@@ -22,7 +22,7 @@ from views.tipo_cambio_window import TipoCambioWindow
 from views.compras_window import ComprasWindow
 from views.kardex_window import KardexWindow
 from views.backup_window import BackupWindow
-from src.views.requisiciones_window import RequisicionesWindow
+from views.requisiciones_window import RequisicionesWindow
 
 class KardexMainWindow(QMainWindow):
     """Ventana principal del sistema"""
