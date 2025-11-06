@@ -353,9 +353,10 @@ def main():
     # --- Actualización automática de TC ---
     session = obtener_session()
     try:
-        # La ruta es relativa a main.py, que está en el directorio raíz del proyecto
-        ruta_excel = str(Path(__file__).parent / 'plantilla_tipo_cambio.xlsx')
-        actualizar_tc_desde_excel(session, ruta_excel, 'Sheet1')
+        # --- MODIFICADO: Ruta fija y nombre de hoja según lo solicitado ---
+        ruta_excel = r"C:\Users\USER\OneDrive\MIM\DATABASS\BASE_DE_DATOS.xlsx"
+        nombre_hoja = "TCbio"
+        actualizar_tc_desde_excel(session, ruta_excel, nombre_hoja)
     except Exception as e:
         print(f"Error durante la actualización de TC: {e}")
     finally:
