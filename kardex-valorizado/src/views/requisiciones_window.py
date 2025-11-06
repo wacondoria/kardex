@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                               QPushButton, QTableWidget, QTableWidgetItem,
                               QLineEdit, QDateEdit, QComboBox, QDoubleSpinBox,
                               QTextEdit, QMessageBox, QDialog, QFormLayout, 
-                              QHeaderView, QGroupBox)
+                              QHeaderView, QGroupBox, QCompleter)
 from PyQt6.QtCore import Qt, QDate
 from PyQt6.QtGui import QFont
 import sys
@@ -134,6 +134,7 @@ class RequisicionDialog(QDialog):
         
         self.cmb_producto = QComboBox()
         self.cmb_producto.setMinimumWidth(300)
+        self.cmb_producto.setEditable(True)
         self.cmb_producto.currentIndexChanged.connect(self.producto_seleccionado)
         
         self.cmb_almacen = QComboBox()
@@ -263,6 +264,12 @@ class RequisicionDialog(QDialog):
         
         for prod in productos:
             self.cmb_producto.addItem(f"{prod.codigo} - {prod.nombre}", prod.id)
+
+        lista_nombres_productos = [self.cmb_producto.itemText(i) for i in range(self.cmb_producto.count())]
+        completer = QCompleter(lista_nombres_productos, self)
+        completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        completer.setFilterMode(Qt.MatchFlag.MatchContains)
+        self.cmb_producto.setCompleter(completer)
         
         # Almacenes
         self.cargar_almacenes()
