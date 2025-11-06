@@ -1,7 +1,7 @@
 """
 Gestión de Productos - Sistema Kardex Valorizado
 Archivo: src/views/productos_window.py
-(Versión corregida y unificada)
+(Versión con QComboBox anidados para Prefijo y Nombre)
 """
 
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
@@ -9,13 +9,10 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                              QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox,
                              QTextEdit, QCheckBox, QMessageBox, QDialog,
                              QFormLayout, QHeaderView, QGroupBox, QFileDialog)
-# --- IMPORTACIONES CORREGIDAS ---
 from PyQt6.QtCore import Qt, pyqtSignal, QEvent, QRegularExpression
 from PyQt6.QtGui import QFont, QKeyEvent, QRegularExpressionValidator
-# --- FIN CORRECCIÓN ---
 import sys
 from pathlib import Path
-import re
 
 try:
     from openpyxl import Workbook, load_workbook
@@ -27,42 +24,23 @@ except ImportError:
     sys.exit(1)
 
 from sqlalchemy import or_, func
-from sqlalchemy.orm import joinedload # <--- IMPORTACIÓN AÑADIDA
+from sqlalchemy.orm import joinedload 
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-# ===========================================================================
-# MODIFICADO: Importar el modelo MovimientoStock (nombre correcto)
-# ===========================================================================
 try:
     from models.database_model import obtener_session, Producto, Categoria, MovimientoStock
 except ImportError:
-    # Fallback por si el modelo Movimiento aún no existe
     from models.database_model import obtener_session, Producto, Categoria
-    MovimientoStock = None # Definir como None para que las comprobaciones fallen de forma segura
-# ===========================================================================
+    MovimientoStock = None 
 
-
-# Lista de unidades movida fuera de la clase para ser reutilizada
 UNIDADES_SUNAT = [
-    "UND - Unidad",
-    "KG - Kilogramo",
-    "GR - Gramo",
-    "LT - Litro",
-    "ML - Mililitro",
-    "M - Metro",
-    "M2 - Metro cuadrado",
-    "M3 - Metro cúbico",
-    "CJ - Caja",
-    "PQ - Paquete",
-    "BOL - Bolsa",
-    "SAC - Saco",
-    "GLN - Galón",
-    "DOC - Docena",
-    "MIL - Millar"
+    "UND - Unidad", "KG - Kilogramo", "GR - Gramo", "LT - Litro",
+    "ML - Mililitro", "M - Metro", "M2 - Metro cuadrado", "M3 - Metro cúbico",
+    "CJ - Caja", "PQ - Paquete", "BOL - Bolsa", "SAC - Saco",
+    "GLN - Galón", "DOC - Docena", "MIL - Millar"
 ]
 
-# Función movida fuera de la clase para ser reutilizada
 def generar_codigo_completo(session, prefijo):
     """Genera el código completo con numeración automática"""
     ultimo = session.query(Producto).filter(
@@ -80,18 +58,22 @@ def generar_codigo_completo(session, prefijo):
 class ProductoDialog(QDialog):
     """Diálogo para crear/editar productos"""
     
-    # Señal para notificar a la ventana principal que se creó/editó un producto
     producto_guardado = pyqtSignal() 
 
     def __init__(self, parent=None, producto=None):
         super().__init__(parent)
         self.session = obtener_session()
         self.producto = producto
-        self.nuevo_producto_id = None # Para la integración con Compras
+        self.nuevo_producto_id = None 
         self.init_ui()
         
         if producto:
             self.cargar_datos_producto()
+        else:
+            self.cmb_codigo.setCurrentIndex(-1)
+            # --- MEJORA: Placeholder inicial para el QComboBox de nombre ---
+            self.cmb_nombre.lineEdit().setPlaceholderText("Escriba un nombre o seleccione uno")
+            self.cmb_nombre.setCurrentIndex(-1)
     
     def init_ui(self):
         self.setWindowTitle("Nuevo Producto" if not self.producto else "Editar Producto")
@@ -106,6 +88,10 @@ class ProductoDialog(QDialog):
             QLineEdit:focus, QTextEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus {
                 border: 2px solid #1a73e8;
             }
+            /* --- MEJORA: Estilo para placeholder en QComboBox editable --- */
+            QComboBox::placeholder { color: #999; }
+            QComboBox QLineEdit::placeholder { color: #999; }
+            
             QComboBox:disabled, QLineEdit:disabled, QSpinBox:disabled, QDoubleSpinBox:disabled {
                 background-color: #f0f0f0;
                 color: #888;
@@ -124,19 +110,23 @@ class ProductoDialog(QDialog):
         form_layout = QFormLayout()
         form_layout.setSpacing(10)
         
-        # --- CÓDIGO PREFIJO MEJORADO (COMBOBOX) ---
+        # --- CÓDIGO PREFIJO ---
         codigo_layout = QHBoxLayout()
         self.cmb_codigo = QComboBox()
         self.cmb_codigo.setEditable(True)
         self.cmb_codigo.setPlaceholderText("Ej: TUBO0")
         self.cmb_codigo.setToolTip("Seleccione un prefijo existente o escriba uno nuevo (5 caracteres)")
 
-        # --- CORRECCIÓN QT6: Usar QRegularExpression ---
-        validator = QRegularExpressionValidator(QRegularExpression("[A-Z0-9]{5}")) # 5 caracteres alfanuméricos mayúsculas
+        validator = QRegularExpressionValidator(QRegularExpression("[A-Z0-9]{5}"))
         self.cmb_codigo.lineEdit().setValidator(validator)
         self.cmb_codigo.lineEdit().textChanged.connect(lambda text: self.cmb_codigo.lineEdit().setText(text.upper()))
+        
+        self.cmb_codigo.currentTextChanged.connect(self.actualizar_siguiente_correlativo)
+        
+        # --- MEJORA: Conectar señal para actualizar nombres por prefijo ---
+        self.cmb_codigo.currentTextChanged.connect(self.actualizar_nombres_por_prefijo)
 
-        self.lbl_codigo_completo = QLabel("-000001")
+        self.lbl_codigo_completo = QLabel("-...")
         self.lbl_codigo_completo.setStyleSheet("color: #666; font-weight: bold;")
 
         codigo_layout.addWidget(self.cmb_codigo)
@@ -144,11 +134,15 @@ class ProductoDialog(QDialog):
         codigo_layout.addStretch()
 
         form_layout.addRow("Código (Prefijo):*", codigo_layout)
-        # --- FIN MEJORA ---
         
-        self.txt_nombre = QLineEdit()
-        self.txt_nombre.setPlaceholderText("Nombre del producto")
-        form_layout.addRow("Nombre:*", self.txt_nombre)
+        # --- MEJORA: QLineEdit a QComboBox editable para Nombre ---
+        self.cmb_nombre = QComboBox()
+        self.cmb_nombre.setEditable(True)
+        self.cmb_nombre.setToolTip("Escriba un nombre nuevo o seleccione uno existente para editarlo")
+        # El placeholder se establece en init y en actualizar_nombres_por_prefijo
+        
+        form_layout.addRow("Nombre:*", self.cmb_nombre)
+        # --- FIN MEJORA ---
         
         self.txt_descripcion = QTextEdit()
         self.txt_descripcion.setMaximumHeight(80)
@@ -206,20 +200,21 @@ class ProductoDialog(QDialog):
         btn_layout.addStretch()
         
         btn_cancelar = QPushButton("Cancelar")
+        btn_cancelar.clicked.connect(self.reject)
+        btn_guardar = QPushButton("Guardar")
+        btn_guardar.clicked.connect(self.guardar)
+        
+        # Estilos de botones (movidos aquí para referencia)
         btn_cancelar.setStyleSheet("""
             QPushButton { background-color: #f1f3f4; color: #333; padding: 10px 30px;
                 border: none; border-radius: 5px; font-weight: bold; }
             QPushButton:hover { background-color: #e8eaed; }
         """)
-        btn_cancelar.clicked.connect(self.reject)
-        
-        btn_guardar = QPushButton("Guardar")
         btn_guardar.setStyleSheet("""
             QPushButton { background-color: #1a73e8; color: white; padding: 10px 30px;
                 border: none; border-radius: 5px; font-weight: bold; }
             QPushButton:hover { background-color: #1557b0; }
         """)
-        btn_guardar.clicked.connect(self.guardar)
         
         btn_layout.addWidget(btn_cancelar)
         btn_layout.addWidget(btn_guardar)
@@ -227,32 +222,54 @@ class ProductoDialog(QDialog):
         layout.addLayout(btn_layout)
         self.setLayout(layout)
 
+    # --- ESTA ES LA FUNCIÓN CORREGIDA EN EL PASO ANTERIOR ---
     def cargar_prefijos_existentes(self):
         """Carga los prefijos de 5 caracteres únicos de la base de datos."""
         try:
-            prefijos = self.session.query(
-                func.substr(Producto.codigo, 1, 5)
-            ).distinct().order_by(1).all()
+            codigos_tuplas = self.session.query(Producto.codigo).distinct().all()
             
-            self.cmb_codigo.addItems([prefijo[0] for prefijo in prefijos if prefijo[0]])
-            self.cmb_codigo.setCurrentIndex(-1) # Empezar sin selección
+            prefijos_set = set()
+            for (codigo,) in codigos_tuplas:
+                if codigo and '-' in codigo:
+                    prefijo = codigo.split('-')[0]
+                    if len(prefijo) == 5 and prefijo.isalnum():
+                        prefijos_set.add(prefijo)
+            
+            prefijos_ordenados = sorted(list(prefijos_set))
+            
+            texto_actual = self.cmb_codigo.currentText()
+            
+            self.cmb_codigo.clear() 
+            self.cmb_codigo.addItems(prefijos_ordenados)
+            
+            if texto_actual in prefijos_ordenados:
+                self.cmb_codigo.setCurrentText(texto_actual)
+            else:
+                self.cmb_codigo.setCurrentIndex(-1)
             
         except Exception as e:
             print(f"Error al cargar prefijos: {e}")
+    # --- FIN FUNCIÓN CORREGIDA ---
     
     def cargar_categorias(self):
         categorias = self.session.query(Categoria).filter_by(activo=True).all()
         for cat in categorias:
             self.cmb_categoria.addItem(cat.nombre, cat.id)
         
-        self.cargar_prefijos_existentes() # <-- Llamada añadida
+        self.cargar_prefijos_existentes() 
     
     def cargar_datos_producto(self):
-        self.cmb_codigo.setCurrentText(self.producto.codigo.split('-')[0])
-        self.cmb_codigo.setEnabled(False) # No se puede editar prefijo al editar
+        prefijo_actual = self.producto.codigo.split('-')[0]
+        
+        self.cmb_codigo.setCurrentText(prefijo_actual)
+        self.cmb_codigo.setEnabled(False) 
         self.lbl_codigo_completo.setText('-' + self.producto.codigo.split('-')[1])
         
-        self.txt_nombre.setText(self.producto.nombre)
+        # --- MEJORA: Cargar nombres para el prefijo y seleccionar el actual ---
+        self.actualizar_nombres_por_prefijo_edicion(prefijo_actual)
+        self.cmb_nombre.setCurrentText(self.producto.nombre)
+        # --- FIN MEJORA ---
+        
         self.txt_descripcion.setPlainText(self.producto.descripcion or "")
         
         index = self.cmb_categoria.findData(self.producto.categoria_id)
@@ -284,9 +301,84 @@ class ProductoDialog(QDialog):
             self.chk_tiene_vencimiento.setChecked(True)
             self.spn_dias_vencimiento.setValue(self.producto.dias_vencimiento)
     
+    def actualizar_siguiente_correlativo(self, prefijo):
+        """Actualiza la etiqueta del correlativo dinámicamente."""
+        if self.cmb_codigo.isEnabled() == False:
+            return 
+            
+        prefijo = prefijo.strip().upper()
+        
+        if len(prefijo) != 5:
+            self.lbl_codigo_completo.setText("-(inválido)")
+            return
+        
+        try:
+            codigo_completo = generar_codigo_completo(self.session, prefijo)
+            sufijo = codigo_completo.split('-')[1]
+            self.lbl_codigo_completo.setText(f"-{sufijo}")
+        except Exception as e:
+            print(f"Error al actualizar correlativo: {e}")
+            self.lbl_codigo_completo.setText("-Error")
+
+    # --- MEJORA: Nueva función para actualizar el QComboBox de Nombres ---
+    def actualizar_nombres_por_prefijo(self, prefijo):
+        """Filtra la lista de nombres de productos basado en el prefijo."""
+        if self.cmb_codigo.isEnabled() == False:
+            return # No hacer nada si estamos en modo edición (ya lo hizo cargar_datos)
+
+        prefijo = prefijo.strip().upper()
+        
+        # Guardar el texto que el usuario pudo haber escrito
+        texto_actual = self.cmb_nombre.currentText()
+        
+        self.cmb_nombre.clear()
+        
+        placeholder = "Escriba un nombre nuevo"
+        
+        if len(prefijo) == 5:
+            try:
+                nombres = self.session.query(Producto.nombre).filter(
+                    Producto.codigo.like(f"{prefijo}-%"),
+                    Producto.activo == True
+                ).order_by(Producto.nombre).all()
+                
+                lista_nombres = [nombre[0] for nombre in nombres]
+                self.cmb_nombre.addItems(lista_nombres)
+                
+                if lista_nombres:
+                    placeholder = "Escriba o seleccione un nombre"
+                
+            except Exception as e:
+                print(f"Error al cargar nombres por prefijo: {e}")
+        
+        # Restaurar el texto y el placeholder
+        self.cmb_nombre.setCurrentText(texto_actual)
+        if self.cmb_nombre.lineEdit(): # Asegurarse de que el lineEdit exista
+            self.cmb_nombre.lineEdit().setPlaceholderText(placeholder)
+        self.cmb_nombre.setCurrentIndex(-1 if texto_actual else 0) # <-- Ajuste
+        self.cmb_nombre.setCurrentText(texto_actual) # Volver a poner el texto
+            
+    def actualizar_nombres_por_prefijo_edicion(self, prefijo):
+        """Versión de 'actualizar_nombres_por_prefijo' para modo edición (sin checks)."""
+        self.cmb_nombre.clear()
+        if len(prefijo) == 5:
+            try:
+                nombres = self.session.query(Producto.nombre).filter(
+                    Producto.codigo.like(f"{prefijo}-%"),
+                    Producto.activo == True
+                ).order_by(Producto.nombre).all()
+                self.cmb_nombre.addItems([nombre[0] for nombre in nombres])
+            except Exception as e:
+                print(f"Error al cargar nombres (edición): {e}")
+    # --- FIN MEJORA ---
+
     def guardar(self):
-        codigo_prefijo = self.cmb_codigo.currentText().strip().upper() # <-- CORREGIDO: Leer de cmb_codigo
-        nombre = self.txt_nombre.text().strip()
+        codigo_prefijo = self.cmb_codigo.currentText().strip().upper() 
+        
+        # --- MEJORA: Leer el nombre desde el QComboBox ---
+        nombre = self.cmb_nombre.currentText().strip()
+        # --- FIN MEJORA ---
+        
         categoria_id = self.cmb_categoria.currentData()
         unidad = self.cmb_unidad.currentText().split(' - ')[0]
         
@@ -310,15 +402,18 @@ class ProductoDialog(QDialog):
                 existe = self.session.query(Producto).filter_by(codigo=codigo_completo).first()
                 if existe:
                     QMessageBox.warning(self, "Error", f"El código {codigo_completo} ya existe. Intente de nuevo (el correlativo se actualizará).")
+                    self.actualizar_siguiente_correlativo(codigo_prefijo)
                     return
                 
+                # --- MEJORA: Validar nombre + prefijo ---
                 existe_nombre = self.session.query(Producto).filter(
                     Producto.nombre == nombre, 
-                    Producto.codigo.like(f"{codigo_prefijo}-%")
+                    Producto.codigo.like(f"{codigo_prefijo}-%"),
+                    Producto.activo == True # --- Añadido por si acaso ---
                 ).first()
                 if existe_nombre:
-                     QMessageBox.warning(self, "Error", f"Ya existe un producto con el nombre '{nombre}' y el prefijo '{codigo_prefijo}'.")
-                     return
+                        QMessageBox.warning(self, "Error", f"Ya existe un producto activo con el nombre '{nombre}' y el prefijo '{codigo_prefijo}'.")
+                        return
                 
                 producto = Producto(
                     codigo=codigo_completo,
@@ -334,12 +429,25 @@ class ProductoDialog(QDialog):
                 )
                 
                 self.session.add(producto)
-                self.session.flush() # Para obtener el ID
-                self.nuevo_producto_id = producto.id # Guardar ID para ComprasWindow
+                self.session.flush() 
+                self.nuevo_producto_id = producto.id 
                 mensaje = "Producto creado exitosamente"
             else:
-                # --- LÓGICA DE EDICIÓN (CORREGIDA) ---
+                # --- LÓGICA DE EDICIÓN ---
                 self.producto = self.session.merge(self.producto)
+                
+                # --- MEJORA: Validar nombre duplicado al editar (excluyendo el propio producto) ---
+                if self.producto.nombre != nombre: # Solo si el nombre cambió
+                    existe_nombre = self.session.query(Producto).filter(
+                        Producto.nombre == nombre, 
+                        Producto.codigo.like(f"{codigo_prefijo}-%"),
+                        Producto.id != self.producto.id, # Excluirse a sí mismo
+                        Producto.activo == True
+                    ).first()
+                    if existe_nombre:
+                        QMessageBox.warning(self, "Error", f"Ya existe OTRO producto activo con el nombre '{nombre}' y el prefijo '{codigo_prefijo}'.")
+                        return
+                # --- FIN MEJORA ---
                 
                 self.producto.nombre = nombre
                 self.producto.descripcion = self.txt_descripcion.toPlainText()
@@ -359,17 +467,16 @@ class ProductoDialog(QDialog):
             self.session.commit()
             QMessageBox.information(self, "Éxito", mensaje)
             
-            self.producto_guardado.emit() # Emitir señal
-            self.session.close() # Cerrar sesión
+            self.producto_guardado.emit() 
+            self.session.close() 
             self.accept()
             
         except Exception as e:
             self.session.rollback()
             QMessageBox.critical(self, "Error", f"Error al guardar:\n{str(e)}")
-            self.session.close() # Cerrar sesión también en error
+            self.session.close() 
     
     def reject(self):
-        """Cierra la sesión de la base de datos al cancelar."""
         print("DEBUG: Diálogo de producto cancelado, cerrando sesión.")
         self.session.close()
         super().reject()
@@ -703,7 +810,6 @@ class ProductosWindow(QWidget):
             ws.add_data_validation(dv_unidad)
             dv_unidad.add('E2:E1000')
             
-            # Usar la sesión de la ventana principal para esto
             categorias = self.session.query(Categoria).filter_by(activo=True).all()
             cat_nombres = [c.nombre.replace('"', "''") for c in categorias]
             if cat_nombres:
@@ -851,8 +957,8 @@ class ProductosWindow(QWidget):
                     errores_lectura.append(f"Fila {row_idx}: {str(e)}")
             
             if not productos_a_crear and not errores_lectura:
-                 QMessageBox.warning(self, "Archivo Vacío", "No se encontraron datos de productos válidos en el archivo.")
-                 return
+                QMessageBox.warning(self, "Archivo Vacío", "No se encontraron datos de productos válidos en el archivo.")
+                return
 
             # 3. Procesar datos (Solo Creación, optimizado)
             creados = 0
@@ -928,7 +1034,6 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
     
-    # --- PRUEBA CON user_info simulado ---
     simulated_user_info = {
         'id': 1,
         'username': 'admin',
@@ -937,7 +1042,6 @@ if __name__ == "__main__":
         'licencia_vencida': False 
     }
     ventana = ProductosWindow(user_info=simulated_user_info)
-    # --- FIN PRUEBA ---
     
     ventana.resize(1200, 700)
     ventana.show()
