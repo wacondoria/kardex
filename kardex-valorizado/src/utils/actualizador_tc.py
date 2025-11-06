@@ -49,7 +49,7 @@ def actualizar_tc_desde_excel(session, ruta_excel: str, nombre_hoja: str):
     fechas_en_db = {tc.fecha for tc in session.query(TipoCambio).all()}
 
     # Empezamos en min_row=2 para saltar el encabezado
-    for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+    for row_idx, row in enumerate(ws.iter_rows(min_row=3, values_only=True), start=3):
         try:
             # --- ESTRUCTURA DE TU EXCEL ---
             # Columna B (índice 1) = Fecha
