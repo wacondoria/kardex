@@ -27,6 +27,10 @@ from views.ordenes_compra_window import OrdenesCompraWindow
 from views.usuarios_window import UsuariosWindow
 from views.valorizacion_window import ValorizacionWindow
 
+# --- Integración para actualización automática ---
+from utils.actualizador_tc import actualizar_tc_desde_excel
+from models.database_model import obtener_session
+
 class KardexMainWindow(QMainWindow):
     """Ventana principal del sistema"""
 
@@ -346,6 +350,18 @@ class KardexMainWindow(QMainWindow):
 
 
 def main():
+    # --- Actualización automática de TC ---
+    session = obtener_session()
+    try:
+        # La ruta es relativa a main.py, que está en el directorio raíz del proyecto
+        ruta_excel = str(Path(__file__).parent / 'plantilla_tipo_cambio.xlsx')
+        actualizar_tc_desde_excel(session, ruta_excel, 'Hoja1')
+    except Exception as e:
+        print(f"Error durante la actualización de TC: {e}")
+    finally:
+        session.close()
+    # --- Fin de la actualización ---
+
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
 
