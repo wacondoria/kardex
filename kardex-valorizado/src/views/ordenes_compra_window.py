@@ -448,7 +448,42 @@ class OrdenCompraDialog(QDialog):
                 )
                 
                 self.accept()
-            
+            else:
+                # Actualizar existente
+                orden = self.orden
+
+                # Actualizar cabecera
+                orden.empresa_id = self.cmb_empresa.currentData()
+                orden.proveedor_id = self.cmb_proveedor.currentData()
+                orden.fecha = self.date_fecha.date().toPyDate()
+                orden.moneda = Moneda(self.cmb_moneda.currentData())
+                orden.tipo_cambio = self.spn_tipo_cambio.value()
+                orden.observaciones = self.txt_observaciones.toPlainText() or None
+
+                # Eliminar detalles antiguos
+                self.session.query(OrdenCompraDetalle).filter_by(orden_id=orden.id).delete()
+
+                # Agregar detalles nuevos
+                for det in self.detalles:
+                    detalle = OrdenCompraDetalle(
+                        orden_id=orden.id,
+                        producto_id=det['producto_id'],
+                        cantidad=det['cantidad'],
+                        cantidad_recibida=0, # Asumimos que se resetea al editar
+                        precio_unitario=det['precio_unitario'],
+                        subtotal=det['subtotal']
+                    )
+                    self.session.add(detalle)
+
+                self.session.commit()
+
+                QMessageBox.information(
+                    self,
+                    "Éxito",
+                    f"Orden {orden.numero_orden} actualizada exitosamente"
+                )
+                self.accept()
+
         except Exception as e:
             self.session.rollback()
             QMessageBox.critical(self, "Error", f"Error al guardar:\n{str(e)}")
@@ -625,9 +660,10 @@ class OrdenesCompraWindow(QWidget):
             self.cargar_ordenes()
     
     def ver_orden(self, orden):
-        """Ver detalle de orden"""
+        """Ver o editar detalle de orden"""
         dialog = OrdenCompraDialog(self, self.user_info, orden)
-        dialog.exec()
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.cargar_ordenes()
     
     def convertir_a_compra(self, orden):
         """Convierte la orden en compra"""

@@ -23,6 +23,7 @@ from views.compras_window import ComprasWindow
 from views.kardex_window import KardexWindow
 from views.backup_window import BackupWindow
 from views.requisiciones_window import RequisicionesWindow
+from views.ordenes_compra_window import OrdenesCompraWindow
 
 class KardexMainWindow(QMainWindow):
     """Ventana principal del sistema"""
@@ -38,7 +39,8 @@ class KardexMainWindow(QMainWindow):
         self.ventana_kardex = None
         self.ventana_backup = None
         # --- 1. Variable inicializada (esto ya estaba bien) ---
-        self.ventana_requisiciones = None 
+        self.ventana_requisiciones = None
+        self.ventana_ordenes_compra = None
         self.init_ui()
     
     def init_ui(self):
@@ -123,6 +125,11 @@ class KardexMainWindow(QMainWindow):
         accion_compras.setShortcut("Ctrl+C")
         accion_compras.triggered.connect(self.abrir_compras)
         menu_operaciones.addAction(accion_compras)
+
+        accion_ordenes_compra = QAction("📄 Órdenes de Compra", self)
+        accion_ordenes_compra.setShortcut("Ctrl+O")
+        accion_ordenes_compra.triggered.connect(self.abrir_ordenes_compra)
+        menu_operaciones.addAction(accion_ordenes_compra)
         
         # --- 2. CORRECCIÓN EN EL MENÚ ---
         accion_requisiciones = QAction("📤 Requisiciones", self)
@@ -203,6 +210,10 @@ class KardexMainWindow(QMainWindow):
         btn_compras = QPushButton("🛒 Compras")
         btn_compras.clicked.connect(self.abrir_compras)
         toolbar.addWidget(btn_compras)
+
+        btn_ordenes_compra = QPushButton("📄 Órdenes de Compra")
+        btn_ordenes_compra.clicked.connect(self.abrir_ordenes_compra)
+        toolbar.addWidget(btn_ordenes_compra)
         
         # --- 3. CORRECCIÓN EN LA BARRA DE HERRAMIENTAS ---
         btn_requisiciones = QPushButton("📤 Requisiciones")
@@ -288,6 +299,15 @@ class KardexMainWindow(QMainWindow):
         self.ventana_requisiciones.show()
         self.ventana_requisiciones.raise_()
         self.ventana_requisiciones.activateWindow()
+
+    def abrir_ordenes_compra(self):
+        """Abre la ventana de gestión de órdenes de compra"""
+        if self.ventana_ordenes_compra is None:
+            self.ventana_ordenes_compra = OrdenesCompraWindow(self.user_info)
+
+        self.ventana_ordenes_compra.show()
+        self.ventana_ordenes_compra.raise_()
+        self.ventana_ordenes_compra.activateWindow()
 
 
 def main():
