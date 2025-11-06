@@ -354,7 +354,7 @@ def main():
     session = obtener_session()
     try:
         # --- MODIFICADO: Ruta fija y nombre de hoja según lo solicitado ---
-        ruta_excel = r"C:\Users\USER\OneDrive\MIM\DATABASS\BASE_DE_DATOS.xlsx"
+        ruta_excel = r"C:\Users\USER\OneDrive\MIM\DATABASS\BASE DE DATOS.xlsx"
         nombre_hoja = "TCbio"
         actualizar_tc_desde_excel(session, ruta_excel, nombre_hoja)
     except Exception as e:
