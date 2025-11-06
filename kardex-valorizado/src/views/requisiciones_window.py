@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from models.database_model import (obtener_session, Requisicion, RequisicionDetalle,
                                    Producto, Almacen, Empresa, Destino,
                                    MovimientoStock, TipoMovimiento, MetodoValuacion)
+from utils.widgets import UpperLineEdit
 
 
 class RequisicionDialog(QDialog):
@@ -81,7 +82,7 @@ class RequisicionDialog(QDialog):
         self.date_fecha.setDate(QDate.currentDate())
         self.date_fecha.setDisplayFormat("dd/MM/yyyy")
         
-        self.txt_numero = QLineEdit()
+        self.txt_numero = UpperLineEdit()
         self.txt_numero.setPlaceholderText("Se generará automáticamente")
         self.txt_numero.setReadOnly(True)
         self.txt_numero.setStyleSheet("background-color: #f0f0f0;")
@@ -117,7 +118,7 @@ class RequisicionDialog(QDialog):
         form_req.addRow("Destino:*", destino_layout)
         
         # Solicitante
-        self.txt_solicitante = QLineEdit()
+        self.txt_solicitante = UpperLineEdit()
         self.txt_solicitante.setPlaceholderText("Nombre de quien solicita")
         form_req.addRow("Solicitante:", self.txt_solicitante)
         
@@ -740,3 +741,16 @@ class RequisicionesWindow(QWidget):
 
         # Mostramos el mensaje en un QMessageBox (ya estaba importado)
         QMessageBox.information(self, "Detalle de Requisición", mensaje)
+
+# PRUEBA STANDALONE
+if __name__ == "__main__":
+    from PyQt6.QtWidgets import QApplication
+
+    app = QApplication(sys.argv)
+    app.setStyle('Fusion')
+
+    ventana = RequisicionesWindow()
+    ventana.resize(1200, 700)
+    ventana.show()
+
+    sys.exit(app.exec())

@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from models.database_model import (obtener_session, OrdenCompra, OrdenCompraDetalle,
                                    Proveedor, Producto, Empresa, TipoCambio,
                                    Moneda, EstadoOrden, Usuario)
+from utils.widgets import UpperLineEdit
 
 
 class OrdenCompraDialog(QDialog):
@@ -93,7 +94,7 @@ class OrdenCompraDialog(QDialog):
         # Número y Fecha
         fila2 = QHBoxLayout()
         
-        self.txt_numero = QLineEdit()
+        self.txt_numero = UpperLineEdit()
         self.txt_numero.setPlaceholderText("Ej: OC-2024-0001")
         
         self.date_fecha = QDateEdit()
