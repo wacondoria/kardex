@@ -234,6 +234,7 @@ class TipoCambio(Base):
     fecha = Column(Date, unique=True, nullable=False)
     precio_compra = Column(Float, nullable=False)
     precio_venta = Column(Float, nullable=False)
+    activo = Column(Boolean, default=True, nullable=False)
     fecha_registro = Column(DateTime, default=datetime.now)
 
 # ============================================

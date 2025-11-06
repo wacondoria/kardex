@@ -31,6 +31,31 @@ from views.valorizacion_window import ValorizacionWindow
 from utils.actualizador_tc import actualizar_tc_desde_excel
 from models.database_model import obtener_session
 
+# --- MODIFICADO: Añadida función de migración de BD ---
+from sqlalchemy import create_engine, inspect, text
+
+def verificar_y_actualizar_db(db_url='sqlite:///kardex.db'):
+    """
+    Verifica si la columna 'activo' existe en 'tipo_cambio' y la añade si no.
+    """
+    engine = create_engine(db_url)
+    inspector = inspect(engine)
+
+    # Obtener columnas de la tabla 'tipo_cambio'
+    columns = [col['name'] for col in inspector.get_columns('tipo_cambio')]
+
+    # Si 'activo' no está, la añadimos
+    if 'activo' not in columns:
+        print("⚠️  Detectado modelo de 'tipo_cambio' antiguo. Actualizando BD...")
+        try:
+            with engine.connect() as connection:
+                # Usamos 'text' para ejecutar SQL de forma segura
+                connection.execute(text("ALTER TABLE tipo_cambio ADD COLUMN activo BOOLEAN DEFAULT 1 NOT NULL"))
+                connection.commit() # Confirmar la transacción
+            print("✓  Columna 'activo' añadida a 'tipo_cambio' exitosamente.")
+        except Exception as e:
+            print(f"❌  Error al actualizar la tabla 'tipo_cambio': {e}")
+
 class KardexMainWindow(QMainWindow):
     """Ventana principal del sistema"""
 
@@ -350,6 +375,9 @@ class KardexMainWindow(QMainWindow):
 
 
 def main():
+    # --- MODIFICADO: Llamada a la función de migración ---
+    verificar_y_actualizar_db()
+
     # --- Actualización automática de TC ---
     session = obtener_session()
     try:
