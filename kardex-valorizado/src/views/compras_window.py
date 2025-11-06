@@ -1427,9 +1427,17 @@ class ComprasWindow(QWidget):
         self.cmb_proveedor_filtro = QComboBox()
         self.cmb_proveedor_filtro.addItem("Todos los proveedores", None)
         self.cmb_proveedor_filtro.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed) # Que se expanda
+        self.cmb_proveedor_filtro.setEditable(True)
         proveedores = self.session.query(Proveedor).filter_by(activo=True).order_by(Proveedor.razon_social).all()
         for prov in proveedores:
             self.cmb_proveedor_filtro.addItem(prov.razon_social, prov.id)
+
+        lista_proveedores = [self.cmb_proveedor_filtro.itemText(i) for i in range(self.cmb_proveedor_filtro.count())]
+        completer_proveedor = QCompleter(lista_proveedores, self)
+        completer_proveedor.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        completer_proveedor.setFilterMode(Qt.MatchFlag.MatchContains)
+        self.cmb_proveedor_filtro.setCompleter(completer_proveedor)
+
         self.cmb_proveedor_filtro.currentIndexChanged.connect(self.cargar_compras)
 
         self.cmb_vista_moneda = QComboBox()

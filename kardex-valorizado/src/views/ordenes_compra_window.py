@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                               QPushButton, QTableWidget, QTableWidgetItem,
                               QLineEdit, QDateEdit, QComboBox, QDoubleSpinBox,
                               QTextEdit, QMessageBox, QDialog, QFormLayout, 
-                              QHeaderView, QGroupBox)
+                              QHeaderView, QGroupBox, QCompleter)
 from PyQt6.QtCore import Qt, QDate
 from PyQt6.QtGui import QFont, QColor
 import sys
@@ -251,11 +251,25 @@ class OrdenCompraDialog(QDialog):
         proveedores = self.session.query(Proveedor).filter_by(activo=True).all()
         for prov in proveedores:
             self.cmb_proveedor.addItem(f"{prov.ruc} - {prov.razon_social}", prov.id)
+
+        self.cmb_proveedor.setEditable(True)
+        lista_proveedores = [self.cmb_proveedor.itemText(i) for i in range(self.cmb_proveedor.count())]
+        completer_proveedor = QCompleter(lista_proveedores, self)
+        completer_proveedor.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        completer_proveedor.setFilterMode(Qt.MatchFlag.MatchContains)
+        self.cmb_proveedor.setCompleter(completer_proveedor)
         
         # Productos
         productos = self.session.query(Producto).filter_by(activo=True).all()
         for prod in productos:
             self.cmb_producto.addItem(f"{prod.codigo} - {prod.nombre}", prod.id)
+
+        self.cmb_producto.setEditable(True)
+        lista_productos = [self.cmb_producto.itemText(i) for i in range(self.cmb_producto.count())]
+        completer_producto = QCompleter(lista_productos, self)
+        completer_producto.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        completer_producto.setFilterMode(Qt.MatchFlag.MatchContains)
+        self.cmb_producto.setCompleter(completer_producto)
     
     def cargar_orden(self):
         """Carga datos de orden existente"""
