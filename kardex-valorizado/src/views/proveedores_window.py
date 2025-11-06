@@ -3,7 +3,7 @@ Gestión de Proveedores - Sistema Kardex Valorizado
 Archivo: src/views/proveedores_window.py
 """
 
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                               QPushButton, QTableWidget, QTableWidgetItem,
                               QLineEdit, QTextEdit, QMessageBox, QDialog,
                               QFormLayout, QHeaderView)
@@ -26,10 +26,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models.database_model import obtener_session, Proveedor
 from sqlalchemy import or_
+from utils.widgets import UpperLineEdit
+
 
 class ProveedorDialog(QDialog):
     """Diálogo para crear/editar proveedores"""
-    
+
     def __init__(self, parent=None, proveedor=None, session=None):
         super().__init__(parent)
         if session:
@@ -39,10 +41,10 @@ class ProveedorDialog(QDialog):
             self.session = obtener_session()
         self.proveedor = proveedor
         self.init_ui()
-        
+
         if proveedor:
             self.cargar_datos_proveedor()
-    
+
     def init_ui(self):
         self.setWindowTitle("Nuevo Proveedor" if not self.proveedor else "Editar Proveedor")
         self.setFixedSize(550, 500)
@@ -64,82 +66,82 @@ class ProveedorDialog(QDialog):
                 border: 2px solid #1a73e8;
             }
         """)
-        
+
         layout = QVBoxLayout()
         layout.setSpacing(15)
         layout.setContentsMargins(20, 20, 20, 20)
-        
+
         # Título
         titulo = QLabel("🏪 " + ("Nuevo Proveedor" if not self.proveedor else "Editar Proveedor"))
         titulo.setFont(QFont("Arial", 16, QFont.Weight.Bold))
         titulo.setStyleSheet("color: #1a73e8; padding: 10px;")
         layout.addWidget(titulo)
-        
+
         # Formulario
         form_layout = QFormLayout()
         self.lbl_id_etiqueta = QLabel("ID Interno:")
         self.txt_id_display = QLineEdit()
         self.txt_id_display.setEnabled(False)
         self.txt_id_display.setStyleSheet("background-color: #eee; color: #555; font-weight: bold;")
-        
+
         # Ocultarlos por defecto (solo se muestran al editar)
         self.lbl_id_etiqueta.hide()
         self.txt_id_display.hide()
-        
+
         form_layout.addRow(self.lbl_id_etiqueta, self.txt_id_display)
         form_layout.setSpacing(12)
-        
+
         # RUC
         self.txt_ruc = QLineEdit()
         self.txt_ruc.setMaxLength(11)
         self.txt_ruc.setPlaceholderText("Ingrese RUC (11 dígitos)")
         self.txt_ruc.textChanged.connect(self.validar_ruc)
         form_layout.addRow("RUC:*", self.txt_ruc)
-        
+
         # Mensaje de validación RUC
         self.lbl_ruc_validacion = QLabel()
         self.lbl_ruc_validacion.setStyleSheet("color: #ea4335; font-size: 10px;")
         form_layout.addRow("", self.lbl_ruc_validacion)
-        
+
         # Razón Social
-        self.txt_razon_social = QLineEdit()
+        self.txt_razon_social = UpperLineEdit()
         self.txt_razon_social.setPlaceholderText("Razón social o nombre comercial")
         form_layout.addRow("Razón Social:*", self.txt_razon_social)
-        
+
         # Dirección
         self.txt_direccion = QTextEdit()
         self.txt_direccion.setMaximumHeight(60)
         self.txt_direccion.setPlaceholderText("Dirección fiscal")
         form_layout.addRow("Dirección:", self.txt_direccion)
-        
+
         # Teléfono
-        self.txt_telefono = QLineEdit()
+        self.txt_telefono = UpperLineEdit()
         self.txt_telefono.setPlaceholderText("Teléfono de contacto")
         form_layout.addRow("Teléfono:", self.txt_telefono)
-        
+
         # Email
         self.txt_email = QLineEdit()
         self.txt_email.setPlaceholderText("correo@empresa.com")
         form_layout.addRow("Email:", self.txt_email)
-        
+
         # Contacto
-        self.txt_contacto = QLineEdit()
+        self.txt_contacto = UpperLineEdit()
         self.txt_contacto.setPlaceholderText("Nombre de la persona de contacto")
         form_layout.addRow("Persona Contacto:", self.txt_contacto)
-        
+
         layout.addLayout(form_layout)
-        
+
         # Nota
         nota = QLabel("* Campos obligatorios")
         nota.setStyleSheet("color: #666; font-size: 10px; font-style: italic;")
         layout.addWidget(nota)
-        
+
         layout.addStretch()
-        
+
         # Botones
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
-        
+
         btn_cancelar = QPushButton("Cancelar")
         btn_cancelar.setStyleSheet("""
             QPushButton {
@@ -155,7 +157,7 @@ class ProveedorDialog(QDialog):
             }
         """)
         btn_cancelar.clicked.connect(self.reject)
-        
+
         self.btn_guardar = QPushButton("Guardar")
         self.btn_guardar.setStyleSheet("""
             QPushButton {
@@ -174,53 +176,53 @@ class ProveedorDialog(QDialog):
             }
         """)
         self.btn_guardar.clicked.connect(self.guardar)
-        
+
         btn_layout.addWidget(btn_cancelar)
         btn_layout.addWidget(self.btn_guardar)
-        
+
         layout.addLayout(btn_layout)
         self.setLayout(layout)
-    
+
     def validar_ruc(self, texto):
         """Valida el RUC en tiempo real"""
         # Eliminar todo lo que no sea número
         ruc = re.sub(r'\D', '', texto)
-        
+
         if len(ruc) == 0:
             self.lbl_ruc_validacion.setText("")
             self.btn_guardar.setEnabled(True)
             return
-        
+
         if len(ruc) < 11:
             self.lbl_ruc_validacion.setText("⚠️ El RUC debe tener 11 dígitos")
             self.btn_guardar.setEnabled(False)
             return
-        
+
         if len(ruc) == 11:
             # Validar que empiece con 10, 15, 17 o 20
             if not ruc.startswith(('10', '15', '17', '20')):
                 self.lbl_ruc_validacion.setText("⚠️ RUC inválido (debe empezar con 10, 15, 17 o 20)")
                 self.btn_guardar.setEnabled(False)
                 return
-            
+
             # --- MODIFICADO: Verificar duplicados al crear Y editar ---
             query = self.session.query(Proveedor).filter_by(ruc=ruc)
-            
+
             if self.proveedor:
                 # Al editar, excluimos al proveedor actual de la búsqueda
                 query = query.filter(Proveedor.id != self.proveedor.id)
-            
+
             existe = query.first()
             if existe:
                 self.lbl_ruc_validacion.setText("❌ Este RUC ya está registrado en otro proveedor")
                 self.btn_guardar.setEnabled(False)
                 return
             # --- FIN DE LA MODIFICACIÓN ---
-            
+
             self.lbl_ruc_validacion.setText("✓ RUC válido")
             self.lbl_ruc_validacion.setStyleSheet("color: #34a853; font-size: 10px;")
             self.btn_guardar.setEnabled(True)
-    
+
     def cargar_datos_proveedor(self):
         """Carga datos del proveedor en edición"""
         if self.proveedor.id:
@@ -228,33 +230,33 @@ class ProveedorDialog(QDialog):
             self.lbl_id_etiqueta.show()
             self.txt_id_display.show()
         self.txt_ruc.setText(self.proveedor.ruc)
-        
+
         self.txt_razon_social.setText(self.proveedor.razon_social)
         self.txt_direccion.setPlainText(self.proveedor.direccion or "")
         self.txt_telefono.setText(self.proveedor.telefono or "")
         self.txt_email.setText(self.proveedor.email or "")
         self.txt_contacto.setText(self.proveedor.contacto or "")
-    
+
     def guardar(self):
         """Guarda el proveedor"""
         # Validaciones
         ruc = self.txt_ruc.text().strip()
         razon_social = self.txt_razon_social.text().strip()
-        
+
         if len(ruc) != 11:
             QMessageBox.warning(self, "Error", "El RUC debe tener 11 dígitos")
             return
-        
+
         if not razon_social:
             QMessageBox.warning(self, "Error", "La razón social es obligatoria")
             return
-        
+
         # Validar email si lo ingresó
         email = self.txt_email.text().strip()
         if email and not re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', email):
             QMessageBox.warning(self, "Error", "El email no es válido")
             return
-        
+
         try:
             if not self.proveedor:
                 # Crear nuevo
@@ -266,7 +268,7 @@ class ProveedorDialog(QDialog):
                     email=email or None,
                     contacto=self.txt_contacto.text().strip() or None
                 )
-                
+
                 self.session.add(proveedor)
                 mensaje = f"Proveedor {razon_social} creado exitosamente"
             else:
@@ -277,13 +279,13 @@ class ProveedorDialog(QDialog):
                 self.proveedor.telefono = self.txt_telefono.text().strip() or None
                 self.proveedor.email = email or None
                 self.proveedor.contacto = self.txt_contacto.text().strip() or None
-                
+
                 mensaje = f"Proveedor {razon_social} actualizado exitosamente"
-            
+
             self.session.commit()
             QMessageBox.information(self, "Éxito", mensaje)
             self.accept()
-            
+
         except Exception as e:
             self.session.rollback()
             QMessageBox.critical(self, "Error", f"Error al guardar:\n{str(e)}")
@@ -291,27 +293,27 @@ class ProveedorDialog(QDialog):
 
 class ProveedoresWindow(QWidget):
     """Ventana principal de gestión de proveedores"""
-    
+
     def __init__(self):
         super().__init__()
         self.session = obtener_session()
         self.init_ui()
         self.cargar_proveedores()
-    
+
     def init_ui(self):
         self.setWindowTitle("Gestión de Proveedores")
-        
+
         layout = QVBoxLayout()
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
-        
+
         # Header
         header_layout = QHBoxLayout()
-        
+
         titulo = QLabel("🏪 Gestión de Proveedores")
         titulo.setFont(QFont("Arial", 18, QFont.Weight.Bold))
         titulo.setStyleSheet("color: #1a73e8;")
-        
+
         btn_descargar = QPushButton("📄 Descargar Plantilla")
         btn_descargar.setStyleSheet("""
             QPushButton {
@@ -325,7 +327,7 @@ class ProveedoresWindow(QWidget):
             QPushButton:hover { background-color: #185C37; }
         """)
         btn_descargar.clicked.connect(self.descargar_plantilla)
-        
+
         btn_importar = QPushButton("⬆️ Importar Excel")
         btn_importar.setStyleSheet("""
             QPushButton {
@@ -355,15 +357,15 @@ class ProveedoresWindow(QWidget):
             }
         """)
         btn_nuevo.clicked.connect(self.nuevo_proveedor)
-        
+
         header_layout.addWidget(titulo)
         header_layout.addStretch()
         header_layout.addWidget(btn_descargar)
         header_layout.addWidget(btn_importar)
         header_layout.addWidget(btn_nuevo)
-        
+
         # Búsqueda
-        self.txt_buscar = QLineEdit()
+        self.txt_buscar = UpperLineEdit()
         self.txt_buscar.setClearButtonEnabled(True)
         self.txt_buscar.setPlaceholderText("🔍 Buscar por RUC, razón social o contacto...")
         self.txt_buscar.setStyleSheet("""
@@ -378,18 +380,18 @@ class ProveedoresWindow(QWidget):
             }
         """)
         self.txt_buscar.textChanged.connect(self.buscar_proveedores)
-        
+
         # Contador
         self.lbl_contador = QLabel()
         self.lbl_contador.setStyleSheet("color: #666; font-size: 11px; padding: 5px;")
-        
+
         # Tabla
         self.tabla = QTableWidget()
         self.tabla.setColumnCount(8)
         self.tabla.setHorizontalHeaderLabels([
             "ID", "RUC", "Razón Social", "Teléfono", "Email", "Contacto", "Dirección", "Acciones"
         ])
-        
+
         self.tabla.setStyleSheet("""
             QTableWidget {
                 border: 1px solid #ddd;
@@ -403,7 +405,7 @@ class ProveedoresWindow(QWidget):
                 font-weight: bold;
             }
         """)
-        
+
         header = self.tabla.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents) # NUEVO: Columna ID
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents) # RUC
@@ -414,35 +416,35 @@ class ProveedoresWindow(QWidget):
         header.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents) # Dirección
         header.setSectionResizeMode(7, QHeaderView.ResizeMode.Fixed)               # Acciones
         self.tabla.setColumnWidth(7, 150) # MODIFICADO: 6 -> 7
-        
+
         self.tabla.setAlternatingRowColors(True)
         self.tabla.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        
+
         # Agregar al layout
         layout.addLayout(header_layout)
         layout.addWidget(self.txt_buscar)
         layout.addWidget(self.lbl_contador)
         layout.addWidget(self.tabla)
-        
+
         self.setLayout(layout)
-    
+
     def cargar_proveedores(self):
         """Carga todos los proveedores en la tabla"""
         proveedores = self.session.query(Proveedor).filter_by(activo=True).order_by(Proveedor.razon_social).all()
         self.mostrar_proveedores(proveedores)
-    
+
     def mostrar_proveedores(self, proveedores):
         """Muestra proveedores en la tabla"""
         self.tabla.setRowCount(len(proveedores))
-        
+
         for row, prov in enumerate(proveedores):
-            
+
             # --- Columna 0: ID ---
             item_id = QTableWidgetItem(str(prov.id))
-            item_id.setFlags(item_id.flags() & ~Qt.ItemFlag.ItemIsEditable) 
-            item_id.setForeground(Qt.GlobalColor.gray) 
+            item_id.setFlags(item_id.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            item_id.setForeground(Qt.GlobalColor.gray)
             self.tabla.setItem(row, 0, item_id)
-            
+
             # --- Columnas 1-6: Datos ---
             self.tabla.setItem(row, 1, QTableWidgetItem(prov.ruc))
             self.tabla.setItem(row, 2, QTableWidgetItem(prov.razon_social))
@@ -450,14 +452,14 @@ class ProveedoresWindow(QWidget):
             self.tabla.setItem(row, 4, QTableWidgetItem(prov.email or ""))
             self.tabla.setItem(row, 5, QTableWidgetItem(prov.contacto or ""))
             self.tabla.setItem(row, 6, QTableWidgetItem(prov.direccion or ""))
-            
+
             # --- Columna 7: Botones de acción ---
-            
+
             # (Aquí estaba el error, faltaba esta sección)
             btn_widget = QWidget()
             btn_layout = QHBoxLayout() # <--- ESTA LÍNEA FALTABA O ESTABA MAL UBICADA
             btn_layout.setContentsMargins(5, 5, 5, 5)
-            
+
             btn_editar = QPushButton("Editar")
             btn_editar.setStyleSheet("""
                 QPushButton {
@@ -472,7 +474,7 @@ class ProveedoresWindow(QWidget):
                 }
             """)
             btn_editar.clicked.connect(lambda checked, p=prov: self.editar_proveedor(p))
-            
+
             btn_eliminar = QPushButton("Eliminar")
             btn_eliminar.setStyleSheet("""
                 QPushButton {
@@ -487,28 +489,28 @@ class ProveedoresWindow(QWidget):
                 }
             """)
             btn_eliminar.clicked.connect(lambda checked, p=prov: self.eliminar_proveedor(p))
-            
+
             # (Fin de la sección que faltaba)
 
             btn_layout.addWidget(btn_editar)
             btn_layout.addWidget(btn_eliminar)
             btn_widget.setLayout(btn_layout)
-            
+
             self.tabla.setCellWidget(row, 7, btn_widget) # Asegúrate que sea la columna 7
-        
+
         # Actualizar contador
         self.lbl_contador.setText(f"📊 Total: {len(proveedores)} proveedor(es)")
-    
+
     def buscar_proveedores(self):
         """Busca proveedores por texto"""
         texto = self.txt_buscar.text().lower().strip()
-        
+
         # Empezar la consulta base
         query = self.session.query(Proveedor).filter_by(activo=True)
-        
+
         if texto:
             # ilike es como 'LIKE' pero ignora mayúsculas/minúsculas
-            filtro_texto = f"%{texto}%" 
+            filtro_texto = f"%{texto}%"
             query = query.filter(
                 or_(
                     Proveedor.ruc.ilike(filtro_texto),
@@ -517,24 +519,24 @@ class ProveedoresWindow(QWidget):
                     Proveedor.email.ilike(filtro_texto)
                 )
             )
-        
+
         # Ordenar y ejecutar la consulta final
         proveedores = query.order_by(Proveedor.razon_social).all()
         self.mostrar_proveedores(proveedores)
-    
+
     def nuevo_proveedor(self):
         """Abre diálogo para crear proveedor"""
         dialog = ProveedorDialog(self, session=self.session)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.cargar_proveedores()
-    
+
     def editar_proveedor(self, proveedor):
         """Abre diálogo para editar proveedor"""
         dialog = ProveedorDialog(self, proveedor=proveedor, session=self.session)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.session.refresh(proveedor)
             self.cargar_proveedores()
-    
+
     def eliminar_proveedor(self, proveedor):
         """Elimina (desactiva) un proveedor"""
         respuesta = QMessageBox.question(
@@ -544,7 +546,7 @@ class ProveedoresWindow(QWidget):
             "El proveedor se desactivará pero se mantendrá en el historial.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
-        
+
         if respuesta == QMessageBox.StandardButton.Yes:
             try:
                 proveedor.activo = False
@@ -572,7 +574,7 @@ class ProveedoresWindow(QWidget):
             "plantilla_proveedores.xlsx",
             "Archivos de Excel (*.xlsx)"
         )
-        
+
         if not file_path:
             return
 
@@ -580,14 +582,14 @@ class ProveedoresWindow(QWidget):
             wb = Workbook()
             ws = wb.active
             ws.title = "Proveedores"
-            
+
             headers = [
-                "RUC", "RAZON_SOCIAL", "DIRECCION", 
+                "RUC", "RAZON_SOCIAL", "DIRECCION",
                 "TELEFONO", "EMAIL", "CONTACTO"
             ]
-            
+
             ws.append(headers)
-            
+
             # Estilo para los encabezados
             header_font = Font(bold=True, color="FFFFFF")
             header_fill = "FF1D6F42" # Color verde
@@ -597,7 +599,7 @@ class ProveedoresWindow(QWidget):
                 cell.font = header_font
                 cell.fill = cell.fill = PatternFill(start_color=header_fill, end_color=header_fill, fill_type="solid")
                 cell.alignment = header_align
-            
+
             # Ajustar ancho de columnas
             ws.column_dimensions['A'].width = 15  # RUC
             ws.column_dimensions['B'].width = 40  # Razón Social
@@ -630,24 +632,24 @@ class ProveedoresWindow(QWidget):
             "",
             "Archivos de Excel (*.xlsx)"
         )
-        
+
         if not file_path:
             return
 
         try:
             wb = load_workbook(file_path, data_only=True)
-            
+
             if "Proveedores" not in wb.sheetnames:
                 QMessageBox.critical(self, "Error de Hoja",
                     "No se encontró la hoja llamada 'Proveedores' en el archivo.")
                 return
-                
+
             ws = wb["Proveedores"] # Asumimos que los datos están en la hoja "Proveedores"
 
             # 1. Validar encabezados
             expected_headers = ["RUC", "RAZON_SOCIAL", "DIRECCION", "TELEFONO", "EMAIL", "CONTACTO"]
             actual_headers = [str(cell.value).upper().strip() for cell in ws[1]]
-            
+
             if actual_headers != expected_headers:
                 QMessageBox.critical(self, "Error de Formato",
                     f"Los encabezados del Excel no son correctos.\n"
@@ -658,15 +660,15 @@ class ProveedoresWindow(QWidget):
             # 2. Leer datos del Excel
             proveedores_excel = []
             errores_lectura = []
-            
+
             for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
                 # Detener la lectura si la fila está completamente vacía
                 if all(c is None for c in row):
                     break
-                    
+
                 ruc = str(row[0]).strip() if row[0] else ""
                 razon_social = str(row[1]).strip() if row[1] else ""
-                
+
                 # Datos opcionales
                 direccion = str(row[2]).strip() if row[2] else None
                 telefono = str(row[3]).strip() if row[3] else None
@@ -681,15 +683,15 @@ class ProveedoresWindow(QWidget):
                 if not ruc or not razon_social:
                     errores_lectura.append(f"Fila {row_idx}: RUC y Razón Social son obligatorios.")
                     continue
-                
+
                 if len(ruc) != 11 or not ruc.startswith(('10', '15', '17', '20')):
                     errores_lectura.append(f"Fila {row_idx}: RUC '{ruc}' inválido.")
                     continue
-                
+
                 if email and not re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', email):
                     errores_lectura.append(f"Fila {row_idx}: Email '{email}' inválido.")
                     continue
-                    
+
                 proveedores_excel.append({
                     "ruc": ruc,
                     "razon_social": razon_social,
@@ -709,10 +711,10 @@ class ProveedoresWindow(QWidget):
             rucs_excel = {p['ruc'] for p in proveedores_excel}
             existentes_db = self.session.query(Proveedor).filter(Proveedor.ruc.in_(rucs_excel)).all()
             mapa_existentes = {p.ruc: p for p in existentes_db}
-            
+
             creados = 0
             actualizados = 0
-            
+
             for data in proveedores_excel:
                 ruc = data['ruc']
                 if ruc in mapa_existentes:
@@ -738,14 +740,14 @@ class ProveedoresWindow(QWidget):
                     self.session.add(prov)
                     mapa_existentes[ruc] = prov # Añadir al mapa para evitar duplicados del propio Excel
                     creados += 1
-            
+
             # 4. Commit y Reporte
             self.session.commit()
-            
+
             mensaje = f"Importación completada con éxito.\n\n" \
                       f"✅ Proveedores nuevos creados: {creados}\n" \
                       f"🔄 Proveedores existentes actualizados: {actualizados}\n\n"
-            
+
             if errores_lectura:
                 mensaje += f"⚠️ Se encontraron {len(errores_lectura)} errores que fueron omitidos:\n"
                 mensaje += "\n".join(errores_lectura[:10]) # Mostrar solo los primeros 10
@@ -764,12 +766,12 @@ class ProveedoresWindow(QWidget):
 # PRUEBA STANDALONE
 if __name__ == "__main__":
     from PyQt6.QtWidgets import QApplication
-    
+
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
-    
+
     ventana = ProveedoresWindow()
     ventana.resize(1200, 700)
     ventana.show()
-    
+
     sys.exit(app.exec())

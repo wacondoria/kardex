@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models.database_model import (obtener_session, Usuario, RolUsuario, 
                                    Empresa, UsuarioEmpresa)
+from utils.widgets import UpperLineEdit
 
 
 class UsuarioDialog(QDialog):
@@ -79,7 +80,7 @@ class UsuarioDialog(QDialog):
         form_layout.setSpacing(12)
         
         # Username
-        self.txt_username = QLineEdit()
+        self.txt_username = UpperLineEdit()
         self.txt_username.setPlaceholderText("Usuario para iniciar sesión")
         self.txt_username.setMaxLength(50)
         form_layout.addRow("Usuario:*", self.txt_username)
@@ -109,7 +110,7 @@ class UsuarioDialog(QDialog):
             form_layout.addRow("Contraseña:*", password_layout)
         
         # Nombre Completo
-        self.txt_nombre = QLineEdit()
+        self.txt_nombre = UpperLineEdit()
         self.txt_nombre.setPlaceholderText("Nombre completo del usuario")
         form_layout.addRow("Nombre Completo:*", self.txt_nombre)
         
@@ -399,7 +400,7 @@ class UsuariosWindow(QWidget):
         # Filtro
         filtro_layout = QHBoxLayout()
         
-        self.txt_buscar = QLineEdit()
+        self.txt_buscar = UpperLineEdit()
         self.txt_buscar.setPlaceholderText("🔍 Buscar por usuario o nombre...")
         self.txt_buscar.setStyleSheet("""
             QLineEdit {

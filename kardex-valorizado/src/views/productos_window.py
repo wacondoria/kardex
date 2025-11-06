@@ -4,7 +4,7 @@ Archivo: src/views/productos_window.py
 (Versión con QComboBox anidados para Prefijo y Nombre)
 """
 
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                              QPushButton, QTableWidget, QTableWidgetItem,
                              QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox,
                              QTextEdit, QCheckBox, QMessageBox, QDialog,
@@ -24,7 +24,7 @@ except ImportError:
     sys.exit(1)
 
 from sqlalchemy import or_, func
-from sqlalchemy.orm import joinedload 
+from sqlalchemy.orm import joinedload
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -32,7 +32,8 @@ try:
     from models.database_model import obtener_session, Producto, Categoria, MovimientoStock
 except ImportError:
     from models.database_model import obtener_session, Producto, Categoria
-    MovimientoStock = None 
+    MovimientoStock = None
+from utils.widgets import UpperLineEdit
 
 UNIDADES_SUNAT = [
     "UND - Unidad", "KG - Kilogramo", "GR - Gramo", "LT - Litro",
@@ -46,27 +47,27 @@ def generar_codigo_completo(session, prefijo):
     ultimo = session.query(Producto).filter(
         Producto.codigo.like(f"{prefijo}-%")
     ).order_by(Producto.codigo.desc()).first()
-    
+
     if ultimo:
         numero = int(ultimo.codigo.split('-')[1]) + 1
     else:
         numero = 1
-    
+
     return f"{prefijo}-{numero:06d}"
 
 
 class ProductoDialog(QDialog):
     """Diálogo para crear/editar productos"""
-    
-    producto_guardado = pyqtSignal() 
+
+    producto_guardado = pyqtSignal()
 
     def __init__(self, parent=None, producto=None):
         super().__init__(parent)
         self.session = obtener_session()
         self.producto = producto
-        self.nuevo_producto_id = None 
+        self.nuevo_producto_id = None
         self.init_ui()
-        
+
         if producto:
             self.cargar_datos_producto()
         else:
@@ -74,7 +75,7 @@ class ProductoDialog(QDialog):
             # --- MEJORA: Placeholder inicial para el QComboBox de nombre ---
             self.cmb_nombre.lineEdit().setPlaceholderText("Escriba un nombre o seleccione uno")
             self.cmb_nombre.setCurrentIndex(-1)
-    
+
     def init_ui(self):
         self.setWindowTitle("Nuevo Producto" if not self.producto else "Editar Producto")
         self.setFixedSize(600, 650)
@@ -91,25 +92,25 @@ class ProductoDialog(QDialog):
             /* --- MEJORA: Estilo para placeholder en QComboBox editable --- */
             QComboBox::placeholder { color: #999; }
             QComboBox QLineEdit::placeholder { color: #999; }
-            
+
             QComboBox:disabled, QLineEdit:disabled, QSpinBox:disabled, QDoubleSpinBox:disabled {
                 background-color: #f0f0f0;
                 color: #888;
             }
         """)
-        
+
         layout = QVBoxLayout()
         layout.setSpacing(15)
         layout.setContentsMargins(20, 20, 20, 20)
-        
+
         titulo = QLabel("📦 " + ("Nuevo Producto" if not self.producto else "Editar Producto"))
         titulo.setFont(QFont("Arial", 16, QFont.Weight.Bold))
         titulo.setStyleSheet("color: #1a73e8; padding: 10px;")
         layout.addWidget(titulo)
-        
+
         form_layout = QFormLayout()
         form_layout.setSpacing(10)
-        
+
         # --- CÓDIGO PREFIJO ---
         codigo_layout = QHBoxLayout()
         self.cmb_codigo = QComboBox()
@@ -120,9 +121,9 @@ class ProductoDialog(QDialog):
         validator = QRegularExpressionValidator(QRegularExpression("[A-Z0-9]{5}"))
         self.cmb_codigo.lineEdit().setValidator(validator)
         self.cmb_codigo.lineEdit().textChanged.connect(lambda text: self.cmb_codigo.lineEdit().setText(text.upper()))
-        
+
         self.cmb_codigo.currentTextChanged.connect(self.actualizar_siguiente_correlativo)
-        
+
         # --- MEJORA: Conectar señal para actualizar nombres por prefijo ---
         self.cmb_codigo.currentTextChanged.connect(self.actualizar_nombres_por_prefijo)
 
@@ -134,76 +135,77 @@ class ProductoDialog(QDialog):
         codigo_layout.addStretch()
 
         form_layout.addRow("Código (Prefijo):*", codigo_layout)
-        
+
         # --- MEJORA: QLineEdit a QComboBox editable para Nombre ---
         self.cmb_nombre = QComboBox()
         self.cmb_nombre.setEditable(True)
         self.cmb_nombre.setToolTip("Escriba un nombre nuevo o seleccione uno existente para editarlo")
+        self.cmb_nombre.lineEdit().textChanged.connect(lambda text: self.cmb_nombre.lineEdit().setText(text.upper()))
         # El placeholder se establece en init y en actualizar_nombres_por_prefijo
-        
+
         form_layout.addRow("Nombre:*", self.cmb_nombre)
         # --- FIN MEJORA ---
-        
+
         self.txt_descripcion = QTextEdit()
         self.txt_descripcion.setMaximumHeight(80)
         self.txt_descripcion.setPlaceholderText("Descripción detallada del producto")
         form_layout.addRow("Descripción:", self.txt_descripcion)
-        
+
         self.cmb_categoria = QComboBox()
         self.cargar_categorias() # Esto ahora también carga los prefijos
         form_layout.addRow("Categoría:*", self.cmb_categoria)
-        
+
         self.cmb_unidad = QComboBox()
         self.cmb_unidad.addItems(UNIDADES_SUNAT)
         form_layout.addRow("Unidad Medida:*", self.cmb_unidad)
-        
+
         self.spn_stock_min = QDoubleSpinBox()
         self.spn_stock_min.setRange(0, 999999)
         self.spn_stock_min.setDecimals(2)
         form_layout.addRow("Stock Mínimo:", self.spn_stock_min)
-        
+
         self.spn_precio_venta = QDoubleSpinBox()
         self.spn_precio_venta.setRange(0, 999999.99)
         self.spn_precio_venta.setDecimals(2)
         self.spn_precio_venta.setPrefix("S/ ")
         form_layout.addRow("Precio Venta:", self.spn_precio_venta)
-        
+
         config_group = QGroupBox("Configuración")
         config_layout = QVBoxLayout()
-        
+
         self.chk_tiene_lote = QCheckBox("Maneja Lotes")
         self.chk_tiene_serie = QCheckBox("Maneja Series")
-        
+
         vencimiento_layout = QHBoxLayout()
         self.chk_tiene_vencimiento = QCheckBox("Tiene Vencimiento")
         self.spn_dias_vencimiento = QSpinBox()
         self.spn_dias_vencimiento.setRange(0, 3650)
         self.spn_dias_vencimiento.setSuffix(" días")
         self.spn_dias_vencimiento.setEnabled(False)
-        
+
         self.chk_tiene_vencimiento.toggled.connect(self.spn_dias_vencimiento.setEnabled)
-        
+
         vencimiento_layout.addWidget(self.chk_tiene_vencimiento)
         vencimiento_layout.addWidget(self.spn_dias_vencimiento)
         vencimiento_layout.addStretch()
-        
+
         config_layout.addWidget(self.chk_tiene_lote)
         config_layout.addWidget(self.chk_tiene_serie)
         config_layout.addLayout(vencimiento_layout)
-        
+
         config_group.setLayout(config_layout)
-        
+
         layout.addLayout(form_layout)
         layout.addWidget(config_group)
-        
+
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
-        
+
         btn_cancelar = QPushButton("Cancelar")
         btn_cancelar.clicked.connect(self.reject)
         btn_guardar = QPushButton("Guardar")
         btn_guardar.clicked.connect(self.guardar)
-        
+
         # Estilos de botones (movidos aquí para referencia)
         btn_cancelar.setStyleSheet("""
             QPushButton { background-color: #f1f3f4; color: #333; padding: 10px 30px;
@@ -215,10 +217,10 @@ class ProductoDialog(QDialog):
                 border: none; border-radius: 5px; font-weight: bold; }
             QPushButton:hover { background-color: #1557b0; }
         """)
-        
+
         btn_layout.addWidget(btn_cancelar)
         btn_layout.addWidget(btn_guardar)
-        
+
         layout.addLayout(btn_layout)
         self.setLayout(layout)
 
@@ -227,60 +229,60 @@ class ProductoDialog(QDialog):
         """Carga los prefijos de 5 caracteres únicos de la base de datos."""
         try:
             codigos_tuplas = self.session.query(Producto.codigo).distinct().all()
-            
+
             prefijos_set = set()
             for (codigo,) in codigos_tuplas:
                 if codigo and '-' in codigo:
                     prefijo = codigo.split('-')[0]
                     if len(prefijo) == 5 and prefijo.isalnum():
                         prefijos_set.add(prefijo)
-            
+
             prefijos_ordenados = sorted(list(prefijos_set))
-            
+
             texto_actual = self.cmb_codigo.currentText()
-            
-            self.cmb_codigo.clear() 
+
+            self.cmb_codigo.clear()
             self.cmb_codigo.addItems(prefijos_ordenados)
-            
+
             if texto_actual in prefijos_ordenados:
                 self.cmb_codigo.setCurrentText(texto_actual)
             else:
                 self.cmb_codigo.setCurrentIndex(-1)
-            
+
         except Exception as e:
             print(f"Error al cargar prefijos: {e}")
     # --- FIN FUNCIÓN CORREGIDA ---
-    
+
     def cargar_categorias(self):
         categorias = self.session.query(Categoria).filter_by(activo=True).all()
         for cat in categorias:
             self.cmb_categoria.addItem(cat.nombre, cat.id)
-        
-        self.cargar_prefijos_existentes() 
-    
+
+        self.cargar_prefijos_existentes()
+
     def cargar_datos_producto(self):
         prefijo_actual = self.producto.codigo.split('-')[0]
-        
+
         self.cmb_codigo.setCurrentText(prefijo_actual)
-        self.cmb_codigo.setEnabled(False) 
+        self.cmb_codigo.setEnabled(False)
         self.lbl_codigo_completo.setText('-' + self.producto.codigo.split('-')[1])
-        
+
         # --- MEJORA: Cargar nombres para el prefijo y seleccionar el actual ---
         self.actualizar_nombres_por_prefijo_edicion(prefijo_actual)
         self.cmb_nombre.setCurrentText(self.producto.nombre)
         # --- FIN MEJORA ---
-        
+
         self.txt_descripcion.setPlainText(self.producto.descripcion or "")
-        
+
         index = self.cmb_categoria.findData(self.producto.categoria_id)
         if index >= 0:
             self.cmb_categoria.setCurrentIndex(index)
-        
+
         for i, item_text in enumerate(UNIDADES_SUNAT):
             if item_text.startswith(self.producto.unidad_medida):
                 self.cmb_unidad.setCurrentIndex(i)
                 break
-        
+
         if MovimientoStock:
             try:
                 movimiento_existente = self.session.query(MovimientoStock).filter_by(producto_id=self.producto.id).first()
@@ -293,25 +295,25 @@ class ProductoDialog(QDialog):
         self.spn_stock_min.setValue(self.producto.stock_minimo)
         if self.producto.precio_venta:
             self.spn_precio_venta.setValue(self.producto.precio_venta)
-        
+
         self.chk_tiene_lote.setChecked(self.producto.tiene_lote)
         self.chk_tiene_serie.setChecked(self.producto.tiene_serie)
-        
+
         if self.producto.dias_vencimiento:
             self.chk_tiene_vencimiento.setChecked(True)
             self.spn_dias_vencimiento.setValue(self.producto.dias_vencimiento)
-    
+
     def actualizar_siguiente_correlativo(self, prefijo):
         """Actualiza la etiqueta del correlativo dinámicamente."""
         if self.cmb_codigo.isEnabled() == False:
-            return 
-            
+            return
+
         prefijo = prefijo.strip().upper()
-        
+
         if len(prefijo) != 5:
             self.lbl_codigo_completo.setText("-(inválido)")
             return
-        
+
         try:
             codigo_completo = generar_codigo_completo(self.session, prefijo)
             sufijo = codigo_completo.split('-')[1]
@@ -327,37 +329,37 @@ class ProductoDialog(QDialog):
             return # No hacer nada si estamos en modo edición (ya lo hizo cargar_datos)
 
         prefijo = prefijo.strip().upper()
-        
+
         # Guardar el texto que el usuario pudo haber escrito
         texto_actual = self.cmb_nombre.currentText()
-        
+
         self.cmb_nombre.clear()
-        
+
         placeholder = "Escriba un nombre nuevo"
-        
+
         if len(prefijo) == 5:
             try:
                 nombres = self.session.query(Producto.nombre).filter(
                     Producto.codigo.like(f"{prefijo}-%"),
                     Producto.activo == True
                 ).order_by(Producto.nombre).all()
-                
+
                 lista_nombres = [nombre[0] for nombre in nombres]
                 self.cmb_nombre.addItems(lista_nombres)
-                
+
                 if lista_nombres:
                     placeholder = "Escriba o seleccione un nombre"
-                
+
             except Exception as e:
                 print(f"Error al cargar nombres por prefijo: {e}")
-        
+
         # Restaurar el texto y el placeholder
         self.cmb_nombre.setCurrentText(texto_actual)
         if self.cmb_nombre.lineEdit(): # Asegurarse de que el lineEdit exista
             self.cmb_nombre.lineEdit().setPlaceholderText(placeholder)
         self.cmb_nombre.setCurrentIndex(-1 if texto_actual else 0) # <-- Ajuste
         self.cmb_nombre.setCurrentText(texto_actual) # Volver a poner el texto
-            
+
     def actualizar_nombres_por_prefijo_edicion(self, prefijo):
         """Versión de 'actualizar_nombres_por_prefijo' para modo edición (sin checks)."""
         self.cmb_nombre.clear()
@@ -373,48 +375,48 @@ class ProductoDialog(QDialog):
     # --- FIN MEJORA ---
 
     def guardar(self):
-        codigo_prefijo = self.cmb_codigo.currentText().strip().upper() 
-        
+        codigo_prefijo = self.cmb_codigo.currentText().strip().upper()
+
         # --- MEJORA: Leer el nombre desde el QComboBox ---
         nombre = self.cmb_nombre.currentText().strip()
         # --- FIN MEJORA ---
-        
+
         categoria_id = self.cmb_categoria.currentData()
         unidad = self.cmb_unidad.currentText().split(' - ')[0]
-        
+
         if len(codigo_prefijo) != 5:
             QMessageBox.warning(self, "Error", "El prefijo del código debe tener 5 caracteres")
             return
-        
+
         if not nombre:
             QMessageBox.warning(self, "Error", "El nombre es obligatorio")
             return
-        
+
         if not categoria_id:
             QMessageBox.warning(self, "Error", "Debe seleccionar una categoría")
             return
-        
+
         try:
             if not self.producto:
                 # --- LÓGICA DE CREACIÓN ---
                 codigo_completo = generar_codigo_completo(self.session, codigo_prefijo)
-                
+
                 existe = self.session.query(Producto).filter_by(codigo=codigo_completo).first()
                 if existe:
                     QMessageBox.warning(self, "Error", f"El código {codigo_completo} ya existe. Intente de nuevo (el correlativo se actualizará).")
                     self.actualizar_siguiente_correlativo(codigo_prefijo)
                     return
-                
+
                 # --- MEJORA: Validar nombre + prefijo ---
                 existe_nombre = self.session.query(Producto).filter(
-                    Producto.nombre == nombre, 
+                    Producto.nombre == nombre,
                     Producto.codigo.like(f"{codigo_prefijo}-%"),
                     Producto.activo == True # --- Añadido por si acaso ---
                 ).first()
                 if existe_nombre:
                         QMessageBox.warning(self, "Error", f"Ya existe un producto activo con el nombre '{nombre}' y el prefijo '{codigo_prefijo}'.")
                         return
-                
+
                 producto = Producto(
                     codigo=codigo_completo,
                     nombre=nombre,
@@ -427,19 +429,19 @@ class ProductoDialog(QDialog):
                     tiene_serie=self.chk_tiene_serie.isChecked(),
                     dias_vencimiento=self.spn_dias_vencimiento.value() if self.chk_tiene_vencimiento.isChecked() else None
                 )
-                
+
                 self.session.add(producto)
-                self.session.flush() 
-                self.nuevo_producto_id = producto.id 
+                self.session.flush()
+                self.nuevo_producto_id = producto.id
                 mensaje = "Producto creado exitosamente"
             else:
                 # --- LÓGICA DE EDICIÓN ---
                 self.producto = self.session.merge(self.producto)
-                
+
                 # --- MEJORA: Validar nombre duplicado al editar (excluyendo el propio producto) ---
                 if self.producto.nombre != nombre: # Solo si el nombre cambió
                     existe_nombre = self.session.query(Producto).filter(
-                        Producto.nombre == nombre, 
+                        Producto.nombre == nombre,
                         Producto.codigo.like(f"{codigo_prefijo}-%"),
                         Producto.id != self.producto.id, # Excluirse a sí mismo
                         Producto.activo == True
@@ -448,34 +450,34 @@ class ProductoDialog(QDialog):
                         QMessageBox.warning(self, "Error", f"Ya existe OTRO producto activo con el nombre '{nombre}' y el prefijo '{codigo_prefijo}'.")
                         return
                 # --- FIN MEJORA ---
-                
+
                 self.producto.nombre = nombre
                 self.producto.descripcion = self.txt_descripcion.toPlainText()
                 self.producto.categoria_id = categoria_id
-                
+
                 if self.cmb_unidad.isEnabled():
                     self.producto.unidad_medida = unidad
-                    
+
                 self.producto.stock_minimo = self.spn_stock_min.value()
                 self.producto.precio_venta = self.spn_precio_venta.value() if self.spn_precio_venta.value() > 0 else None
                 self.producto.tiene_lote = self.chk_tiene_lote.isChecked()
                 self.producto.tiene_serie = self.chk_tiene_serie.isChecked()
                 self.producto.dias_vencimiento = self.spn_dias_vencimiento.value() if self.chk_tiene_vencimiento.isChecked() else None
-                
+
                 mensaje = "Producto actualizado exitosamente"
-            
+
             self.session.commit()
             QMessageBox.information(self, "Éxito", mensaje)
-            
-            self.producto_guardado.emit() 
-            self.session.close() 
+
+            self.producto_guardado.emit()
+            self.session.close()
             self.accept()
-            
+
         except Exception as e:
             self.session.rollback()
             QMessageBox.critical(self, "Error", f"Error al guardar:\n{str(e)}")
-            self.session.close() 
-    
+            self.session.close()
+
     def reject(self):
         print("DEBUG: Diálogo de producto cancelado, cerrando sesión.")
         self.session.close()
@@ -484,28 +486,28 @@ class ProductoDialog(QDialog):
 
 class ProductosWindow(QWidget):
     """Ventana principal de gestión de productos"""
-    
+
     def __init__(self, user_info=None):
         super().__init__()
         self.session = obtener_session()
         self.user_info = user_info
         self.init_ui()
         self.cargar_productos()
-    
+
     def init_ui(self):
         self.setWindowTitle("Gestión de Productos")
-        
+
         layout = QVBoxLayout()
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
-        
+
         # Header
         header_layout = QHBoxLayout()
-        
+
         titulo = QLabel("📦 Gestión de Productos")
         titulo.setFont(QFont("Arial", 18, QFont.Weight.Bold))
         titulo.setStyleSheet("color: #1a73e8;")
-        
+
         btn_nuevo = QPushButton("➕ Nuevo Producto")
         btn_nuevo.setStyleSheet("""
             QPushButton { background-color: #1a73e8; color: white; padding: 10px 20px;
@@ -513,7 +515,7 @@ class ProductosWindow(QWidget):
             QPushButton:hover { background-color: #1557b0; }
         """)
         btn_nuevo.clicked.connect(self.nuevo_producto)
-        
+
         secondary_btn_style = """
             QPushButton {
                 background-color: #1D6F42; /* Excel Green */
@@ -525,7 +527,7 @@ class ProductosWindow(QWidget):
             }
             QPushButton:hover { background-color: #185C37; }
         """
-        
+
         btn_plantilla = QPushButton("📄 Generar Plantilla")
         btn_plantilla.setStyleSheet(secondary_btn_style)
         btn_plantilla.setToolTip("Generar plantilla Excel para importación masiva")
@@ -549,64 +551,64 @@ class ProductosWindow(QWidget):
         header_layout.addWidget(btn_plantilla)
         header_layout.addWidget(btn_importar)
         header_layout.addWidget(btn_nuevo)
-        
+
         # Búsqueda
         search_layout = QHBoxLayout()
-        
-        self.txt_buscar = QLineEdit()
+
+        self.txt_buscar = UpperLineEdit()
         self.txt_buscar.setPlaceholderText("🔍 Buscar por código, nombre o categoría...")
         self.txt_buscar.setStyleSheet("""
             QLineEdit { padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 12px; }
             QLineEdit:focus { border: 2px solid #1a73e8; }
         """)
         self.txt_buscar.textChanged.connect(self.buscar_productos)
-        
+
         self.cmb_categoria_filtro = QComboBox()
         self.cmb_categoria_filtro.setStyleSheet("padding: 8px; min-width: 200px;")
         self.cargar_categorias_filtro()
         self.cmb_categoria_filtro.currentIndexChanged.connect(self.buscar_productos)
-        
+
         search_layout.addWidget(self.txt_buscar, 3)
         search_layout.addWidget(self.cmb_categoria_filtro, 1)
-        
+
         # Tabla
         self.tabla = QTableWidget()
         self.tabla.setColumnCount(8)
         self.tabla.setHorizontalHeaderLabels([
-            "Código", "Nombre", "Categoría", "Unidad", "Stock Mín.", 
+            "Código", "Nombre", "Categoría", "Unidad", "Stock Mín.",
             "Lote", "Serie", "Acciones"
         ])
-        
+
         self.tabla.setStyleSheet("""
             QTableWidget { border: 1px solid #ddd; border-radius: 5px; background-color: white; }
             QHeaderView::section { background-color: #f1f3f4; padding: 10px;
                 border: none; font-weight: bold; }
         """)
-        
+
         header = self.tabla.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(7, QHeaderView.ResizeMode.Fixed)
         self.tabla.setColumnWidth(7, 150)
-        
+
         self.tabla.setAlternatingRowColors(True)
         self.tabla.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.tabla.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        
+
         layout.addLayout(header_layout)
         layout.addLayout(search_layout)
         layout.addWidget(self.tabla)
-        
+
         self.setLayout(layout)
-    
+
     def cargar_categorias_filtro(self):
         self.cmb_categoria_filtro.clear()
         self.cmb_categoria_filtro.addItem("Todas las categorías", None)
         categorias = self.session.query(Categoria).filter_by(activo=True).order_by(Categoria.nombre).all()
         for cat in categorias:
             self.cmb_categoria_filtro.addItem(cat.nombre, cat.id)
-            
+
     def cargar_productos(self):
         try:
             self.session.expire_all()
@@ -617,26 +619,26 @@ class ProductosWindow(QWidget):
         except Exception as e:
             print(f"Error al recargar productos: {e}")
             self.session.rollback()
-            self.session = obtener_session() 
+            self.session = obtener_session()
             productos = self.session.query(Producto).options(
                 joinedload(Producto.categoria)
             ).filter_by(activo=True).order_by(Producto.nombre).all()
             self.mostrar_productos(productos)
-    
+
     def mostrar_productos(self, productos):
         self.tabla.setRowCount(0)
         self.tabla.setRowCount(len(productos))
-        
+
         for row, prod in enumerate(productos):
             self.tabla.setItem(row, 0, QTableWidgetItem(prod.codigo))
             self.tabla.setItem(row, 1, QTableWidgetItem(prod.nombre))
-            
+
             cat_nombre = prod.categoria.nombre if prod.categoria else "N/A"
             self.tabla.setItem(row, 2, QTableWidgetItem(cat_nombre))
-            
+
             self.tabla.setItem(row, 3, QTableWidgetItem(prod.unidad_medida))
             self.tabla.setItem(row, 4, QTableWidgetItem(str(prod.stock_minimo)))
-            
+
             check_lote = QTableWidgetItem("✓" if prod.tiene_lote else "✗")
             check_lote.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.tabla.setItem(row, 5, check_lote)
@@ -644,12 +646,12 @@ class ProductosWindow(QWidget):
             check_serie = QTableWidgetItem("✓" if prod.tiene_serie else "✗")
             check_serie.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.tabla.setItem(row, 6, check_serie)
-            
+
             btn_widget = QWidget()
             btn_layout = QHBoxLayout()
             btn_layout.setContentsMargins(5, 5, 5, 5)
             btn_layout.setSpacing(5)
-            
+
             btn_editar = QPushButton("Editar")
             btn_editar.setStyleSheet("""
                 QPushButton { background-color: #34a853; color: white; padding: 5px 10px;
@@ -657,7 +659,7 @@ class ProductosWindow(QWidget):
                 QPushButton:hover { background-color: #2d8e47; }
             """)
             btn_editar.clicked.connect(lambda checked, p=prod: self.editar_producto(p))
-            
+
             btn_eliminar = QPushButton("Eliminar")
             btn_eliminar.setStyleSheet("""
                 QPushButton { background-color: #ea4335; color: white; padding: 5px 10px;
@@ -665,7 +667,7 @@ class ProductosWindow(QWidget):
                 QPushButton:hover { background-color: #c5221f; }
             """)
             btn_eliminar.clicked.connect(lambda checked, p=prod: self.eliminar_producto(p))
-            
+
             if self.user_info and self.user_info.get('licencia_vencida'):
                 btn_editar.setEnabled(False)
                 btn_eliminar.setEnabled(False)
@@ -674,43 +676,43 @@ class ProductosWindow(QWidget):
             btn_layout.addWidget(btn_eliminar)
             btn_layout.addStretch()
             btn_widget.setLayout(btn_layout)
-            
+
             self.tabla.setCellWidget(row, 7, btn_widget)
-    
+
     def buscar_productos(self):
         texto = self.txt_buscar.text().strip()
         categoria_id = self.cmb_categoria_filtro.currentData()
-        
+
         try:
             query = self.session.query(Producto).options(
                 joinedload(Producto.categoria)
             ).filter(Producto.activo == True)
-            
+
             if categoria_id:
                 query = query.filter_by(categoria_id=categoria_id)
-            
+
             if texto:
                 search_text = f"%{texto}%"
                 query = query.join(Categoria).filter(
                     or_(
                         Producto.codigo.ilike(search_text),
                         Producto.nombre.ilike(search_text),
-                        Categoria.nombre.ilike(search_text) 
+                        Categoria.nombre.ilike(search_text)
                     )
                 )
-            
+
             productos = query.order_by(Producto.nombre).all()
             self.mostrar_productos(productos)
-            
+
         except Exception as e:
             QMessageBox.critical(self, "Error de Búsqueda", f"Error al consultar la base de datos:\n{e}")
 
-    
+
     def nuevo_producto(self):
         dialog = ProductoDialog(self)
         dialog.producto_guardado.connect(self.recargar_datos)
         dialog.exec()
-    
+
     def editar_producto(self, producto):
         dialog = ProductoDialog(self, producto)
         dialog.producto_guardado.connect(self.recargar_datos)
@@ -721,24 +723,24 @@ class ProductosWindow(QWidget):
         print("DEBUG: Señal recibida, recargando productos y categorías...")
         self.cargar_productos()
         self.cargar_categorias_filtro()
-    
+
     def eliminar_producto(self, producto):
         """Elimina (desactiva) un producto, validando movimientos primero"""
-        
+
         if MovimientoStock is None:
             print("Advertencia: No se pudo importar 'MovimientoStock'. "
                   "Se omitirá la validación de movimientos al eliminar.")
         else:
             try:
                 movimiento_existente = self.session.query(MovimientoStock).filter_by(producto_id=producto.id).first()
-                
+
                 if movimiento_existente:
                     QMessageBox.warning(self, "Eliminación Bloqueada",
                         f"No se puede eliminar el producto '{producto.nombre}'.\n\n"
                         "Este producto ya tiene movimientos de Kardex registrados. "
                         "Desactivarlo podría causar inconsistencias en los reportes.")
-                    return 
-            
+                    return
+
             except Exception as e:
                 self.session.rollback()
                 QMessageBox.critical(self, "Error de Validación",
@@ -752,7 +754,7 @@ class ProductosWindow(QWidget):
             "El producto se desactivará pero se mantendrá en el historial.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
-        
+
         if respuesta == QMessageBox.StandardButton.Yes:
             try:
                 producto_a_eliminar = self.session.merge(producto)
@@ -776,7 +778,7 @@ class ProductosWindow(QWidget):
             "plantilla_productos.xlsx",
             "Archivos de Excel (*.xlsx)"
         )
-        
+
         if not path:
             return
 
@@ -800,7 +802,7 @@ class ProductosWindow(QWidget):
                 cell.font = header_font
                 cell.fill = PatternFill(start_color=header_fill, end_color=header_fill, fill_type="solid")
                 cell.alignment = header_align
-            
+
             dv_sino = DataValidation(type="list", formula1='"SI,NO"', allow_blank=True)
             ws.add_data_validation(dv_sino)
             dv_sino.add('H2:J1000')
@@ -809,7 +811,7 @@ class ProductosWindow(QWidget):
             dv_unidad = DataValidation(type="list", formula1=f'"{",".join(unidades_codigos)}"', allow_blank=False)
             ws.add_data_validation(dv_unidad)
             dv_unidad.add('E2:E1000')
-            
+
             categorias = self.session.query(Categoria).filter_by(activo=True).all()
             cat_nombres = [c.nombre.replace('"', "''") for c in categorias]
             if cat_nombres:
@@ -853,18 +855,18 @@ class ProductosWindow(QWidget):
             "",
             "Archivos de Excel (*.xlsx *.xls)"
         )
-        
+
         if not path:
             return
 
         try:
             wb = load_workbook(path, data_only=True)
-            
+
             if "Productos" not in wb.sheetnames:
                 QMessageBox.critical(self, "Error de Hoja",
                     "No se encontró la hoja llamada 'Productos' en el archivo.")
                 return
-                
+
             ws = wb["Productos"]
 
             # 1. Validar encabezados
@@ -886,7 +888,7 @@ class ProductosWindow(QWidget):
             # 2. Leer datos del Excel
             productos_a_crear = []
             errores_lectura = []
-            
+
             categorias_db = self.session.query(Categoria).filter_by(activo=True).all()
             cat_map = {cat.nombre.upper(): cat.id for cat in categorias_db}
             unidades_validas = [u.split(' - ')[0] for u in UNIDADES_SUNAT]
@@ -895,7 +897,7 @@ class ProductosWindow(QWidget):
             for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
                 if all(c is None for c in row):
                     break
-                
+
                 try:
                     codigo_prefijo = str(row[0]).strip().upper() if row[0] else ""
                     nombre = str(row[1]).strip() if row[1] else ""
@@ -910,30 +912,30 @@ class ProductosWindow(QWidget):
                     dias_venc_str = str(row[10]).strip() if row[10] else "0"
 
                     if not codigo_prefijo and not nombre:
-                        continue 
+                        continue
 
                     if len(codigo_prefijo) != 5:
                         raise ValueError(f"Código prefijo debe tener 5 caracteres. Se recibió: '{codigo_prefijo}'")
                     if not nombre:
                         raise ValueError("El Nombre es obligatorio.")
-                    
+
                     categoria_id = cat_map.get(categoria_nombre)
                     if not categoria_id:
                         raise ValueError(f"Categoría '{row[3]}' no encontrada o inactiva.")
-                    
+
                     if unidad not in unidades_validas:
                         raise ValueError(f"Unidad_Medida '{unidad}' no es válida.")
 
                     try: stock_min = float(stock_min_str)
                     except ValueError: raise ValueError(f"Stock Mínimo '{stock_min_str}' no es un número.")
-                    
+
                     try: precio_venta = float(precio_venta_str)
                     except ValueError: raise ValueError(f"Precio Venta '{precio_venta_str}' no es un número.")
 
                     tiene_lote = maneja_lote_str == "SI"
                     tiene_serie = maneja_serie_str == "SI"
                     tiene_vencimiento = tiene_venc_str == "SI"
-                    
+
                     dias_vencimiento = None
                     if tiene_vencimiento:
                         try: dias_vencimiento = int(dias_venc_str)
@@ -941,7 +943,7 @@ class ProductosWindow(QWidget):
                         if dias_vencimiento <= 0:
                             tiene_vencimiento = False
                             dias_vencimiento = None
-                    
+
                     if (codigo_prefijo, nombre) in nombres_prefijos_excel:
                         raise ValueError(f"Duplicado en Excel: Prefijo '{codigo_prefijo}' y Nombre '{nombre}' repetidos.")
                     nombres_prefijos_excel.add((codigo_prefijo, nombre))
@@ -955,16 +957,16 @@ class ProductosWindow(QWidget):
 
                 except Exception as e:
                     errores_lectura.append(f"Fila {row_idx}: {str(e)}")
-            
+
             if not productos_a_crear and not errores_lectura:
                 QMessageBox.warning(self, "Archivo Vacío", "No se encontraron datos de productos válidos en el archivo.")
                 return
 
             # 3. Procesar datos (Solo Creación, optimizado)
             creados = 0
-            correlativos_map = {} 
+            correlativos_map = {}
             nombres_prefijos_db = {
-                (p.codigo.split('-')[0], p.nombre) 
+                (p.codigo.split('-')[0], p.nombre)
                 for p in self.session.query(Producto).filter_by(activo=True).all()
             }
 
@@ -972,7 +974,7 @@ class ProductosWindow(QWidget):
                 try:
                     prefijo = data['prefijo']
                     nombre = data['nombre']
-                    
+
                     if (prefijo, nombre) in nombres_prefijos_db:
                         raise ValueError(f"Ya existe un producto con Prefijo '{prefijo}' y Nombre '{nombre}' en la BD.")
 
@@ -981,7 +983,7 @@ class ProductosWindow(QWidget):
                             Producto.codigo.like(f"{prefijo}-%")
                         ).order_by(Producto.codigo.desc()).first()
                         correlativos_map[prefijo] = int(ultimo.codigo.split('-')[1]) if ultimo else 0
-                    
+
                     correlativos_map[prefijo] += 1
                     numero = correlativos_map[prefijo]
                     codigo_completo = f"{prefijo}-{numero:06d}"
@@ -998,19 +1000,19 @@ class ProductosWindow(QWidget):
                         tiene_serie=data['serie'],
                         dias_vencimiento=data['dias_venc']
                     )
-                    
+
                     self.session.add(producto)
                     creados += 1
-                
+
                 except Exception as e:
                     errores_lectura.append(f"Fila {data['fila']} (Procesando): {str(e)}")
 
             # 4. Commit y Reporte
             self.session.commit()
-            
+
             mensaje = f"Importación completada.\n\n" \
                       f"✅ Productos nuevos creados: {creados}\n"
-            
+
             if errores_lectura:
                 mensaje += f"\n⚠️ Se encontraron {len(errores_lectura)} errores que fueron omitidos:\n"
                 mensaje += "\n".join(errores_lectura[:10])
@@ -1030,20 +1032,20 @@ class ProductosWindow(QWidget):
 # PRUEBA STANDALONE
 if __name__ == "__main__":
     from PyQt6.QtWidgets import QApplication
-    
+
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
-    
+
     simulated_user_info = {
         'id': 1,
         'username': 'admin',
         'nombre_completo': 'Administrador',
         'rol': 'ADMINISTRADOR',
-        'licencia_vencida': False 
+        'licencia_vencida': False
     }
     ventana = ProductosWindow(user_info=simulated_user_info)
-    
+
     ventana.resize(1200, 700)
     ventana.show()
-    
+
     sys.exit(app.exec())
