@@ -1,0 +1,9 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+
+# DB files
+kardex.db
+
+# Excel temp files
+~$*.xlsx
