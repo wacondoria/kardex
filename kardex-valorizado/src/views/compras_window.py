@@ -1419,13 +1419,8 @@ class ComprasWindow(QWidget):
             self.cmb_mes_filtro.addItem(mes, i + 1) # Guardar el número de mes (1-12)
         self.cmb_mes_filtro.setCurrentIndex(mes_actual - 1) # Seleccionar mes actual
 
-        self.spn_anio_filtro = QSpinBox()
-        self.spn_anio_filtro.setRange(2020, 2040)
-        self.spn_anio_filtro.setValue(app_context.get_selected_year())
-
         # Conectar señales
         self.cmb_mes_filtro.currentIndexChanged.connect(self.cargar_compras)
-        self.spn_anio_filtro.valueChanged.connect(self.cargar_compras)
         # --- FIN NUEVOS FILTROS ---
 
         self.cmb_proveedor_filtro = QComboBox()
@@ -1455,7 +1450,6 @@ class ComprasWindow(QWidget):
 
         # Añadir widgets al layout de filtros
         filtro_layout.addWidget(self.cmb_mes_filtro)
-        filtro_layout.addWidget(self.spn_anio_filtro)
         filtro_layout.addWidget(self.cmb_proveedor_filtro)
         filtro_layout.addWidget(self.cmb_vista_moneda)
         filtro_layout.addStretch()
@@ -1560,7 +1554,7 @@ class ComprasWindow(QWidget):
         """Carga las compras usando una nueva sesión y filtros de periodo contable."""
 
         mes_sel = self.cmb_mes_filtro.currentData()
-        anio_sel = self.spn_anio_filtro.value()
+        anio_sel = app_context.get_selected_year()
 
         primer_dia, num_dias = calendar.monthrange(anio_sel, mes_sel)
         fecha_desde = date(anio_sel, mes_sel, 1)
