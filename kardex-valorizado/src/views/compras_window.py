@@ -647,7 +647,8 @@ class CompraDialog(QDialog):
         """Guarda una compra nueva o actualiza una existente, ajustando el Kardex."""
         try:
             fecha_doc = self.date_fecha.date().toPyDate()
-            verificar_estado_anio(fecha_doc)
+            fecha_contable = self.date_fecha_contable.date().toPyDate()
+            verificar_estado_anio(fecha_contable)
 
             if not self.cmb_proveedor.currentData():
                 QMessageBox.warning(self, "Error", "Seleccione un proveedor")
@@ -958,8 +959,6 @@ class CompraDialog(QDialog):
             self.date_fecha.setDate(QDate(self.compra_original.fecha.year,
                                            self.compra_original.fecha.month,
                                            self.compra_original.fecha.day))
-            self.date_fecha.setEnabled(False)
-            self.date_fecha.setToolTip("La fecha de emisión no se puede editar para mantener la integridad del Kardex.")
 
             fecha_contable_guardada = getattr(self.compra_original, 'fecha_registro_contable', None)
             if fecha_contable_guardada:
