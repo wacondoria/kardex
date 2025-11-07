@@ -1,6 +1,7 @@
 """
 Pantalla de Login - Sistema Kardex Valorizado
 Archivo: src/views/login_window.py
+(Con nuevo tema de estilo corporativo)
 """
 
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QLineEdit,
@@ -18,6 +19,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from models.database_model import (obtener_session, Usuario, Licencia,
                                    AnioContable, EstadoAnio)
 from utils.app_context import app_context
+
+# --- NO SE USA EL TEMA OSCURO ---
+# from utils.theme import DARK_THEME_QSS 
 
 
 class LoginWindow(QWidget):
@@ -37,35 +41,133 @@ class LoginWindow(QWidget):
     def init_ui(self):
         """Inicializa la interfaz de usuario"""
         self.setWindowTitle("Kardex Valorizado - Iniciar Sesión")
-        self.setFixedSize(450, 650) # Aumentar altura para el selector de año
+        self.setFixedSize(450, 650) 
+        
+        # --- NUEVA HOJA DE ESTILO (QSS) BASADA EN LAS CAPTURAS ---
         self.setStyleSheet("""
-            QWidget {
-                background-color: #f0f2f5;
+            /* --- Base de la Ventana --- */
+            /* Usamos objectName para que el fondo gris no afecte los QFrame */
+            QWidget#LoginWindow {
+                background-color: #EEEEEE; /* Fondo gris claro (como el de TR) */
+            }
+
+            /* --- Contenedores (Fondo Blanco) --- */
+            QFrame {
+                background-color: white;
+                border-radius: 10px;
+                padding: 30px;
+            }
+
+            /* --- Títulos (Logo) --- */
+            QLabel#titulo {
+                color: #1a73e8; /* Mantenemos tu azul original para el logo */
+                padding: 10px;
+                font-size: 24px;
+                font-weight: bold;
+                font-family: Arial;
+            }
+            QLabel#subtitulo {
+                color: #5f6368;
+                padding-bottom: 10px;
+                font-size: 11px;
+                font-family: Arial;
+            }
+            
+            /* --- Etiquetas (Usuario, Contraseña, Año) --- */
+            QLabel {
+                color: #003366; /* Azul corporativo oscuro (como el de TR) */
+                font-weight: bold;
+                font-size: 11px;
+                font-family: Arial;
+            }
+
+            /* --- Campos de Entrada --- */
+            QLineEdit, QComboBox {
+                background-color: white;
+                border: 1px solid #BDBDBD; /* Borde gris estándar */
+                border-radius: 4px;
+                padding: 8px;
+                color: #333333; /* Texto dentro del campo */
+                font-size: 11px;
+                font-family: Arial;
+            }
+            QLineEdit:focus, QComboBox:focus {
+                border: 1px solid #005A9C; /* Borde azul oscuro al seleccionar */
+            }
+            QLineEdit::placeholder {
+                color: #AAAAAA;
+            }
+
+            /* --- Estilo de la lista del ComboBox --- */
+            QComboBox QAbstractItemView {
+                background-color: white;
+                border: 1px solid #BDBDBD;
+                selection-background-color: #005A9C; /* Fondo azul al seleccionar item */
+                selection-color: white;
+            }
+
+            /* --- Botones --- */
+            QPushButton {
+                background-color: #E0E0E0; /* Fondo gris claro, como el botón 'Ingresar' de TR */
+                color: #003366; /* Texto azul */
+                border: 1px solid #BDBDBD;
+                border-radius: 4px;
+                padding: 10px 15px;
+                font-weight: bold;
+                font-size: 11px;
+                font-family: Arial;
+            }
+            QPushButton:hover {
+                background-color: #E8E8E8; /* Un poco más claro al pasar el mouse */
+                border-color: #AAAAAA;
+            }
+            QPushButton:pressed {
+                background-color: #D0D0D0; /* Un poco más oscuro al presionar */
+            }
+            
+            /* Botón por defecto (Aceptar e Ingresar) - lo hacemos un poco más oscuro */
+            QPushButton:default {
+                background-color: #D5D5D5;
+                border: 1px solid #ADADAD;
+            }
+
+            /* --- Mensaje de Licencia --- */
+            QLabel#lbl_licencia {
+                color: #333333;
+                font-weight: normal;
+                font-size: 9px;
+            }
+            
+            /* --- Footer --- */
+            QLabel#footer {
+                color: #9aa0a6;
+                font-weight: normal;
+                font-size: 8px;
             }
         """)
+        
+        # --- Asignar objectName para que el QSS funcione ---
+        self.setObjectName("LoginWindow") 
 
         # Layout principal
         layout = QVBoxLayout()
         layout.setContentsMargins(40, 40, 40, 40)
         layout.setSpacing(20)
-
-        # Espaciador superior
         layout.addStretch()
 
         # === LOGO / TÍTULO ===
         logo_frame = QFrame()
-        logo_frame.setStyleSheet("background-color: white; border-radius: 10px; padding: 30px;")
         logo_layout = QVBoxLayout(logo_frame)
 
-        titulo = QLabel("📦 KARDEX VALORIZADO")
+        titulo = QLabel("📦 KARDEX ")
+        titulo.setObjectName("titulo") # <-- objectName añadido
         titulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        titulo.setFont(QFont("Arial", 24, QFont.Weight.Bold))
-        titulo.setStyleSheet("color: #1a73e8; padding: 10px;")
+        # Se quita el setStyleSheet de aquí
 
         subtitulo = QLabel("Sistema de Gestión de Inventarios")
+        subtitulo.setObjectName("subtitulo") # <-- objectName añadido
         subtitulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        subtitulo.setFont(QFont("Arial", 11))
-        subtitulo.setStyleSheet("color: #5f6368; padding-bottom: 10px;")
+        # Se quita el setStyleSheet de aquí
 
         logo_layout.addWidget(titulo)
         logo_layout.addWidget(subtitulo)
@@ -73,46 +175,38 @@ class LoginWindow(QWidget):
 
         # === FORMULARIO ===
         self.form_frame = QFrame()
-        self.form_frame.setStyleSheet("background-color: white; border-radius: 10px; padding: 30px;")
         form_layout = QVBoxLayout(self.form_frame)
         form_layout.setSpacing(15)
 
         # --- Campos de Usuario y Contraseña ---
         user_label = QLabel("Usuario")
-        user_label.setFont(QFont("Arial", 10, QFont.Weight.Bold))
+        # Se quita el setFont de aquí (controlado por QSS)
         self.txt_usuario = QLineEdit()
         self.txt_usuario.setPlaceholderText("Ingrese su usuario")
-        self.txt_usuario.setFont(QFont("Arial", 11))
         self.txt_usuario.returnPressed.connect(self.verificar_credenciales)
 
         pass_label = QLabel("Contraseña")
-        pass_label.setFont(QFont("Arial", 10, QFont.Weight.Bold))
         self.txt_password = QLineEdit()
         self.txt_password.setPlaceholderText("Ingrese su contraseña")
         self.txt_password.setEchoMode(QLineEdit.EchoMode.Password)
-        self.txt_password.setFont(QFont("Arial", 11))
         self.txt_password.returnPressed.connect(self.verificar_credenciales)
 
         # Botón para verificar credenciales
         self.btn_verificar = QPushButton("Siguiente")
-        self.btn_verificar.setFont(QFont("Arial", 11, QFont.Weight.Bold))
         self.btn_verificar.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_verificar.clicked.connect(self.verificar_credenciales)
 
         # --- Selector de Año (inicialmente oculto) ---
         self.anio_label = QLabel("Seleccionar Año de Trabajo")
-        self.anio_label.setFont(QFont("Arial", 10, QFont.Weight.Bold))
         self.anio_combo = QComboBox()
-        self.anio_combo.setFont(QFont("Arial", 11))
         self.anio_combo.setPlaceholderText("Cargando años...")
+        
         self.btn_aceptar = QPushButton("Aceptar e Ingresar")
-        self.btn_aceptar.setFont(QFont("Arial", 11, QFont.Weight.Bold))
         self.btn_aceptar.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_aceptar.setDefault(True)
+        self.btn_aceptar.setDefault(True) # <-- Esto activa el estilo :default
         self.btn_aceptar.clicked.connect(self.finalizar_login)
         self.anio_combo.activated.connect(self.finalizar_login)
 
-        # Ocultar widgets de selección de año al inicio
         self.anio_label.hide()
         self.anio_combo.hide()
         self.btn_aceptar.hide()
@@ -132,8 +226,8 @@ class LoginWindow(QWidget):
 
         # === INFO DE LICENCIA ===
         self.lbl_licencia = QLabel()
+        self.lbl_licencia.setObjectName("lbl_licencia") # <-- objectName añadido
         self.lbl_licencia.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.lbl_licencia.setFont(QFont("Arial", 9))
         self.verificar_licencia_startup()
         layout.addWidget(self.lbl_licencia)
 
@@ -141,14 +235,17 @@ class LoginWindow(QWidget):
 
         # Footer
         footer = QLabel("© 2024 Sistema Kardex Valorizado v1.0")
+        footer.setObjectName("footer") # <-- objectName añadido
         footer.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        footer.setFont(QFont("Arial", 8))
-        footer.setStyleSheet("color: #9aa0a6;")
+        # Se quita el setStyleSheet de aquí
         layout.addWidget(footer)
 
         self.setLayout(layout)
         self.txt_usuario.setFocus()
-
+    
+    # ... (El resto de tus funciones: verificar_credenciales, mostrar_seleccion_anio, etc.) ...
+    # ... (No necesitas cambiar ninguna de las funciones lógicas) ...
+    
     def verificar_credenciales(self):
         """Paso 1: Valida usuario y contraseña."""
         usuario = self.txt_usuario.text().strip()
@@ -274,7 +371,7 @@ if __name__ == "__main__":
     from PyQt6.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-    app.setStyle('Fusion')
+    app.setStyle('Fusion') # Fusion sigue siendo una buena base
 
     login = LoginWindow()
     login.show()
