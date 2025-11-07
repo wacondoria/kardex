@@ -428,6 +428,8 @@ class RequisicionDetalle(Base):
     
     # Relaciones
     requisicion = relationship("Requisicion", back_populates="detalles")
+    producto = relationship("Producto")
+    almacen = relationship("Almacen")
 
 # ============================================
 # TABLA: MOVIMIENTOS DE STOCK (KARDEX)
