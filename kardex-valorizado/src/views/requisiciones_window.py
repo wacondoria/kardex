@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                               QPushButton, QTableWidget, QTableWidgetItem,
                               QLineEdit, QDateEdit, QComboBox, QDoubleSpinBox,
                               QTextEdit, QMessageBox, QDialog, QFormLayout, 
-                              QHeaderView, QGroupBox, QCompleter)
+                              QHeaderView, QGroupBox)
 from PyQt6.QtCore import Qt, QDate
 from PyQt6.QtGui import QFont
 import sys
@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from models.database_model import (obtener_session, Requisicion, RequisicionDetalle,
                                    Producto, Almacen, Empresa, Destino,
                                    MovimientoStock, TipoMovimiento, MetodoValuacion)
-from utils.widgets import UpperLineEdit
+from utils.widgets import UpperLineEdit, SearchableComboBox
 from utils.app_context import app_context
 
 
@@ -104,7 +104,7 @@ class RequisicionDialog(QDialog):
         
         # Destino
         destino_layout = QHBoxLayout()
-        self.cmb_destino = QComboBox()
+        self.cmb_destino = SearchableComboBox()
         self.cmb_destino.setMinimumWidth(300)
         
         btn_nuevo_destino = QPushButton("+ Nuevo")
@@ -139,12 +139,11 @@ class RequisicionDialog(QDialog):
         # Selector de producto
         selector_layout = QHBoxLayout()
         
-        self.cmb_producto = QComboBox()
+        self.cmb_producto = SearchableComboBox()
         self.cmb_producto.setMinimumWidth(300)
-        self.cmb_producto.setEditable(True)
         self.cmb_producto.currentIndexChanged.connect(self.producto_seleccionado)
         
-        self.cmb_almacen = QComboBox()
+        self.cmb_almacen = SearchableComboBox()
         self.cmb_almacen.currentIndexChanged.connect(self.almacen_seleccionado)
         
         self.lbl_stock_disponible = QLabel("Stock: -")
@@ -271,12 +270,6 @@ class RequisicionDialog(QDialog):
         
         for prod in productos:
             self.cmb_producto.addItem(f"{prod.codigo} - {prod.nombre}", prod.id)
-
-        lista_nombres_productos = [self.cmb_producto.itemText(i) for i in range(self.cmb_producto.count())]
-        completer = QCompleter(lista_nombres_productos, self)
-        completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
-        completer.setFilterMode(Qt.MatchFlag.MatchContains)
-        self.cmb_producto.setCompleter(completer)
         
         # Almacenes
         self.cargar_almacenes()

@@ -3,9 +3,9 @@ Kardex Valorizado - Sistema Kardex Valorizado
 Archivo: src/views/kardex_window.py
 """
 
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                               QPushButton, QTableWidget, QTableWidgetItem,
-                              QComboBox, QDateEdit, QMessageBox, QHeaderView,
+                              QDateEdit, QMessageBox, QHeaderView,
                               QGroupBox, QRadioButton, QButtonGroup, QFileDialog)
 from PyQt6.QtCore import Qt, QDate
 from PyQt6.QtGui import QFont
@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models.database_model import (obtener_session, Producto, Empresa, Almacen,
                                    MovimientoStock, Moneda, MetodoValuacion)
+from utils.widgets import SearchableComboBox
 
 
 class KardexWindow(QWidget):
@@ -58,18 +59,18 @@ class KardexWindow(QWidget):
         fila1 = QHBoxLayout()
         
         fila1.addWidget(QLabel("Empresa:"))
-        self.cmb_empresa = QComboBox()
+        self.cmb_empresa = SearchableComboBox()
         self.cmb_empresa.setMinimumWidth(200)
         self.cmb_empresa.currentIndexChanged.connect(self.empresa_cambiada)
         fila1.addWidget(self.cmb_empresa, 2)
         
         fila1.addWidget(QLabel("Producto:"))
-        self.cmb_producto = QComboBox()
+        self.cmb_producto = SearchableComboBox()
         self.cmb_producto.setMinimumWidth(300)
         fila1.addWidget(self.cmb_producto, 3)
         
         fila1.addWidget(QLabel("Almacén:"))
-        self.cmb_almacen = QComboBox()
+        self.cmb_almacen = SearchableComboBox()
         self.cmb_almacen.addItem("Todos", None)
         fila1.addWidget(self.cmb_almacen, 1)
         

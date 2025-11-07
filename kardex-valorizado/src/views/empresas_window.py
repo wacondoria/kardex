@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models.database_model import (obtener_session, Empresa, Almacen,
                                    MetodoValuacion, UsuarioEmpresa)
-from utils.widgets import UpperLineEdit
+from utils.widgets import UpperLineEdit, SearchableComboBox
 
 
 class AlmacenDialog(QDialog):
@@ -490,7 +490,7 @@ class EmpresasWindow(QWidget):
         lbl_empresa = QLabel("Empresa:")
         lbl_empresa.setFont(QFont("Arial", 11, QFont.Weight.Bold))
 
-        self.cmb_empresa_almacenes = QComboBox()
+        self.cmb_empresa_almacenes = SearchableComboBox()
         self.cmb_empresa_almacenes.setStyleSheet("padding: 8px;")
         self.cmb_empresa_almacenes.currentIndexChanged.connect(self.cargar_almacenes)
 
