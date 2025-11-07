@@ -28,6 +28,7 @@ from views.ordenes_compra_window import OrdenesCompraWindow
 from views.usuarios_window import UsuariosWindow
 from views.valorizacion_window import ValorizacionWindow
 from views.anio_contable_window import AnioContableWindow
+from views.sistemas_importacion_window import SistemasImportacionWindow
 
 # --- Integración para actualización automática ---
 from utils.actualizador_tc import actualizar_tc_desde_excel
@@ -124,6 +125,7 @@ class KardexMainWindow(QMainWindow):
         self.ventana_requisiciones = None
         self.ventana_ordenes_compra = None
         self.ventana_admin_anios = None
+        self.ventana_importacion = None
         self.init_ui()
 
     def init_ui(self):
@@ -247,6 +249,10 @@ class KardexMainWindow(QMainWindow):
         accion_admin_anios.setEnabled(self.user_info['rol'] == 'ADMINISTRADOR')
         accion_admin_anios.triggered.connect(self.abrir_admin_anios)
         menu_sistema.addAction(accion_admin_anios)
+
+        accion_importacion = QAction("⬆️ Central de Importaciones", self)
+        accion_importacion.triggered.connect(self.abrir_importacion)
+        menu_sistema.addAction(accion_importacion)
 
         menu_sistema.addSeparator()
 
@@ -436,6 +442,15 @@ class KardexMainWindow(QMainWindow):
         self.ventana_admin_anios.show()
         self.ventana_admin_anios.raise_()
         self.ventana_admin_anios.activateWindow()
+
+    def abrir_importacion(self):
+        """Abre la ventana de importación de datos."""
+        if self.ventana_importacion is None:
+            self.ventana_importacion = SistemasImportacionWindow()
+
+        self.ventana_importacion.show()
+        self.ventana_importacion.raise_()
+        self.ventana_importacion.activateWindow()
 
 
 def main():
