@@ -5,9 +5,10 @@ Archivo: src/views/login_window.py
 """
 
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QLineEdit,
-                             QPushButton, QMessageBox, QFrame, QComboBox)
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QFont
+                             QPushButton, QMessageBox, QFrame, QComboBox,
+                             QGridLayout, QSpacerItem, QSizePolicy)
+from PyQt6.QtCore import Qt, pyqtSignal, QSize
+from PyQt6.QtGui import QFont, QPixmap, QIcon
 from werkzeug.security import check_password_hash
 from datetime import datetime, date
 import sys
@@ -40,207 +41,86 @@ class LoginWindow(QWidget):
 
     def init_ui(self):
         """Inicializa la interfaz de usuario"""
-        self.setWindowTitle("Kardex Valorizado - Iniciar Sesión")
-        self.setFixedSize(450, 650) 
-        
-        # --- NUEVA HOJA DE ESTILO (QSS) BASADA EN LAS CAPTURAS ---
+        self.setWindowTitle("ECBCont v2.14.4 - Modulo de Contabilidad")
+        self.setFixedSize(400, 300)
+
         self.setStyleSheet("""
-            /* --- Base de la Ventana --- */
-            /* Usamos objectName para que el fondo gris no afecte los QFrame */
-            QWidget#LoginWindow {
-                background-color: #EEEEEE; /* Fondo gris claro (como el de TR) */
-            }
-
-            /* --- Contenedores (Fondo Blanco) --- */
-            QFrame {
-                background-color: white;
-                border-radius: 10px;
-                padding: 30px;
-            }
-
-            /* --- Títulos (Logo) --- */
-            QLabel#titulo {
-                color: #1a73e8; /* Mantenemos tu azul original para el logo */
-                padding: 10px;
-                font-size: 24px;
-                font-weight: bold;
-                font-family: Arial;
-            }
-            QLabel#subtitulo {
-                color: #5f6368;
-                padding-bottom: 10px;
-                font-size: 11px;
-                font-family: Arial;
-            }
-            
-            /* --- Etiquetas (Usuario, Contraseña, Año) --- */
-            QLabel {
-                color: #003366; /* Azul corporativo oscuro (como el de TR) */
-                font-weight: bold;
-                font-size: 11px;
-                font-family: Arial;
-            }
-
-            /* --- Campos de Entrada --- */
-            QLineEdit, QComboBox {
-                background-color: white;
-                border: 1px solid #BDBDBD; /* Borde gris estándar */
-                border-radius: 4px;
-                padding: 8px;
-                color: #333333; /* Texto dentro del campo */
-                font-size: 11px;
-                font-family: Arial;
-            }
-            QLineEdit:focus, QComboBox:focus {
-                border: 1px solid #005A9C; /* Borde azul oscuro al seleccionar */
-            }
-            QLineEdit::placeholder {
-                color: #AAAAAA;
-            }
-
-            /* --- Estilo de la lista del ComboBox --- */
-            QComboBox QAbstractItemView {
-                background-color: white;
-                border: 1px solid #BDBDBD;
-                selection-background-color: #005A9C; /* Fondo azul al seleccionar item */
-                selection-color: white;
-            }
-
-            /* --- Botones --- */
+            QWidget#LoginWindow { background-color: #E0E0E0; }
+            QLabel { color: #003366; font-weight: bold; font-size: 11px; font-family: Arial; }
+            QLineEdit { border: 1px solid #8C8C8C; }
             QPushButton {
-                background-color: #E0E0E0; /* Fondo gris claro, como el botón 'Ingresar' de TR */
-                color: #003366; /* Texto azul */
-                border: 1px solid #BDBDBD;
-                border-radius: 4px;
-                padding: 10px 15px;
-                font-weight: bold;
-                font-size: 11px;
-                font-family: Arial;
-            }
-            QPushButton:hover {
-                background-color: #E8E8E8; /* Un poco más claro al pasar el mouse */
-                border-color: #AAAAAA;
-            }
-            QPushButton:pressed {
-                background-color: #D0D0D0; /* Un poco más oscuro al presionar */
-            }
-            
-            /* Botón por defecto (Aceptar e Ingresar) - lo hacemos un poco más oscuro */
-            QPushButton:default {
-                background-color: #D5D5D5;
-                border: 1px solid #ADADAD;
-            }
-
-            /* --- Mensaje de Licencia --- */
-            QLabel#lbl_licencia {
-                color: #333333;
-                font-weight: normal;
-                font-size: 9px;
-            }
-            
-            /* --- Footer --- */
-            QLabel#footer {
-                color: #9aa0a6;
-                font-weight: normal;
-                font-size: 8px;
+                background-color: #F0F0F0; border: 1px solid #8C8C8C;
+                padding: 4px; text-align: right;
             }
         """)
-        
-        # --- Asignar objectName para que el QSS funcione ---
-        self.setObjectName("LoginWindow") 
+        self.setObjectName("LoginWindow")
 
         # Layout principal
-        layout = QVBoxLayout()
-        layout.setContentsMargins(40, 40, 40, 40)
-        layout.setSpacing(20)
-        layout.addStretch()
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(20, 20, 20, 20)
+        main_layout.addStretch(1)
 
-        # === LOGO / TÍTULO ===
-        logo_frame = QFrame()
-        logo_layout = QVBoxLayout(logo_frame)
+        # Logo
+        logo_label = QLabel()
+        pixmap = QPixmap("kardex-valorizado/src/resources/logo.png")
+        logo_label.setPixmap(pixmap.scaled(300, 100, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        main_layout.addWidget(logo_label)
+        main_layout.addSpacing(20)
 
-        titulo = QLabel("📦 KARDEX ")
-        titulo.setObjectName("titulo") # <-- objectName añadido
-        titulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        # Se quita el setStyleSheet de aquí
+        # Formulario
+        form_layout = QGridLayout()
+        form_layout.setHorizontalSpacing(10)
+        form_layout.setVerticalSpacing(15)
 
-        subtitulo = QLabel("Sistema de Gestión de Inventarios")
-        subtitulo.setObjectName("subtitulo") # <-- objectName añadido
-        subtitulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        # Se quita el setStyleSheet de aquí
-
-        logo_layout.addWidget(titulo)
-        logo_layout.addWidget(subtitulo)
-        layout.addWidget(logo_frame)
-
-        # === FORMULARIO ===
-        self.form_frame = QFrame()
-        form_layout = QVBoxLayout(self.form_frame)
-        form_layout.setSpacing(15)
-
-        # --- Campos de Usuario y Contraseña ---
-        user_label = QLabel("Usuario")
-        # Se quita el setFont de aquí (controlado por QSS)
+        user_label = QLabel("Usuario:")
         self.txt_usuario = QLineEdit()
-        self.txt_usuario.setPlaceholderText("Ingrese su usuario")
-        self.txt_usuario.returnPressed.connect(self.verificar_credenciales)
 
-        pass_label = QLabel("Contraseña")
+        pass_label = QLabel("Contraseña:")
         self.txt_password = QLineEdit()
-        self.txt_password.setPlaceholderText("Ingrese su contraseña")
         self.txt_password.setEchoMode(QLineEdit.EchoMode.Password)
-        self.txt_password.returnPressed.connect(self.verificar_credenciales)
 
-        # Botón para verificar credenciales
-        self.btn_verificar = QPushButton("Siguiente")
-        self.btn_verificar.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_verificar.clicked.connect(self.verificar_credenciales)
+        self.btn_verificar = QPushButton(" Ingresar")
+        self.btn_verificar.setIcon(QIcon("kardex-valorizado/src/resources/login_icon.png"))
+        self.btn_verificar.setIconSize(QSize(16, 16))
+        self.btn_verificar.setFixedSize(100, 28)
 
-        # --- Selector de Año (inicialmente oculto) ---
-        self.anio_label = QLabel("Seleccionar Año de Trabajo")
+        self.anio_label = QLabel("Seleccionar Año:")
         self.anio_combo = QComboBox()
-        self.anio_combo.setPlaceholderText("Cargando años...")
-        
-        self.btn_aceptar = QPushButton("Aceptar e Ingresar")
-        self.btn_aceptar.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_aceptar.setDefault(True) # <-- Esto activa el estilo :default
-        self.btn_aceptar.clicked.connect(self.finalizar_login)
-        self.anio_combo.activated.connect(self.finalizar_login)
+        self.btn_aceptar = QPushButton("Aceptar")
+        self.btn_aceptar.setFixedSize(100, 28)
 
         self.anio_label.hide()
         self.anio_combo.hide()
         self.btn_aceptar.hide()
 
-        # Agregar widgets al formulario
-        form_layout.addWidget(user_label)
-        form_layout.addWidget(self.txt_usuario)
-        form_layout.addWidget(pass_label)
-        form_layout.addWidget(self.txt_password)
-        form_layout.addSpacing(10)
-        form_layout.addWidget(self.btn_verificar)
-        form_layout.addWidget(self.anio_label)
-        form_layout.addWidget(self.anio_combo)
-        form_layout.addWidget(self.btn_aceptar)
+        form_layout.addWidget(user_label, 0, 0)
+        form_layout.addWidget(self.txt_usuario, 0, 1, 1, 2)
+        form_layout.addWidget(pass_label, 1, 0)
+        form_layout.addWidget(self.txt_password, 1, 1, 1, 2)
+        form_layout.addWidget(self.btn_verificar, 2, 2)
 
-        layout.addWidget(self.form_frame)
+        form_layout.addWidget(self.anio_label, 3, 0)
+        form_layout.addWidget(self.anio_combo, 3, 1, 1, 2)
+        form_layout.addWidget(self.btn_aceptar, 4, 2)
+
+        main_layout.addLayout(form_layout)
+        main_layout.addStretch(2)
 
         # === INFO DE LICENCIA ===
         self.lbl_licencia = QLabel()
-        self.lbl_licencia.setObjectName("lbl_licencia") # <-- objectName añadido
         self.lbl_licencia.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.lbl_licencia.setStyleSheet("font-size: 9px; font-weight: normal; color: #555;")
         self.verificar_licencia_startup()
-        layout.addWidget(self.lbl_licencia)
+        main_layout.addWidget(self.lbl_licencia)
 
-        layout.addStretch()
+        # Conectar señales
+        self.txt_usuario.returnPressed.connect(self.btn_verificar.click)
+        self.txt_password.returnPressed.connect(self.btn_verificar.click)
+        self.btn_verificar.clicked.connect(self.verificar_credenciales)
+        self.btn_aceptar.clicked.connect(self.finalizar_login)
+        self.anio_combo.activated.connect(self.finalizar_login)
 
-        # Footer
-        footer = QLabel("© 2024 Sistema Kardex Valorizado v1.0")
-        footer.setObjectName("footer") # <-- objectName añadido
-        footer.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        # Se quita el setStyleSheet de aquí
-        layout.addWidget(footer)
-
-        self.setLayout(layout)
         self.txt_usuario.setFocus()
     
     # ... (El resto de tus funciones: verificar_credenciales, mostrar_seleccion_anio, etc.) ...
@@ -281,6 +161,27 @@ class LoginWindow(QWidget):
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error al procesar login:\n{str(e)}")
+
+    def verificar_licencia_startup(self):
+        """Verifica el estado de la licencia al iniciar."""
+        try:
+            licencia = self.session.query(Licencia).filter_by(activa=True).first()
+            if not licencia:
+                self.lbl_licencia.setText("⚠️ No hay licencia instalada - Modo demostración")
+                return
+
+            hoy = date.today()
+            dias_restantes = (licencia.fecha_vencimiento - hoy).days
+
+            if dias_restantes < 0:
+                self.lbl_licencia.setText(f"❌ Licencia VENCIDA (hace {abs(dias_restantes)} días)")
+            elif dias_restantes <= 30:
+                self.lbl_licencia.setText(f"⚠️ Licencia vence en {dias_restantes} días")
+            else:
+                self.lbl_licencia.setText(f"✓ Licencia vigente ({dias_restantes} días restantes)")
+
+        except Exception:
+            self.lbl_licencia.setText("⚠️ Error al verificar licencia")
 
     def mostrar_seleccion_anio(self):
         """Paso 2: Oculta campos de login y muestra el selector de año."""
@@ -329,27 +230,6 @@ class LoginWindow(QWidget):
 
         self.login_exitoso.emit(self.user_info)
         self.close()
-
-    def verificar_licencia_startup(self):
-        """Verifica el estado de la licencia al iniciar."""
-        try:
-            licencia = self.session.query(Licencia).filter_by(activa=True).first()
-            if not licencia:
-                self.lbl_licencia.setText("⚠️ No hay licencia instalada - Modo demostración")
-                return
-
-            hoy = date.today()
-            dias_restantes = (licencia.fecha_vencimiento - hoy).days
-
-            if dias_restantes < 0:
-                self.lbl_licencia.setText(f"❌ Licencia VENCIDA (hace {abs(dias_restantes)} días)")
-            elif dias_restantes <= 30:
-                self.lbl_licencia.setText(f"⚠️ Licencia vence en {dias_restantes} días")
-            else:
-                self.lbl_licencia.setText(f"✓ Licencia vigente ({dias_restantes} días restantes)")
-
-        except Exception:
-            self.lbl_licencia.setText("⚠️ Error al verificar licencia")
 
     def verificar_licencia_activa(self):
         """Verifica si la licencia está vencida."""
