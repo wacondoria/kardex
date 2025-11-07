@@ -27,7 +27,7 @@ except ImportError:
 from datetime import datetime, date
 from decimal import Decimal, ROUND_HALF_UP
 from sqlalchemy.orm import sessionmaker, joinedload
-from sqlalchemy import func
+from sqlalchemy import func, extract
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -45,6 +45,8 @@ from models.database_model import (obtener_session, Compra, CompraDetalle,
                                    TipoCambio, TipoDocumento, Moneda,
                                    MovimientoStock, TipoMovimiento)
 from utils.widgets import UppercaseValidator
+from utils.app_context import app_context
+from utils.validation import verificar_estado_anio, AnioCerradoError
 
 # ============================================
 # CLASES AUXILIARES (para seleccionar texto)
@@ -643,28 +645,28 @@ class CompraDialog(QDialog):
 
     def guardar_compra(self):
         """Guarda una compra nueva o actualiza una existente, ajustando el Kardex."""
-        if not self.cmb_proveedor.currentData():
-            QMessageBox.warning(self, "Error", "Seleccione un proveedor")
-            return
-
-        serie = self.txt_serie_doc.text().strip()
-        numero = self.txt_numero_doc.text().strip()
-        if not serie or not numero:
-            QMessageBox.warning(self, "Error", "Debe ingresar la serie y el número del documento")
-            return
-
-        numero_documento_completo = f"{serie}-{numero}"
-
-        # CORRECCIÓN: Permitir editar compras importadas (sin detalles)
-        if not self.detalles_compra and self.compra_original is None:
-             # Si es una NUEVA compra (no edición) y no hay detalles
-            QMessageBox.warning(self, "Error", "Agregue al menos un producto")
-            return
-        # Si es EDICIÓN (self.compra_original existe), SÍ permitimos guardar con 0 detalles
-
-        es_edicion = self.compra_original is not None
-
         try:
+            fecha_doc = self.date_fecha.date().toPyDate()
+            verificar_estado_anio(fecha_doc)
+
+            if not self.cmb_proveedor.currentData():
+                QMessageBox.warning(self, "Error", "Seleccione un proveedor")
+                return
+
+            serie = self.txt_serie_doc.text().strip()
+            numero = self.txt_numero_doc.text().strip()
+            if not serie or not numero:
+                QMessageBox.warning(self, "Error", "Debe ingresar la serie y el número del documento")
+                return
+
+            numero_documento_completo = f"{serie}-{numero}"
+
+            if not self.detalles_compra and self.compra_original is None:
+                QMessageBox.warning(self, "Error", "Agregue al menos un producto")
+                return
+
+            es_edicion = self.compra_original is not None
+
             subtotal, igv, total, subtotal_productos_ui, costo_adicional = self._calcular_montos_decimal()
 
             if es_edicion:
@@ -689,7 +691,7 @@ class CompraDialog(QDialog):
             else:
                 compra = Compra(
                     proveedor_id=self.cmb_proveedor.currentData(),
-                    fecha=self.date_fecha.date().toPyDate(),
+                    fecha=fecha_doc,
                     fecha_registro_contable=self.date_fecha_contable.date().toPyDate(),
                     tipo_documento=TipoDocumento(self.cmb_tipo_doc.currentData()),
                     numero_documento=numero_documento_completo,
@@ -919,6 +921,8 @@ class CompraDialog(QDialog):
             QMessageBox.information(self, "Éxito", f"Compra {'actualizada' if es_edicion else 'registrada'} exitosamente.")
             self.accept()
 
+        except AnioCerradoError as e:
+            QMessageBox.warning(self, "Operación no permitida", str(e))
         except Exception as e:
             self.session.rollback()
             QMessageBox.critical(self, "Error", f"Error al {'actualizar' if es_edicion else 'guardar'} compra:\n{str(e)}")
@@ -1417,7 +1421,7 @@ class ComprasWindow(QWidget):
 
         self.spn_anio_filtro = QSpinBox()
         self.spn_anio_filtro.setRange(2020, 2040)
-        self.spn_anio_filtro.setValue(datetime.now().year)
+        self.spn_anio_filtro.setValue(app_context.get_selected_year())
 
         # Conectar señales
         self.cmb_mes_filtro.currentIndexChanged.connect(self.cargar_compras)
@@ -1428,7 +1432,10 @@ class ComprasWindow(QWidget):
         self.cmb_proveedor_filtro.addItem("Todos los proveedores", None)
         self.cmb_proveedor_filtro.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed) # Que se expanda
         self.cmb_proveedor_filtro.setEditable(True)
-        proveedores = self.session.query(Proveedor).filter_by(activo=True).order_by(Proveedor.razon_social).all()
+        proveedores = self.session.query(Proveedor).join(Compra).filter(
+            Proveedor.activo==True,
+            extract('year', Compra.fecha) == app_context.get_selected_year()
+        ).distinct().order_by(Proveedor.razon_social).all()
         for prov in proveedores:
             self.cmb_proveedor_filtro.addItem(prov.razon_social, prov.id)
 
