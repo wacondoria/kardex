@@ -135,6 +135,15 @@ class CompraDialog(QDialog):
 
         form_compra.addRow("Proveedor:*", proveedor_layout)
 
+        # Número de Proceso
+        proceso_layout = QHBoxLayout()
+        self.txt_numero_proceso = SelectAllLineEdit()
+        self.txt_numero_proceso.setPlaceholderText("Ej: 1 (se autocompletará a 06MM000001)")
+        self.txt_numero_proceso.setToolTip("Ingrese el correlativo. El formato completo se generará automáticamente.")
+        proceso_layout.addWidget(self.txt_numero_proceso)
+        proceso_layout.addStretch()
+        form_compra.addRow("Número de Proceso:*", proceso_layout)
+
         # Fecha, Tipo Doc, Número
         fila1 = QHBoxLayout()
 
@@ -657,6 +666,11 @@ class CompraDialog(QDialog):
                 QMessageBox.warning(self, "Error", "Seleccione un proveedor")
                 return
 
+            numero_proceso_correlativo = self.txt_numero_proceso.text().strip()
+            if not numero_proceso_correlativo.isdigit():
+                QMessageBox.warning(self, "Error", "El Número de Proceso debe ser un número (correlativo).")
+                return
+
             serie = self.txt_serie_doc.text().strip()
             numero = self.txt_numero_doc.text().strip()
             if not serie or not numero:
@@ -678,6 +692,10 @@ class CompraDialog(QDialog):
                 if not compra:
                     raise Exception(f"No se pudo encontrar la Compra ID {self.compra_original.id} en la sesión del diálogo.")
 
+                mes_contable = self.date_fecha_contable.date().month()
+                numero_proceso_completo = f"06{mes_contable:02d}{int(numero_proceso_correlativo):06d}"
+
+                compra.numero_proceso = numero_proceso_completo
                 compra.proveedor_id = self.cmb_proveedor.currentData()
                 compra.tipo_documento = TipoDocumento(self.cmb_tipo_doc.currentData())
                 compra.numero_documento = numero_documento_completo
@@ -693,7 +711,11 @@ class CompraDialog(QDialog):
                 compra.observaciones = self.txt_observaciones.toPlainText().strip() or None
 
             else:
+                mes_contable = self.date_fecha_contable.date().month()
+                numero_proceso_completo = f"06{mes_contable:02d}{int(numero_proceso_correlativo):06d}"
+
                 compra = Compra(
+                    numero_proceso=numero_proceso_completo,
                     proveedor_id=self.cmb_proveedor.currentData(),
                     fecha=fecha_doc,
                     fecha_registro_contable=self.date_fecha_contable.date().toPyDate(),
@@ -952,6 +974,13 @@ class CompraDialog(QDialog):
         try:
             self.setWindowTitle(f"✏️ Editando Compra: {self.compra_original.numero_documento}")
             self.btn_guardar.setText("Guardar Cambios")
+
+            if self.compra_original.numero_proceso and len(self.compra_original.numero_proceso) >= 6:
+                correlativo = self.compra_original.numero_proceso[-6:]
+                self.txt_numero_proceso.setText(str(int(correlativo))) # Convertir a int para quitar ceros a la izquierda
+            else:
+                self.txt_numero_proceso.setText("")
+
 
             index_prov = self.cmb_proveedor.findData(self.compra_original.proveedor_id)
             if index_prov != -1:
