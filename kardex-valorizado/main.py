@@ -15,7 +15,6 @@ from PyQt6.QtGui import QFont, QAction
 sys.path.insert(0, str(Path(__file__).parent / 'src'))
 
 from views.login_window import LoginWindow
-from views.seleccion_anio_window import SeleccionAnioWindow
 from utils.app_context import app_context
 from views.productos_window import ProductosWindow
 from views.proveedores_window import ProveedoresWindow
@@ -455,31 +454,17 @@ def main():
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
 
-    # Variables para mantener las ventanas vivas
     main_window = None
-    selection_window = None
+    login_window = LoginWindow()
 
-    login = LoginWindow()
-
-    def on_login_exitoso(user_info):
-        """Paso 1: El login fue exitoso. Ahora mostramos la selección de año."""
-        nonlocal selection_window
-        login.hide() # Ocultamos la ventana de login
-        selection_window = SeleccionAnioWindow(user_info)
-        # Conectamos la señal de la ventana de selección al siguiente paso
-        selection_window.login_exitoso_con_anio.connect(on_anio_seleccionado)
-        selection_window.show()
-
-    def on_anio_seleccionado(user_info):
-        """Paso 2: El año fue seleccionado. Ahora mostramos la ventana principal."""
+    def on_login_successful(user_info):
         nonlocal main_window
-        selection_window.hide()
-        main_window = KardexMainWindow() # Ya no necesita user_info
+        main_window = KardexMainWindow()
         main_window.show()
+        login_window.close()
 
-    # Conectar la señal del login al primer paso
-    login.login_exitoso.connect(on_login_exitoso)
-    login.show()
+    login_window.login_exitoso.connect(on_login_successful)
+    login_window.show()
 
     sys.exit(app.exec())
 
