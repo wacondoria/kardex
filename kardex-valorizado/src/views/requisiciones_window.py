@@ -26,19 +26,25 @@ from utils.app_context import app_context
 
 
 class RequisicionDialog(QDialog):
-    """Diálogo para crear requisiciones"""
+    """Diálogo para crear y editar requisiciones"""
     
-    def __init__(self, parent=None, user_info=None):
+    def __init__(self, parent=None, user_info=None, requisicion_a_editar=None):
         super().__init__(parent)
         self.session = obtener_session()
         self.user_info = user_info
-        self.detalles_requisicion = []
+        self.requisicion_original = requisicion_a_editar
+        self.detalles_requisicion = [] # Lista de diccionarios para la UI
+        self.detalles_originales_obj = [] # Lista de objetos SQLAlchemy originales
         self.selected_year = app_context.get_selected_year()
+
         self.init_ui()
         self.cargar_datos_iniciales()
-    
+
+        if self.requisicion_original:
+            self.cargar_datos_para_edicion()
+
     def init_ui(self):
-        self.setWindowTitle("Nueva Requisición")
+        self.setWindowTitle("Nueva Requisición" if not self.requisicion_original else "Editar Requisición")
         self.setMinimumSize(1000, 650)
         self.setStyleSheet("""
             QDialog {
@@ -244,6 +250,53 @@ class RequisicionDialog(QDialog):
         
         layout.addLayout(btn_layout)
         self.setLayout(layout)
+
+    def cargar_datos_para_edicion(self):
+        """Rellena los campos del diálogo con los datos de la requisición a editar."""
+        if not self.requisicion_original:
+            return
+
+        self.setWindowTitle(f"✏️ Editando Requisición: {self.requisicion_original.numero_requisicion}")
+        self.btn_guardar.setText("Guardar Cambios")
+
+        # Bloquear campos clave
+        self.date_fecha.setDate(QDate.fromString(self.requisicion_original.fecha.strftime('%Y-%m-%d'), 'yyyy-MM-dd'))
+        self.date_fecha.setEnabled(False)
+        self.txt_numero.setText(self.requisicion_original.numero_requisicion)
+
+        # Cargar datos
+        index_destino = self.cmb_destino.findData(self.requisicion_original.destino_id)
+        if index_destino != -1:
+            self.cmb_destino.setCurrentIndex(index_destino)
+
+        self.txt_solicitante.setText(self.requisicion_original.solicitante or "")
+        self.txt_observaciones.setPlainText(self.requisicion_original.observaciones or "")
+
+        # Cargar detalles
+        self.detalles_originales_obj = self.session.query(RequisicionDetalle).filter_by(requisicion_id=self.requisicion_original.id).all()
+        for det_obj in self.detalles_originales_obj:
+            producto = self.session.query(Producto).get(det_obj.producto_id)
+            almacen = self.session.query(Almacen).get(det_obj.almacen_id)
+
+            detalle_dict = {
+                'producto_id': det_obj.producto_id,
+                'producto_nombre': f"{producto.codigo} - {producto.nombre}",
+                'almacen_id': det_obj.almacen_id,
+                'almacen_nombre': almacen.nombre,
+                'stock_disponible': 0, # Se recalculará si es necesario, no es crítico para la edición
+                'cantidad': float(det_obj.cantidad),
+                'detalle_original_id': det_obj.id
+            }
+            self.detalles_requisicion.append(detalle_dict)
+
+        self.actualizar_tabla_productos()
+
+    def keyPressEvent(self, event):
+        """Captura la pulsación de teclas en el diálogo."""
+        if event.key() == Qt.Key.Key_F4:
+            self.guardar_requisicion()
+        else:
+            super().keyPressEvent(event)
     
     def cargar_datos_iniciales(self):
         """Carga destinos, productos y almacenes"""
@@ -443,7 +496,7 @@ class RequisicionDialog(QDialog):
             self.actualizar_tabla_productos()
     
     def guardar_requisicion(self):
-        """Guarda la requisición"""
+        """Guarda una requisición nueva o actualiza una existente."""
         if not self.cmb_destino.currentData():
             QMessageBox.warning(self, "Error", "Seleccione un destino")
             return
@@ -451,92 +504,131 @@ class RequisicionDialog(QDialog):
         if not self.detalles_requisicion:
             QMessageBox.warning(self, "Error", "Agregue al menos un producto")
             return
-        
+
+        es_edicion = self.requisicion_original is not None
+
         try:
-            # Crear requisición
-            requisicion = Requisicion(
-                destino_id=self.cmb_destino.currentData(),
-                numero_requisicion=self.txt_numero.text(),
-                fecha=self.date_fecha.date().toPyDate(),
-                solicitante=self.txt_solicitante.text().strip() or None,
-                observaciones=self.txt_observaciones.toPlainText() or None
-            )
-            
-            self.session.add(requisicion)
-            self.session.flush()
-            
-            # Crear detalles y movimientos
-            for det in self.detalles_requisicion:
-                # Detalle
-                detalle = RequisicionDetalle(
-                    requisicion_id=requisicion.id,
-                    producto_id=det['producto_id'],
-                    almacen_id=det['almacen_id'],
-                    cantidad=det['cantidad']
+            if es_edicion:
+                requisicion = self.session.get(Requisicion, self.requisicion_original.id)
+                requisicion.destino_id = self.cmb_destino.currentData()
+                requisicion.solicitante = self.txt_solicitante.text().strip() or None
+                requisicion.observaciones = self.txt_observaciones.toPlainText().strip() or None
+            else:
+                requisicion = Requisicion(
+                    destino_id=self.cmb_destino.currentData(),
+                    numero_requisicion=self.txt_numero.text(),
+                    fecha=self.date_fecha.date().toPyDate(),
+                    solicitante=self.txt_solicitante.text().strip() or None,
+                    observaciones=self.txt_observaciones.toPlainText().strip() or None
                 )
-                
-                self.session.add(detalle)
-                
-                # Obtener datos para movimiento
-                almacen = self.session.query(Almacen).get(det['almacen_id'])
-                
-                # Calcular costo de salida según método de valuación
-                empresa = self.session.query(Empresa).get(almacen.empresa_id)
-                costo_unitario, costo_total = self.calcular_costo_salida(
-                    empresa,
-                    det['producto_id'],
-                    det['almacen_id'],
-                    det['cantidad']
-                )
-                
-                # Obtener saldo anterior
-                ultimo_mov = self.session.query(MovimientoStock).filter_by(
-                    empresa_id=almacen.empresa_id,
-                    producto_id=det['producto_id'],
-                    almacen_id=det['almacen_id']
-                ).order_by(MovimientoStock.id.desc()).first()
-                
-                saldo_anterior_cant = ultimo_mov.saldo_cantidad if ultimo_mov else 0
-                saldo_anterior_costo = ultimo_mov.saldo_costo_total if ultimo_mov else 0
-                
-                nuevo_saldo_cant = saldo_anterior_cant - det['cantidad']
-                nuevo_saldo_costo = saldo_anterior_costo - costo_total
-                
-                # Crear movimiento
-                movimiento = MovimientoStock(
-                    empresa_id=almacen.empresa_id,
-                    producto_id=det['producto_id'],
-                    almacen_id=det['almacen_id'],
-                    tipo=TipoMovimiento.REQUISICION,
-                    numero_documento=requisicion.numero_requisicion,
-                    fecha_documento=requisicion.fecha,
-                    destino_id=requisicion.destino_id,
-                    cantidad_entrada=0,
-                    cantidad_salida=det['cantidad'],
-                    costo_unitario=float(costo_unitario),
-                    costo_total=float(costo_total),
-                    saldo_cantidad=float(nuevo_saldo_cant),
-                    saldo_costo_total=float(nuevo_saldo_costo),
-                    observaciones=f"Requisición {requisicion.numero_requisicion}"
-                )
-                
-                self.session.add(movimiento)
+                self.session.add(requisicion)
+                self.session.flush()
+
+            # Lógica para manejar detalles (eliminar, añadir, modificar)
+            ids_detalles_ui = {det.get('detalle_original_id') for det in self.detalles_requisicion if det.get('detalle_original_id')}
+            ids_detalles_originales = {det.id for det in self.detalles_originales_obj}
             
+            detalles_a_eliminar_ids = ids_detalles_originales - ids_detalles_ui
+            detalles_a_anadir_ui = [det for det in self.detalles_requisicion if not det.get('detalle_original_id')]
+            detalles_a_modificar_ui = [det for det in self.detalles_requisicion if det.get('detalle_original_id') in ids_detalles_originales]
+
+            # 1. Eliminar detalles y revertir movimientos
+            for detalle_id in detalles_a_eliminar_ids:
+                detalle_obj = self.session.get(RequisicionDetalle, detalle_id)
+                if detalle_obj:
+                    # Crear movimiento de devolución
+                    costo_unitario, costo_total = self.calcular_costo_salida(self.session.get(Empresa, 1), detalle_obj.producto_id, detalle_obj.almacen_id, float(detalle_obj.cantidad))
+                    almacen = self.session.get(Almacen, detalle_obj.almacen_id)
+                    devolucion = MovimientoStock(
+                        empresa_id=almacen.empresa_id, producto_id=detalle_obj.producto_id, almacen_id=detalle_obj.almacen_id,
+                        tipo=TipoMovimiento.DEVOLUCION_REQUISICION, numero_documento=requisicion.numero_requisicion, fecha_documento=requisicion.fecha,
+                        cantidad_entrada=detalle_obj.cantidad, cantidad_salida=0,
+                        costo_unitario=costo_unitario, costo_total=costo_total,
+                        observaciones=f"Reversión por edición de Requisición ID {requisicion.id}"
+                    )
+                    self.session.add(devolucion)
+                    self.session.delete(detalle_obj)
+
+            # 2. Añadir nuevos detalles
+            for det_ui in detalles_a_anadir_ui:
+                self.crear_detalle_y_movimiento(requisicion, det_ui, "Nueva línea en edición")
+
+            # 3. Modificar detalles existentes
+            for det_ui in detalles_a_modificar_ui:
+                detalle_obj = self.session.get(RequisicionDetalle, det_ui['detalle_original_id'])
+                cantidad_original = detalle_obj.cantidad
+                cantidad_nueva = Decimal(str(det_ui['cantidad']))
+                diferencia = cantidad_nueva - cantidad_original
+
+                if diferencia != 0:
+                     # Crear movimiento de ajuste
+                    almacen = self.session.get(Almacen, detalle_obj.almacen_id)
+                    costo_unitario, costo_total_dif = self.calcular_costo_salida(self.session.get(Empresa, 1), detalle_obj.producto_id, detalle_obj.almacen_id, float(abs(diferencia)))
+
+                    ajuste = MovimientoStock(
+                        empresa_id=almacen.empresa_id, producto_id=detalle_obj.producto_id, almacen_id=detalle_obj.almacen_id,
+                        tipo=TipoMovimiento.AJUSTE_NEGATIVO if diferencia > 0 else TipoMovimiento.AJUSTE_POSITIVO,
+                        numero_documento=requisicion.numero_requisicion, fecha_documento=requisicion.fecha,
+                        cantidad_entrada=abs(diferencia) if diferencia < 0 else 0,
+                        cantidad_salida=abs(diferencia) if diferencia > 0 else 0,
+                        costo_unitario=costo_unitario, costo_total=costo_total_dif,
+                        observaciones=f"Ajuste por edición de Req. ID {requisicion.id}"
+                    )
+                    self.session.add(ajuste)
+
+                detalle_obj.cantidad = cantidad_nueva
+                detalle_obj.producto_id = det_ui['producto_id'] # Permitir cambio de producto
+                detalle_obj.almacen_id = det_ui['almacen_id']   # Permitir cambio de almacén
+
+            if not es_edicion:
+                 for det in self.detalles_requisicion:
+                      self.crear_detalle_y_movimiento(requisicion, det, f"Requisición {requisicion.numero_requisicion}")
+
             self.session.commit()
-            
-            QMessageBox.information(
-                self,
-                "Éxito",
-                f"Requisición {requisicion.numero_requisicion} registrada exitosamente\n\n"
-                f"Productos: {len(self.detalles_requisicion)}\n"
-                f"Destino: {self.cmb_destino.currentText()}"
-            )
-            
+            QMessageBox.information(self, "Éxito", f"Requisición {'actualizada' if es_edicion else 'registrada'} exitosamente.")
             self.accept()
-            
+
         except Exception as e:
             self.session.rollback()
+            import traceback
+            traceback.print_exc()
             QMessageBox.critical(self, "Error", f"Error al guardar requisición:\n{str(e)}")
+
+    def crear_detalle_y_movimiento(self, requisicion, det_dict, observacion):
+        """Crea un RequisicionDetalle y su MovimientoStock asociado."""
+        detalle = RequisicionDetalle(
+            requisicion_id=requisicion.id,
+            producto_id=det_dict['producto_id'],
+            almacen_id=det_dict['almacen_id'],
+            cantidad=det_dict['cantidad']
+        )
+        self.session.add(detalle)
+
+        almacen = self.session.query(Almacen).get(det_dict['almacen_id'])
+        empresa = self.session.query(Empresa).get(almacen.empresa_id)
+        costo_unitario, costo_total = self.calcular_costo_salida(
+            empresa, det_dict['producto_id'], det_dict['almacen_id'], det_dict['cantidad']
+        )
+
+        ultimo_mov = self.session.query(MovimientoStock).filter_by(
+            empresa_id=almacen.empresa_id, producto_id=det_dict['producto_id'], almacen_id=det_dict['almacen_id']
+        ).order_by(MovimientoStock.id.desc()).first()
+
+        saldo_anterior_cant = Decimal(str(ultimo_mov.saldo_cantidad)) if ultimo_mov else Decimal('0')
+        saldo_anterior_costo = Decimal(str(ultimo_mov.saldo_costo_total)) if ultimo_mov else Decimal('0')
+
+        nuevo_saldo_cant = saldo_anterior_cant - Decimal(str(det_dict['cantidad']))
+        nuevo_saldo_costo = saldo_anterior_costo - Decimal(str(costo_total))
+
+        movimiento = MovimientoStock(
+            empresa_id=almacen.empresa_id, producto_id=det_dict['producto_id'], almacen_id=det_dict['almacen_id'],
+            tipo=TipoMovimiento.REQUISICION, numero_documento=requisicion.numero_requisicion, fecha_documento=requisicion.fecha,
+            destino_id=requisicion.destino_id, cantidad_entrada=0, cantidad_salida=det_dict['cantidad'],
+            costo_unitario=float(costo_unitario), costo_total=float(costo_total),
+            saldo_cantidad=float(nuevo_saldo_cant), saldo_costo_total=float(nuevo_saldo_costo),
+            observaciones=observacion
+        )
+        self.session.add(movimiento)
     
     def calcular_costo_salida(self, empresa, producto_id, almacen_id, cantidad):
         """
@@ -568,8 +660,19 @@ class RequisicionesWindow(QWidget):
         super().__init__()
         self.session = obtener_session()
         self.user_info = user_info
+        self.requisiciones_mostradas = []
         self.init_ui()
         self.cargar_requisiciones()
+
+    def keyPressEvent(self, event):
+        """Captura la pulsación de F6 para editar."""
+        if event.key() == Qt.Key.Key_F6:
+            fila = self.tabla.currentRow()
+            if fila != -1 and fila < len(self.requisiciones_mostradas):
+                requisicion_seleccionada = self.requisiciones_mostradas[fila]
+                self.editar_requisicion(requisicion_seleccionada)
+        else:
+            super().keyPressEvent(event)
     
     def init_ui(self):
         self.setWindowTitle("Gestión de Requisiciones")
@@ -682,6 +785,7 @@ class RequisicionesWindow(QWidget):
     
     def mostrar_requisiciones(self, requisiciones):
         """Muestra requisiciones en la tabla"""
+        self.requisiciones_mostradas = requisiciones
         self.tabla.setRowCount(len(requisiciones))
         
         for row, req in enumerate(requisiciones):
@@ -705,14 +809,42 @@ class RequisicionesWindow(QWidget):
                 }
             """)
             btn_ver.clicked.connect(lambda checked, r=req: self.ver_detalle(r))
+
+            btn_editar = QPushButton("Editar")
+            btn_editar.setStyleSheet("""
+                QPushButton {
+                    background-color: #fbbc04;
+                    color: white;
+                    padding: 5px 10px;
+                    border-radius: 3px;
+                }
+            """)
+            btn_editar.clicked.connect(lambda checked, r=req: self.editar_requisicion(r))
+
+            # Layout for buttons
+            btn_layout = QHBoxLayout()
+            btn_layout.setContentsMargins(0, 0, 0, 0)
+            btn_layout.setSpacing(5)
+            btn_layout.addWidget(btn_ver)
+            btn_layout.addWidget(btn_editar)
+            btn_layout.addStretch()
             
-            self.tabla.setCellWidget(row, 5, btn_ver)
+            btn_widget = QWidget()
+            btn_widget.setLayout(btn_layout)
+
+            self.tabla.setCellWidget(row, 5, btn_widget)
         
         self.lbl_contador.setText(f"📊 Total: {len(requisiciones)} requisición(es)")
     
     def nueva_requisicion(self):
         """Abre diálogo para nueva requisición"""
         dialog = RequisicionDialog(self, self.user_info)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.cargar_requisiciones()
+
+    def editar_requisicion(self, requisicion):
+        """Abre el diálogo para editar una requisición existente."""
+        dialog = RequisicionDialog(self, self.user_info, requisicion_a_editar=requisicion)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.cargar_requisiciones()
     

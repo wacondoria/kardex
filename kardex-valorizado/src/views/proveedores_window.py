@@ -183,6 +183,13 @@ class ProveedorDialog(QDialog):
         layout.addLayout(btn_layout)
         self.setLayout(layout)
 
+    def keyPressEvent(self, event):
+        """Captura la pulsación de teclas en el diálogo."""
+        if event.key() == Qt.Key.Key_F4:
+            self.guardar()
+        else:
+            super().keyPressEvent(event)
+
     def validar_ruc(self, texto):
         """Valida el RUC en tiempo real"""
         # Eliminar todo lo que no sea número
@@ -297,8 +304,19 @@ class ProveedoresWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.session = obtener_session()
+        self.proveedores_mostrados = []
         self.init_ui()
         self.cargar_proveedores()
+
+    def keyPressEvent(self, event):
+        """Captura la pulsación de F6 para editar."""
+        if event.key() == Qt.Key.Key_F6:
+            fila = self.tabla.currentRow()
+            if fila != -1 and fila < len(self.proveedores_mostrados):
+                proveedor_seleccionado = self.proveedores_mostrados[fila]
+                self.editar_proveedor(proveedor_seleccionado)
+        else:
+            super().keyPressEvent(event)
 
     def init_ui(self):
         self.setWindowTitle("Gestión de Proveedores")
@@ -405,6 +423,7 @@ class ProveedoresWindow(QWidget):
 
     def mostrar_proveedores(self, proveedores):
         """Muestra proveedores en la tabla"""
+        self.proveedores_mostrados = proveedores
         self.tabla.setRowCount(len(proveedores))
 
         for row, prov in enumerate(proveedores):

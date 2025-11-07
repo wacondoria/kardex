@@ -222,6 +222,13 @@ class ProductoDialog(QDialog):
         layout.addLayout(btn_layout)
         self.setLayout(layout)
 
+    def keyPressEvent(self, event):
+        """Captura la pulsación de teclas en el diálogo."""
+        if event.key() == Qt.Key.Key_F4:
+            self.guardar()
+        else:
+            super().keyPressEvent(event)
+
     # --- ESTA ES LA FUNCIÓN CORREGIDA EN EL PASO ANTERIOR ---
     def cargar_prefijos_existentes(self):
         """Carga los prefijos de 5 caracteres únicos de la base de datos."""
@@ -489,8 +496,19 @@ class ProductosWindow(QWidget):
         super().__init__()
         self.session = obtener_session()
         self.user_info = user_info
+        self.productos_mostrados = []
         self.init_ui()
         self.cargar_productos()
+
+    def keyPressEvent(self, event):
+        """Captura la pulsación de F6 para editar."""
+        if event.key() == Qt.Key.Key_F6:
+            fila = self.tabla.currentRow()
+            if fila != -1 and fila < len(self.productos_mostrados):
+                producto_seleccionado = self.productos_mostrados[fila]
+                self.editar_producto(producto_seleccionado)
+        else:
+            super().keyPressEvent(event)
 
     def init_ui(self):
         self.setWindowTitle("Gestión de Productos")
@@ -596,6 +614,7 @@ class ProductosWindow(QWidget):
             self.mostrar_productos(productos)
 
     def mostrar_productos(self, productos):
+        self.productos_mostrados = productos
         self.tabla.setRowCount(0)
         self.tabla.setRowCount(len(productos))
 

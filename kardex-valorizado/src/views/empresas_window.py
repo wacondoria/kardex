@@ -101,6 +101,13 @@ class AlmacenDialog(QDialog):
         layout.addLayout(btn_layout)
         self.setLayout(layout)
 
+    def keyPressEvent(self, event):
+        """Captura la pulsación de teclas en el diálogo."""
+        if event.key() == Qt.Key.Key_F4:
+            self.guardar()
+        else:
+            super().keyPressEvent(event)
+
     def cargar_datos_almacen(self):
         """Carga datos del almacén en edición"""
         self.txt_codigo.setText(self.almacen.codigo)
@@ -284,6 +291,13 @@ class EmpresaDialog(QDialog):
         layout.addLayout(btn_layout)
         self.setLayout(layout)
 
+    def keyPressEvent(self, event):
+        """Captura la pulsación de teclas en el diálogo."""
+        if event.key() == Qt.Key.Key_F4:
+            self.guardar()
+        else:
+            super().keyPressEvent(event)
+
     def validar_ruc(self, texto):
         """Valida el RUC"""
         ruc = re.sub(r'\D', '', texto)
@@ -392,8 +406,26 @@ class EmpresasWindow(QWidget):
         super().__init__()
         self.session = obtener_session()
         self.empresa_seleccionada = None
+        self.empresas_mostradas = []
+        self.almacenes_mostrados = []
         self.init_ui()
         self.cargar_empresas()
+
+    def keyPressEvent(self, event):
+        """Captura la pulsación de F6 para editar."""
+        if event.key() == Qt.Key.Key_F6:
+            if self.tabs.currentIndex() == 0:  # Pestaña de Empresas
+                fila = self.tabla_empresas.currentRow()
+                if fila != -1 and fila < len(self.empresas_mostradas):
+                    empresa_seleccionada = self.empresas_mostradas[fila]
+                    self.editar_empresa(empresa_seleccionada)
+            elif self.tabs.currentIndex() == 1:  # Pestaña de Almacenes
+                fila = self.tabla_almacenes.currentRow()
+                if fila != -1 and fila < len(self.almacenes_mostrados):
+                    almacen_seleccionado = self.almacenes_mostrados[fila]
+                    self.editar_almacen(almacen_seleccionado)
+        else:
+            super().keyPressEvent(event)
 
     def init_ui(self):
         self.setWindowTitle("Gestión de Empresas y Almacenes")
@@ -549,7 +581,7 @@ class EmpresasWindow(QWidget):
     def cargar_empresas(self):
         """Carga todas las empresas"""
         empresas = self.session.query(Empresa).filter_by(activo=True).all()
-
+        self.empresas_mostradas = empresas
         self.tabla_empresas.setRowCount(len(empresas))
 
         # Limpiar y cargar combo
@@ -613,7 +645,7 @@ class EmpresasWindow(QWidget):
             empresa_id=empresa_id,
             activo=True
         ).all()
-
+        self.almacenes_mostrados = almacenes
         self.tabla_almacenes.setRowCount(len(almacenes))
 
         for row, alm in enumerate(almacenes):

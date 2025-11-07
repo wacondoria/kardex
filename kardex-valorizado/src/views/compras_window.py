@@ -1231,6 +1231,13 @@ class CompraDialog(QDialog):
 
             # (El código para seleccionar el nuevo producto se omite por simplicidad)
 
+    def keyPressEvent(self, event):
+        """Captura la pulsación de teclas en el diálogo."""
+        if event.key() == Qt.Key.Key_F4:
+            self.guardar_compra()
+        else:
+            super().keyPressEvent(event)
+
 # ============================================
 # DIÁLOGO DE VER DETALLE (CORREGIDO)
 # ============================================
@@ -1376,8 +1383,19 @@ class ComprasWindow(QWidget):
         super().__init__()
         self.session = obtener_session()
         self.user_info = user_info
+        self.compras_mostradas = []
         self.init_ui()
         self.cargar_compras()
+
+    def keyPressEvent(self, event):
+        """Captura la pulsación de F6 para editar."""
+        if event.key() == Qt.Key.Key_F6:
+            fila = self.tabla.currentRow()
+            if fila != -1 and fila < len(self.compras_mostradas):
+                compra_seleccionada = self.compras_mostradas[fila]
+                self.editar_compra(compra_seleccionada)
+        else:
+            super().keyPressEvent(event)
 
     def init_ui(self):
         self.setWindowTitle("Gestión de Compras")
@@ -1604,7 +1622,7 @@ class ComprasWindow(QWidget):
 
     def mostrar_compras(self, compras):
         """Muestra compras en la tabla, convirtiendo a Soles si es necesario."""
-
+        self.compras_mostradas = compras
         self.tabla.setColumnCount(10)
         self.tabla.setHorizontalHeaderLabels([
             "Nro. Proceso", "F. Contable", "F. Emisión", "Documento", "Proveedor", "Moneda", "Subtotal", "IGV", "Total", "Acciones"

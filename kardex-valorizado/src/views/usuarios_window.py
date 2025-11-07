@@ -237,6 +237,13 @@ class UsuarioDialog(QDialog):
         layout.addLayout(btn_layout)
         self.setLayout(layout)
     
+    def keyPressEvent(self, event):
+        """Captura la pulsación de teclas en el diálogo."""
+        if event.key() == Qt.Key.Key_F4:
+            self.guardar()
+        else:
+            super().keyPressEvent(event)
+
     def cargar_datos_usuario(self):
         """Carga datos del usuario en edición"""
         self.txt_username.setText(self.usuario.username)
@@ -361,8 +368,19 @@ class UsuariosWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.session = obtener_session()
+        self.usuarios_mostrados = []
         self.init_ui()
         self.cargar_usuarios()
+
+    def keyPressEvent(self, event):
+        """Captura la pulsación de F6 para editar."""
+        if event.key() == Qt.Key.Key_F6:
+            fila = self.tabla.currentRow()
+            if fila != -1 and fila < len(self.usuarios_mostrados):
+                usuario_seleccionado = self.usuarios_mostrados[fila]
+                self.editar_usuario(usuario_seleccionado)
+        else:
+            super().keyPressEvent(event)
     
     def init_ui(self):
         self.setWindowTitle("Gestión de Usuarios")
@@ -459,6 +477,7 @@ class UsuariosWindow(QWidget):
     
     def mostrar_usuarios(self, usuarios):
         """Muestra usuarios en la tabla"""
+        self.usuarios_mostrados = usuarios
         self.tabla.setRowCount(len(usuarios))
         
         for row, user in enumerate(usuarios):
