@@ -15,6 +15,7 @@ from pathlib import Path
 from datetime import datetime
 from decimal import Decimal
 from sqlalchemy import extract, func
+from sqlalchemy.orm import joinedload
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -319,20 +320,21 @@ class RequisicionDialog(QDialog):
             self.cmb_destino.addItem(dest.nombre, dest.id)
         
         # Productos: Cargar solo productos con stock > 0
-        # 1. Subconsulta para obtener el ID del último movimiento para cada producto/almacén
-        subquery_ultimo_mov_id = self.session.query(
+        # 1. Statement para obtener el ID del último movimiento para cada producto/almacén.
+        #    No se usa .subquery() para evitar un SAWarning. La Query se pasa directamente a IN().
+        subquery_ultimo_mov_id_stmt = self.session.query(
             func.max(MovimientoStock.id)
         ).group_by(
             MovimientoStock.producto_id,
             MovimientoStock.almacen_id
-        ).subquery()
+        )
 
         # 2. Subconsulta para obtener el saldo total de cada producto sumando los saldos de cada almacén
         subquery_stock_total = self.session.query(
             MovimientoStock.producto_id,
             func.sum(MovimientoStock.saldo_cantidad).label('stock_total')
         ).filter(
-            MovimientoStock.id.in_(subquery_ultimo_mov_id)
+            MovimientoStock.id.in_(subquery_ultimo_mov_id_stmt)
         ).group_by(
             MovimientoStock.producto_id
         ).subquery()
@@ -881,13 +883,17 @@ class RequisicionesWindow(QWidget):
         # Volvemos a consultar la requisición y sus detalles en la sesión
         # para asegurarnos de que las relaciones (destino, detalles, producto, etc.)
         # están cargadas.
-        req = self.session.query(Requisicion).get(requisicion.id)
-        
+        req = self.session.query(Requisicion).options(
+            joinedload(Requisicion.destino),
+            joinedload(Requisicion.detalles).joinedload(RequisicionDetalle.producto),
+            joinedload(Requisicion.detalles).joinedload(RequisicionDetalle.almacen)
+        ).filter_by(id=requisicion.id).first()
+
         if not req:
             QMessageBox.warning(self, "Error", "No se encontró la requisición.")
             return
             
-        detalles = req.detalles 
+        detalles = req.detalles
         
         # Corregimos la línea incompleta y completamos el mensaje
         mensaje = f"<b>REQUISICIÓN: {req.numero_requisicion}</b><br>"
