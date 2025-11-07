@@ -86,6 +86,7 @@ class CompraDialog(QDialog):
         self.compra_original = compra_a_editar
         self.detalles_originales_obj = detalles_originales
         self.detalles_compra = []
+        self.lista_completa_productos = []
 
         self.init_ui()
         self.cargar_datos_iniciales()
@@ -460,10 +461,10 @@ class CompraDialog(QDialog):
 
         # Productos
         self.cmb_producto.clear()
-        productos = self.session.query(Producto).filter_by(activo=True).order_by(Producto.nombre).all()
-        if not productos:
+        self.lista_completa_productos = self.session.query(Producto).filter_by(activo=True).order_by(Producto.nombre).all()
+        if not self.lista_completa_productos:
             QMessageBox.warning(self, "Sin productos", "No hay productos registrados.")
-        for prod in productos:
+        for prod in self.lista_completa_productos:
             self.cmb_producto.addItem(f"{prod.codigo} - {prod.nombre}", prod.id)
         lista_nombres_productos = [self.cmb_producto.itemText(i) for i in range(self.cmb_producto.count())]
         completer = QCompleter(lista_nombres_productos, self)
@@ -576,12 +577,26 @@ class CompraDialog(QDialog):
         self.tabla_productos.setRowCount(len(self.detalles_compra))
 
         for row, det in enumerate(self.detalles_compra):
-            item_prod = QTableWidgetItem(det['producto_nombre'])
+            # --- PRODUCTO (COMBOBOX) ---
+            combo_producto = QComboBox(self.tabla_productos)
+            for prod in self.lista_completa_productos:
+                combo_producto.addItem(f"{prod.codigo} - {prod.nombre}", prod.id)
+
+            index_actual = combo_producto.findData(det['producto_id'])
+            if index_actual != -1:
+                combo_producto.setCurrentIndex(index_actual)
+
+            # Conectar la señal ANTES de añadir a la tabla podría ser más seguro
+            combo_producto.currentIndexChanged.connect(
+                lambda index, r=row: self.producto_en_detalle_editado(index, r)
+            )
+            self.tabla_productos.setCellWidget(row, 0, combo_producto)
+
+            # --- RESTO DE LAS CELDAS ---
             item_alm = QTableWidgetItem(det['almacen_nombre'])
-            item_prod.setFlags(item_prod.flags() & ~Qt.ItemFlag.ItemIsEditable)
             item_alm.setFlags(item_alm.flags() & ~Qt.ItemFlag.ItemIsEditable)
-            self.tabla_productos.setItem(row, 0, item_prod)
             self.tabla_productos.setItem(row, 1, item_alm)
+
 
             item_cant = QTableWidgetItem(f"{det['cantidad']:.2f}")
             item_precio = QTableWidgetItem(f"{det['precio_unitario']:.2f}")
@@ -1044,6 +1059,25 @@ class CompraDialog(QDialog):
                   widget.blockSignals(original_state)
 
         self.recalcular_totales()
+
+    def producto_en_detalle_editado(self, combo_index, row):
+        """
+        Maneja el cambio de un producto en el ComboBox de la tabla de detalles.
+        """
+        if 0 <= row < len(self.detalles_compra):
+            combo_box = self.tabla_productos.cellWidget(row, 0)
+            if not combo_box:
+                return
+
+            nuevo_producto_id = combo_box.itemData(combo_index)
+            nuevo_producto_nombre = combo_box.itemText(combo_index)
+
+            if nuevo_producto_id is not None:
+                detalle_actualizado = self.detalles_compra[row]
+                detalle_actualizado['producto_id'] = nuevo_producto_id
+                detalle_actualizado['producto_nombre'] = nuevo_producto_nombre
+            else:
+                print(f"ADVERTENCIA: No se pudo obtener el ID del producto para el índice {combo_index} en la fila {row}")
 
     def detalle_editado(self, row, column):
         if column not in [2, 3]:
