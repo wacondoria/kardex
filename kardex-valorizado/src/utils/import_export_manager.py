@@ -3,11 +3,17 @@ Manager Centralizado para Importación y Exportación de Plantillas
 Archivo: src/utils/import_export_manager.py
 """
 import re
+import calendar
+from datetime import datetime, date
+from decimal import Decimal, ROUND_HALF_UP
+
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, Alignment, PatternFill
 from openpyxl.worksheet.datavalidation import DataValidation
-from models.database_model import obtener_session, Proveedor, Producto, Categoria
+
+from models.database_model import (obtener_session, Proveedor, Producto, Compra,
+                                   Categoria, TipoCambio, TipoDocumento, Moneda)
 
 # Definición de unidades SUNAT
 UNIDADES_SUNAT = [
@@ -28,6 +34,10 @@ class ImportExportManager:
             self._generar_plantilla_proveedores()
         elif modulo == "Productos":
             self._generar_plantilla_productos()
+        elif modulo == "Compras":
+            self._generar_plantilla_compras()
+        elif modulo == "Tipo de Cambio":
+            self._generar_plantilla_tipo_cambio()
         else:
             QMessageBox.warning(self.parent, "Error", f"El módulo '{modulo}' no es válido para generar plantillas.")
 
@@ -37,6 +47,10 @@ class ImportExportManager:
             self._importar_datos_proveedores()
         elif modulo == "Productos":
             self._importar_datos_productos()
+        elif modulo == "Compras":
+            self._importar_datos_compras()
+        elif modulo == "Tipo de Cambio":
+            self._importar_datos_tipo_cambio()
         else:
             QMessageBox.warning(self.parent, "Error", f"El módulo '{modulo}' no es válido para importar datos.")
 
@@ -338,6 +352,192 @@ class ImportExportManager:
         except Exception as e:
             self.session.rollback()
             QMessageBox.critical(self.parent, "Error Crítico", f"Ocurrió un error inesperado:\n{str(e)}")
+        finally:
+            self.session.close()
+
+    def _generar_plantilla_compras(self):
+        """Genera una plantilla Excel para la importación masiva de cabeceras de compra."""
+        path, _ = QFileDialog.getSaveFileName(
+            self.parent, "Guardar Plantilla de Compras",
+            "plantilla_compras.xlsx", "Archivos de Excel (*.xlsx)"
+        )
+        if not path: return
+
+        try:
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Compras"
+            headers = ["RUC_PROVEEDOR", "FECHA_EMISION (dd/mm/aaaa)", "FECHA_CONTABLE (dd/mm/aaaa)", "SERIE", "NUMERO"]
+            ws.append(headers)
+
+            header_font = Font(bold=True, color="FFFFFF")
+            header_fill = PatternFill(start_color="FF1D6F42", end_color="FF1D6F42", fill_type="solid")
+            header_align = Alignment(horizontal="center")
+            for cell in ws[1]:
+                cell.font, cell.fill, cell.alignment = header_font, header_fill, header_align
+
+            proveedores = self.session.query(Proveedor).filter_by(activo=True).all()
+            if proveedores and len(proveedores) < 200:
+                rucs = [p.ruc for p in proveedores]
+                dv_ruc = DataValidation(type="list", formula1=f'"{",".join(rucs)}"', allow_blank=False)
+                ws.add_data_validation(dv_ruc)
+                dv_ruc.add('A2:A1000')
+
+            ws.column_dimensions['A'].width = 18
+            ws.column_dimensions['B'].width = 25
+            ws.column_dimensions['C'].width = 28
+            ws.column_dimensions['D'].width = 10
+            ws.column_dimensions['E'].width = 12
+
+            ws_inst = wb.create_sheet(title="Instrucciones")
+            ws_inst.append(["Columna", "Descripción", "Obligatorio"])
+            ws_inst.append(["RUC_PROVEEDOR", "RUC de 11 dígitos. Debe existir en su base de datos.", "Sí"])
+            ws_inst.append(["FECHA_EMISION (dd/mm/aaaa)", "Fecha de la factura (para el Kardex).", "Sí"])
+            ws_inst.append(["FECHA_CONTABLE (dd/mm/aaaa)", "Fecha del periodo contable (para el reporte).", "Sí"])
+            ws_inst.append(["SERIE", "Serie de la factura (Ej: F001).", "Sí"])
+            ws_inst.append(["NUMERO", "Número de la factura (Ej: 1234).", "Sí"])
+            ws.append(["12345678901", "30/09/2025", "01/10/2025", "F001", "1234"])
+
+            wb.save(path)
+            QMessageBox.information(self.parent, "Éxito", f"Plantilla guardada exitosamente en:\n{path}")
+        except Exception as e:
+            QMessageBox.critical(self.parent, "Error", f"No se pudo generar la plantilla:\n{str(e)}")
+
+    def _importar_datos_compras(self):
+        """Importa cabeceras de compra desde un archivo Excel."""
+        path, _ = QFileDialog.getOpenFileName(
+            self.parent, "Abrir Plantilla de Compras", "", "Archivos de Excel (*.xlsx *.xls)"
+        )
+        if not path: return
+
+        try:
+            wb = load_workbook(path, data_only=True)
+            if "Compras" not in wb.sheetnames:
+                QMessageBox.critical(self.parent, "Error de Hoja", "No se encontró la hoja 'Compras'.")
+                return
+
+            ws = wb["Compras"]
+            expected_headers = ["RUC_PROVEEDOR", "FECHA_EMISION (DD/MM/AAAA)", "FECHA_CONTABLE (DD/MM/AAAA)", "SERIE", "NUMERO"]
+            actual_headers = [str(cell.value).upper().strip() for cell in ws[1] if cell.value is not None][:len(expected_headers)]
+            expected_headers_check = [h.split(' (')[0] for h in expected_headers]
+            actual_headers_check = [h.split(' (')[0] for h in actual_headers]
+
+            if actual_headers_check != expected_headers_check:
+                QMessageBox.critical(self.parent, "Error de Formato", f"Los encabezados del Excel no son correctos.")
+                return
+
+            compras_a_crear, errores_lectura = [], []
+            proveedores_db = self.session.query(Proveedor).filter_by(activo=True).all()
+            prov_map = {p.ruc: p.id for p in proveedores_db}
+            documentos_excel = set()
+            documentos_db = {(c.proveedor_id, c.numero_documento) for c in self.session.query(Compra.proveedor_id, Compra.numero_documento).all()}
+
+            for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+                if all(c is None for c in row): continue
+                try:
+                    ruc_excel, fecha_emision_excel, fecha_contable_excel, serie_excel, numero_excel = row[:5]
+                    if not all([ruc_excel, fecha_emision_excel, fecha_contable_excel, serie_excel, numero_excel]):
+                        raise ValueError("Faltan datos (RUC, Fechas, Serie o Número).")
+
+                    ruc = str(ruc_excel).strip()
+                    if ruc not in prov_map: raise ValueError(f"Proveedor con RUC {ruc} no encontrado.")
+                    proveedor_id = prov_map[ruc]
+
+                    fecha_emision = (fecha_emision_excel if isinstance(fecha_emision_excel, datetime) else datetime.strptime(str(fecha_emision_excel).split(" ")[0], "%d/%m/%Y")).date()
+                    fecha_contable = (fecha_contable_excel if isinstance(fecha_contable_excel, datetime) else datetime.strptime(str(fecha_contable_excel).split(" ")[0], "%d/%m/%Y")).date()
+
+                    serie = str(serie_excel).strip().upper()
+                    numero = str(numero_excel).strip().zfill(8)
+                    numero_documento_completo = f"{serie}-{numero}"
+                    doc_key = (proveedor_id, numero_documento_completo)
+                    if doc_key in documentos_excel: raise ValueError(f"Documento {numero_documento_completo} duplicado en el archivo.")
+                    documentos_excel.add(doc_key)
+                    if doc_key in documentos_db: raise ValueError(f"Documento {numero_documento_completo} ya existe en la BD.")
+
+                    compras_a_crear.append(Compra(
+                        proveedor_id=proveedor_id, fecha=fecha_emision, fecha_registro_contable=fecha_contable,
+                        tipo_documento=TipoDocumento.FACTURA, numero_documento=numero_documento_completo,
+                        moneda=Moneda.SOLES, tipo_cambio=Decimal('1.0'), incluye_igv=False,
+                        igv_porcentaje=Decimal('18.0'), subtotal=Decimal('0.0'), igv=Decimal('0.0'), total=Decimal('0.0')
+                    ))
+                except Exception as e:
+                    errores_lectura.append(f"Fila {row_idx}: {str(e)}")
+
+            if errores_lectura:
+                self.session.rollback()
+                self._mostrar_reporte_importacion(0, 0, errores_lectura)
+            elif not compras_a_crear:
+                QMessageBox.warning(self.parent, "Archivo Vacío", "No se encontraron datos válidos.")
+            else:
+                self.session.add_all(compras_a_crear)
+                self.session.commit()
+                self._mostrar_reporte_importacion(len(compras_a_crear), 0, [])
+        except Exception as e:
+            self.session.rollback()
+            QMessageBox.critical(self.parent, "Error Crítico", f"Ocurrió un error inesperado:\n{str(e)}")
+        finally:
+            self.session.close()
+
+    def _generar_plantilla_tipo_cambio(self):
+        """Genera una plantilla Excel para la importación de tipo de cambio."""
+        archivo, _ = QFileDialog.getSaveFileName(
+            self.parent, "Guardar Plantilla", "plantilla_tipo_cambio.xlsx", "Excel (*.xlsx)"
+        )
+        if not archivo: return
+        try:
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "TipoCambio"
+            headers = ['fecha (yyyy-mm-dd)', 'precio_compra', 'precio_venta']
+            ws.append(headers)
+            ws.append(['2024-01-15', 3.850, 3.870])
+            for cell in ws[1]:
+                cell.font = Font(bold=True, color="FFFFFF")
+                cell.fill = PatternFill(start_color="FF1D6F42", end_color="FF1D6F42", fill_type="solid")
+            wb.save(archivo)
+            QMessageBox.information(self.parent, "Éxito", f"Plantilla descargada:\n{archivo}")
+        except Exception as e:
+            QMessageBox.critical(self.parent, "Error", f"Error al generar plantilla:\n{str(e)}")
+
+    def _importar_datos_tipo_cambio(self):
+        """Importa tipos de cambio desde Excel."""
+        archivo, _ = QFileDialog.getOpenFileName(
+            self.parent, "Seleccionar archivo Excel", "", "Excel (*.xlsx *.xls)"
+        )
+        if not archivo: return
+
+        try:
+            wb = load_workbook(archivo, data_only=True)
+            ws = wb.active
+
+            nuevos, actualizados, errores = 0, 0, []
+
+            for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+                try:
+                    if not row[0] or not row[1] or not row[2]: continue
+
+                    fecha = (row[0].date() if isinstance(row[0], datetime) else
+                             row[0] if isinstance(row[0], date) else
+                             datetime.strptime(str(row[0]), '%Y-%m-%d').date())
+
+                    precio_compra = float(row[1])
+                    precio_venta = float(row[2])
+
+                    tc_existe = self.session.query(TipoCambio).filter_by(fecha=fecha).first()
+                    if tc_existe:
+                        tc_existe.precio_compra, tc_existe.precio_venta, tc_existe.activo = precio_compra, precio_venta, True
+                        actualizados += 1
+                    else:
+                        self.session.add(TipoCambio(fecha=fecha, precio_compra=precio_compra, precio_venta=precio_venta))
+                        nuevos += 1
+                except Exception as e:
+                    errores.append(f"Fila {row_idx}: {str(e)}")
+
+            self.session.commit()
+            self._mostrar_reporte_importacion(nuevos, actualizados, errores)
+        except Exception as e:
+            self.session.rollback()
+            QMessageBox.critical(self.parent, "Error", f"Error al importar:\n{str(e)}")
         finally:
             self.session.close()
 
