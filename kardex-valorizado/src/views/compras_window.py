@@ -1173,12 +1173,6 @@ class CompraDialog(QDialog):
             for prov in proveedores:
                 self.cmb_proveedor.addItem(f"{prov.ruc} - {prov.razon_social}", prov.id)
 
-            lista_nombres_proveedores = [self.cmb_proveedor.itemText(i) for i in range(self.cmb_proveedor.count())]
-            completer_proveedor = QCompleter(lista_nombres_proveedores, self)
-            completer_proveedor.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
-            completer_proveedor.setFilterMode(Qt.MatchFlag.MatchContains)
-            self.cmb_proveedor.setCompleter(completer_proveedor)
-
             self.cmb_proveedor.lineEdit().setText(texto_actual)
 
             # Opcional: Seleccionar el nuevo proveedor si el diálogo lo retorna
@@ -1203,12 +1197,6 @@ class CompraDialog(QDialog):
             productos = self.session.query(Producto).filter_by(activo=True).order_by(Producto.nombre).all()
             for prod in productos:
                 self.cmb_producto.addItem(f"{prod.codigo} - {prod.nombre}", prod.id)
-
-            lista_nombres_productos = [self.cmb_producto.itemText(i) for i in range(self.cmb_producto.count())]
-            completer = QCompleter(lista_nombres_productos, self)
-            completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
-            completer.setFilterMode(Qt.MatchFlag.MatchContains)
-            self.cmb_producto.setCompleter(completer)
 
             self.cmb_producto.lineEdit().setText(texto_actual)
 
