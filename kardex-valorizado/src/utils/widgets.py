@@ -23,6 +23,12 @@ class SearchableComboBox(QComboBox):
         self.lineEdit().textEdited.connect(self._update_model)
         self.currentIndexChanged.connect(self._on_index_changed)
 
+    def wheelEvent(self, e):
+        if not self.view().isVisible():
+            e.ignore()
+        else:
+            super().wheelEvent(e)
+
     def _update_model(self, text):
         # Cada vez que el texto cambia, actualizamos el modelo del completer
         # para que siempre se base en la lista completa de ítems.
