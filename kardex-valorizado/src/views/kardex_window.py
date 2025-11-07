@@ -13,6 +13,8 @@ import sys
 from pathlib import Path
 from datetime import datetime
 from decimal import Decimal
+from sqlalchemy import extract
+from utils.app_context import app_context
 import xlsxwriter
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
