@@ -1611,8 +1611,7 @@ class ComprasWindow(QWidget):
         ])
         header = self.tabla.horizontalHeader()
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch) # Proveedor
-        header.setSectionResizeMode(9, QHeaderV
-iew.ResizeMode.Fixed) # Acciones
+        header.setSectionResizeMode(9, QHeaderView.ResizeMode.Fixed) # Acciones
         self.tabla.setColumnWidth(0, 100)
         self.tabla.setColumnWidth(1, 90)
         self.tabla.setColumnWidth(2, 90)
