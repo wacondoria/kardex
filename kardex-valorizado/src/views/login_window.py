@@ -42,7 +42,7 @@ class LoginWindow(QWidget):
     def init_ui(self):
         """Inicializa la interfaz de usuario"""
         self.setWindowTitle("KARDEX v1.4.4 - Modulo De Inventarios valorizado")
-        self.setFixedSize(400, 300)
+        self.setFixedSize(400, 250)
 
         self.setStyleSheet("""
             QWidget#LoginWindow { background-color: #E0E0E0; }
@@ -68,7 +68,7 @@ class LoginWindow(QWidget):
 
         # Logo
         logo_label = QLabel()
-        pixmap = QPixmap("kardex-valorizado/src/resources/logo.png")
+        pixmap = QPixmap("src/resources/logo.png")
         logo_label.setPixmap(pixmap.scaled(300, 100, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
         logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         main_layout.addWidget(logo_label)
@@ -86,8 +86,8 @@ class LoginWindow(QWidget):
         self.txt_password = QLineEdit()
         self.txt_password.setEchoMode(QLineEdit.EchoMode.Password)
 
-        self.btn_verificar = QPushButton("➡️ Ingresar")
-        self.btn_verificar.setIcon(QIcon("kardex-valorizado/src/resources/login_icon.png"))
+        self.btn_verificar = QPushButton("Ingresar")
+        self.btn_verificar.setIcon(QIcon("src/resources/login_icon.png"))
         self.btn_verificar.setIconSize(QSize(16, 16))
         self.btn_verificar.setMinimumSize(70, 28)
 
