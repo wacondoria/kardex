@@ -1124,13 +1124,13 @@ class CompraDialog(QDialog):
             if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
 
                 if source is self.cmb_producto:
-                    if self.cmb_producto.completer().popup().isVisible():
+                    if self.cmb_producto.completer.popup().isVisible():
                         return super().eventFilter(source, event)
                     self.cmb_almacen.setFocus()
                     return True
 
                 elif source is self.cmb_almacen:
-                    if hasattr(self.cmb_almacen, 'completer') and self.cmb_almacen.completer() and self.cmb_almacen.completer().popup().isVisible():
+                    if hasattr(self.cmb_almacen, 'completer') and self.cmb_almacen.completer and self.cmb_almacen.completer.popup().isVisible():
                          return super().eventFilter(source, event)
                     self.spn_cantidad.setFocus()
                     return True
