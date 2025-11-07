@@ -65,25 +65,41 @@ def verificar_y_actualizar_db(db_url='sqlite:///kardex.db'):
     if not inspector.has_table('anio_contable'):
         print("⚠️  Tabla 'anio_contable' no encontrada. Creándola...")
         try:
-            # Crea la tabla específica usando el modelo
             AnioContable.__table__.create(engine)
             print("✓  Tabla 'anio_contable' creada exitosamente.")
 
-            # Si se acaba de crear, es probable que esté vacía.
-            # Se recomienda poblarla con un año inicial.
             with sessionmaker(bind=engine)() as session:
-                if session.query(AnioContable).count() == 0:
-                    print("🗓️  Poblando la tabla 'anio_contable' con el año actual...")
-                    anio_actual = AnioContable(
-                        anio=datetime.now().year,
-                        estado=EstadoAnio.ABIERTO
-                    )
-                    session.add(anio_actual)
-                    session.commit()
-                    print(f"✓  Año {datetime.now().year} añadido como 'Abierto'.")
+                print("🗓️  Poblando la tabla 'anio_contable' con el año actual...")
+                anio_actual = AnioContable(
+                    anio=datetime.now().year,
+                    estado=EstadoAnio.ABIERTO
+                )
+                session.add(anio_actual)
+                session.commit()
+                print(f"✓  Año {datetime.now().year} añadido como 'Abierto'.")
 
         except Exception as e:
             print(f"❌  Error al crear o poblar la tabla 'anio_contable': {e}")
+    else:
+        # 3. Si la tabla ya existe, verificar que haya al menos un año abierto
+        from sqlalchemy.orm import sessionmaker
+        Session = sessionmaker(bind=engine)
+        with Session() as session:
+            anios_abiertos = session.query(AnioContable).filter_by(estado=EstadoAnio.ABIERTO).count()
+            if anios_abiertos == 0:
+                print("⚠️  No se encontraron años contables abiertos. Creando año 2025...")
+
+                anio_2025_existe = session.query(AnioContable).filter_by(anio=2025).count() > 0
+
+                if anio_2025_existe:
+                    print("↪️  El año 2025 ya existe. Cambiando su estado a 'Abierto'.")
+                    session.query(AnioContable).filter_by(anio=2025).update({'estado': EstadoAnio.ABIERTO})
+                else:
+                    nuevo_anio = AnioContable(anio=2025, estado=EstadoAnio.ABIERTO)
+                    session.add(nuevo_anio)
+                    print("✓  Año 2025 creado como 'Abierto'.")
+
+                session.commit()
 
 class KardexMainWindow(QMainWindow):
     """Ventana principal del sistema"""
