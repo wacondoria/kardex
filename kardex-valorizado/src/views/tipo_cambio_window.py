@@ -105,6 +105,13 @@ class TipoCambioDialog(QDialog):
         layout.addLayout(btn_layout)
         self.setLayout(layout)
 
+    def keyPressEvent(self, event):
+        """Captura la pulsación de teclas en el diálogo."""
+        if event.key() == Qt.Key.Key_F4:
+            self.guardar()
+        else:
+            super().keyPressEvent(event)
+
     def cargar_datos(self):
         """Carga datos del tipo de cambio en edición"""
         self.date_fecha.setDate(QDate(
@@ -188,8 +195,19 @@ class TipoCambioWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.session = obtener_session()
+        self.tipos_cambio_mostrados = []
         self.init_ui()
         self.cargar_tipos_cambio()
+
+    def keyPressEvent(self, event):
+        """Captura la pulsación de F6 para editar."""
+        if event.key() == Qt.Key.Key_F6:
+            fila = self.tabla.currentRow()
+            if fila != -1 and fila < len(self.tipos_cambio_mostrados):
+                tc_seleccionado = self.tipos_cambio_mostrados[fila]
+                self.editar_tipo_cambio(tc_seleccionado)
+        else:
+            super().keyPressEvent(event)
 
     def init_ui(self):
         self.setWindowTitle("Gestión de Tipo de Cambio")
@@ -293,6 +311,7 @@ class TipoCambioWindow(QWidget):
 
     def mostrar_tipos_cambio(self, tipos_cambio):
         """Muestra tipos de cambio en la tabla"""
+        self.tipos_cambio_mostrados = tipos_cambio
         self.tabla.setRowCount(len(tipos_cambio))
 
         for row, tc in enumerate(tipos_cambio):
