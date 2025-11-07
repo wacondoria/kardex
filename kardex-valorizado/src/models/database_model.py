@@ -322,6 +322,7 @@ class Compra(Base):
     orden_compra_id = Column(Integer, ForeignKey('ordenes_compra.id'), nullable=True)
     
     # Documento
+    numero_proceso = Column(String(20), nullable=True)
     tipo_documento = Column(Enum(TipoDocumento), default=TipoDocumento.FACTURA)
     numero_documento = Column(String(20), nullable=False)
     fecha = Column(Date, nullable=False) # Fecha de Emisión (Kardex)

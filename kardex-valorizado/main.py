@@ -36,8 +36,9 @@ from models.database_model import obtener_session
 
 # --- MODIFICADO: Añadida función de migración de BD ---
 from sqlalchemy import create_engine, inspect, text
-from models.database_model import AnioContable, EstadoAnio
+from models.database_model import AnioContable, EstadoAnio, Compra
 from datetime import datetime
+from collections import defaultdict
 
 def verificar_y_actualizar_db(db_url='sqlite:///kardex.db'):
     """
@@ -100,6 +101,42 @@ def verificar_y_actualizar_db(db_url='sqlite:///kardex.db'):
                     print("✓  Año 2025 creado como 'Abierto'.")
 
                 session.commit()
+
+    # 4. Verificar columna 'numero_proceso' en 'compras'
+    try:
+        columns = [col['name'] for col in inspector.get_columns('compras')]
+        if 'numero_proceso' not in columns:
+            print("⚠️  Detectado modelo de 'compras' antiguo. Actualizando BD...")
+            with engine.connect() as connection:
+                connection.execute(text("ALTER TABLE compras ADD COLUMN numero_proceso VARCHAR(20)"))
+                connection.commit()
+            print("✓  Columna 'numero_proceso' añadida a 'compras' exitosamente.")
+
+            # Poblar 'numero_proceso' para datos existentes
+            print("ℹ️  Asignando 'numero_proceso' a compras existentes...")
+            with sessionmaker(bind=engine)() as session:
+                compras_sin_proceso = session.query(Compra).filter(Compra.numero_proceso == None).order_by(Compra.fecha_registro_contable, Compra.id).all()
+
+                if compras_sin_proceso:
+                    correlativos = defaultdict(int)
+                    for compra in compras_sin_proceso:
+                        # Usar fecha_registro_contable si existe, si no, la fecha de emisión
+                        fecha = compra.fecha_registro_contable or compra.fecha
+                        if fecha:
+                            mes = f"{fecha.month:02d}"
+                            correlativos[mes] += 1
+                            correlativo_actual = correlativos[mes]
+                            compra.numero_proceso = f"06{mes}{correlativo_actual:06d}"
+                        else:
+                            # Caso fallback si no hay ninguna fecha
+                            compra.numero_proceso = f"0600000000"
+
+                    session.commit()
+                    print(f"✓  Se actualizaron {len(compras_sin_proceso)} compras existentes.")
+                else:
+                    print("👍 No hay compras existentes que necesiten actualización.")
+    except Exception as e:
+        print(f"🔷 Info: Tabla 'compras' probablemente no existe aún. Se creará más tarde. ({e})")
 
 class KardexMainWindow(QMainWindow):
     """Ventana principal del sistema"""

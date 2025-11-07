@@ -367,7 +367,7 @@ class ImportExportManager:
             wb = Workbook()
             ws = wb.active
             ws.title = "Compras"
-            headers = ["RUC_PROVEEDOR", "FECHA_EMISION (dd/mm/aaaa)", "FECHA_CONTABLE (dd/mm/aaaa)", "SERIE", "NUMERO"]
+            headers = ["NUMERO_PROCESO_CORRELATIVO", "RUC_PROVEEDOR", "FECHA_EMISION (dd/mm/aaaa)", "FECHA_CONTABLE (dd/mm/aaaa)", "SERIE", "NUMERO"]
             ws.append(headers)
 
             header_font = Font(bold=True, color="FFFFFF")
@@ -381,22 +381,25 @@ class ImportExportManager:
                 rucs = [p.ruc for p in proveedores]
                 dv_ruc = DataValidation(type="list", formula1=f'"{",".join(rucs)}"', allow_blank=False)
                 ws.add_data_validation(dv_ruc)
-                dv_ruc.add('A2:A1000')
+                dv_ruc.add('B2:B1000')
 
-            ws.column_dimensions['A'].width = 18
-            ws.column_dimensions['B'].width = 25
-            ws.column_dimensions['C'].width = 28
-            ws.column_dimensions['D'].width = 10
-            ws.column_dimensions['E'].width = 12
+            ws.column_dimensions['A'].width = 28
+            ws.column_dimensions['B'].width = 18
+            ws.column_dimensions['C'].width = 25
+            ws.column_dimensions['D'].width = 28
+            ws.column_dimensions['E'].width = 10
+            ws.column_dimensions['F'].width = 12
+
 
             ws_inst = wb.create_sheet(title="Instrucciones")
             ws_inst.append(["Columna", "Descripción", "Obligatorio"])
+            ws_inst.append(["NUMERO_PROCESO_CORRELATIVO", "Correlativo numérico. El sistema generará el formato completo.", "Sí"])
             ws_inst.append(["RUC_PROVEEDOR", "RUC de 11 dígitos. Debe existir en su base de datos.", "Sí"])
             ws_inst.append(["FECHA_EMISION (dd/mm/aaaa)", "Fecha de la factura (para el Kardex).", "Sí"])
             ws_inst.append(["FECHA_CONTABLE (dd/mm/aaaa)", "Fecha del periodo contable (para el reporte).", "Sí"])
             ws_inst.append(["SERIE", "Serie de la factura (Ej: F001).", "Sí"])
             ws_inst.append(["NUMERO", "Número de la factura (Ej: 1234).", "Sí"])
-            ws.append(["12345678901", "30/09/2025", "01/10/2025", "F001", "1234"])
+            ws.append(["1", "12345678901", "30/09/2025", "01/10/2025", "F001", "1234"])
 
             wb.save(path)
             QMessageBox.information(self.parent, "Éxito", f"Plantilla guardada exitosamente en:\n{path}")
@@ -417,7 +420,7 @@ class ImportExportManager:
                 return
 
             ws = wb["Compras"]
-            expected_headers = ["RUC_PROVEEDOR", "FECHA_EMISION (DD/MM/AAAA)", "FECHA_CONTABLE (DD/MM/AAAA)", "SERIE", "NUMERO"]
+            expected_headers = ["NUMERO_PROCESO_CORRELATIVO", "RUC_PROVEEDOR", "FECHA_EMISION (DD/MM/AAAA)", "FECHA_CONTABLE (DD/MM/AAAA)", "SERIE", "NUMERO"]
             actual_headers = [str(cell.value).upper().strip() for cell in ws[1] if cell.value is not None][:len(expected_headers)]
             expected_headers_check = [h.split(' (')[0] for h in expected_headers]
             actual_headers_check = [h.split(' (')[0] for h in actual_headers]
@@ -435,16 +438,20 @@ class ImportExportManager:
             for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
                 if all(c is None for c in row): continue
                 try:
-                    ruc_excel, fecha_emision_excel, fecha_contable_excel, serie_excel, numero_excel = row[:5]
-                    if not all([ruc_excel, fecha_emision_excel, fecha_contable_excel, serie_excel, numero_excel]):
-                        raise ValueError("Faltan datos (RUC, Fechas, Serie o Número).")
+                    correlativo_excel, ruc_excel, fecha_emision_excel, fecha_contable_excel, serie_excel, numero_excel = row[:6]
+                    if not all([correlativo_excel, ruc_excel, fecha_emision_excel, fecha_contable_excel, serie_excel, numero_excel]):
+                        raise ValueError("Faltan datos (Correlativo, RUC, Fechas, Serie o Número).")
 
+                    correlativo = int(str(correlativo_excel).strip())
                     ruc = str(ruc_excel).strip()
                     if ruc not in prov_map: raise ValueError(f"Proveedor con RUC {ruc} no encontrado.")
                     proveedor_id = prov_map[ruc]
 
                     fecha_emision = (fecha_emision_excel if isinstance(fecha_emision_excel, datetime) else datetime.strptime(str(fecha_emision_excel).split(" ")[0], "%d/%m/%Y")).date()
                     fecha_contable = (fecha_contable_excel if isinstance(fecha_contable_excel, datetime) else datetime.strptime(str(fecha_contable_excel).split(" ")[0], "%d/%m/%Y")).date()
+
+                    mes_contable = fecha_contable.month
+                    numero_proceso_completo = f"06{mes_contable:02d}{correlativo:06d}"
 
                     serie = str(serie_excel).strip().upper()
                     numero = str(numero_excel).strip().zfill(8)
@@ -455,6 +462,7 @@ class ImportExportManager:
                     if doc_key in documentos_db: raise ValueError(f"Documento {numero_documento_completo} ya existe en la BD.")
 
                     compras_a_crear.append(Compra(
+                        numero_proceso=numero_proceso_completo,
                         proveedor_id=proveedor_id, fecha=fecha_emision, fecha_registro_contable=fecha_contable,
                         tipo_documento=TipoDocumento.FACTURA, numero_documento=numero_documento_completo,
                         moneda=Moneda.SOLES, tipo_cambio=Decimal('1.0'), incluye_igv=False,
