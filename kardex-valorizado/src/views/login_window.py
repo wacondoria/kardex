@@ -42,12 +42,18 @@ class LoginWindow(QWidget):
     def init_ui(self):
         """Inicializa la interfaz de usuario"""
         self.setWindowTitle("KARDEX v1.4.4 - Modulo De Inventarios valorizado")
-        self.setFixedSize(400, 200)
+        self.setFixedSize(400, 300)
 
         self.setStyleSheet("""
             QWidget#LoginWindow { background-color: #E0E0E0; }
             QLabel { color: #003366; font-weight: bold; font-size: 11px; font-family: Arial; }
-            QLineEdit { border: 1px solid #8C8C8C; }
+            QLineEdit {
+                border: 1px solid #8C8C8C;
+                background-color: #FFFFFF;
+                padding: 4px;
+                border-radius: 3px;
+                box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+            }
             QPushButton {
                 background-color: #F0F0F0; border: 1px solid #8C8C8C;
                 padding: 4px; text-align: right;
@@ -76,19 +82,19 @@ class LoginWindow(QWidget):
         user_label = QLabel("Usuario:")
         self.txt_usuario = QLineEdit()
 
-        pass_label = QLabel("Contraseña:")
+        self.pass_label = QLabel("Contraseña:")
         self.txt_password = QLineEdit()
         self.txt_password.setEchoMode(QLineEdit.EchoMode.Password)
 
         self.btn_verificar = QPushButton("➡️ Ingresar")
         self.btn_verificar.setIcon(QIcon("kardex-valorizado/src/resources/login_icon.png"))
         self.btn_verificar.setIconSize(QSize(16, 16))
-        self.btn_verificar.setFixedSize(70, 28)
+        self.btn_verificar.setMinimumSize(70, 28)
 
         self.anio_label = QLabel("Seleccionar Año:")
         self.anio_combo = QComboBox()
         self.btn_aceptar = QPushButton("✅ Aceptar")
-        self.btn_aceptar.setFixedSize(70, 28)
+        self.btn_aceptar.setMinimumSize(70, 28)
 
         self.anio_label.hide()
         self.anio_combo.hide()
@@ -96,13 +102,14 @@ class LoginWindow(QWidget):
 
         form_layout.addWidget(user_label, 0, 0)
         form_layout.addWidget(self.txt_usuario, 0, 1, 1, 2)
-        form_layout.addWidget(pass_label, 1, 0)
-        form_layout.addWidget(self.txt_password, 1, 1, 1, 2)
-        form_layout.addWidget(self.btn_verificar, 2, 2)
 
-        form_layout.addWidget(self.anio_label, 3, 0)
-        form_layout.addWidget(self.anio_combo, 3, 1, 1, 2)
-        form_layout.addWidget(self.btn_aceptar, 4, 2)
+        form_layout.addWidget(self.pass_label, 1, 0)
+        form_layout.addWidget(self.txt_password, 1, 1)
+        form_layout.addWidget(self.btn_verificar, 1, 2)
+
+        form_layout.addWidget(self.anio_label, 2, 0)
+        form_layout.addWidget(self.anio_combo, 2, 1)
+        form_layout.addWidget(self.btn_aceptar, 2, 2)
 
         main_layout.addLayout(form_layout)
         main_layout.addStretch(2)
@@ -115,7 +122,7 @@ class LoginWindow(QWidget):
         main_layout.addWidget(self.lbl_licencia)
 
         # Conectar señales
-        self.txt_usuario.returnPressed.connect(self.btn_verificar.click)
+        self.txt_usuario.returnPressed.connect(self.txt_password.setFocus)
         self.txt_password.returnPressed.connect(self.btn_verificar.click)
         self.btn_verificar.clicked.connect(self.verificar_credenciales)
         self.btn_aceptar.clicked.connect(self.finalizar_login)
@@ -186,7 +193,8 @@ class LoginWindow(QWidget):
     def mostrar_seleccion_anio(self):
         """Paso 2: Oculta campos de login y muestra el selector de año."""
         self.txt_usuario.setEnabled(False)
-        self.txt_password.setEnabled(False)
+        self.pass_label.hide()
+        self.txt_password.hide()
         self.btn_verificar.hide()
 
         self.anio_label.show()
