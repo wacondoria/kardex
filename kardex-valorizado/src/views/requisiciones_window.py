@@ -564,17 +564,26 @@ class RequisicionDialog(QDialog):
             for detalle_id in detalles_a_eliminar_ids:
                 detalle_obj = self.session.get(RequisicionDetalle, detalle_id)
                 if detalle_obj:
-                    # Crear movimiento de devolución
-                    costo_unitario, costo_total = self.calcular_costo_salida(self.session.get(Empresa, 1), detalle_obj.producto_id, detalle_obj.almacen_id, float(detalle_obj.cantidad))
                     almacen = self.session.get(Almacen, detalle_obj.almacen_id)
-                    devolucion = MovimientoStock(
-                        empresa_id=almacen.empresa_id, producto_id=detalle_obj.producto_id, almacen_id=detalle_obj.almacen_id,
-                        tipo=TipoMovimiento.DEVOLUCION_REQUISICION, numero_documento=requisicion.numero_requisicion, fecha_documento=requisicion.fecha,
-                        cantidad_entrada=detalle_obj.cantidad, cantidad_salida=0,
-                        costo_unitario=costo_unitario, costo_total=costo_total,
+                    costo_unitario, costo_total = self.calcular_costo_salida(
+                        self.session.get(Empresa, almacen.empresa_id),
+                        detalle_obj.producto_id,
+                        detalle_obj.almacen_id,
+                        float(detalle_obj.cantidad)
+                    )
+                    self._registrar_movimiento(
+                        empresa_id=almacen.empresa_id,
+                        producto_id=detalle_obj.producto_id,
+                        almacen_id=detalle_obj.almacen_id,
+                        tipo=TipoMovimiento.DEVOLUCION_REQUISICION,
+                        cantidad_entrada=detalle_obj.cantidad,
+                        cantidad_salida=0,
+                        costo_unitario=costo_unitario,
+                        costo_total=costo_total,
+                        numero_documento=requisicion.numero_requisicion,
+                        fecha_documento=requisicion.fecha,
                         observaciones=f"Reversión por edición de Requisición ID {requisicion.id}"
                     )
-                    self.session.add(devolucion)
                     self.session.delete(detalle_obj)
 
             # 2. Añadir nuevos detalles
@@ -589,28 +598,34 @@ class RequisicionDialog(QDialog):
                 diferencia = cantidad_nueva - cantidad_original
 
                 if diferencia != 0:
-                     # Crear movimiento de ajuste
                     almacen = self.session.get(Almacen, detalle_obj.almacen_id)
-                    costo_unitario, costo_total_dif = self.calcular_costo_salida(self.session.get(Empresa, 1), detalle_obj.producto_id, detalle_obj.almacen_id, float(abs(diferencia)))
-
-                    ajuste = MovimientoStock(
-                        empresa_id=almacen.empresa_id, producto_id=detalle_obj.producto_id, almacen_id=detalle_obj.almacen_id,
+                    costo_unitario, costo_total_dif = self.calcular_costo_salida(
+                        self.session.get(Empresa, almacen.empresa_id),
+                        detalle_obj.producto_id,
+                        detalle_obj.almacen_id,
+                        float(abs(diferencia))
+                    )
+                    self._registrar_movimiento(
+                        empresa_id=almacen.empresa_id,
+                        producto_id=detalle_obj.producto_id,
+                        almacen_id=detalle_obj.almacen_id,
                         tipo=TipoMovimiento.AJUSTE_NEGATIVO if diferencia > 0 else TipoMovimiento.AJUSTE_POSITIVO,
-                        numero_documento=requisicion.numero_requisicion, fecha_documento=requisicion.fecha,
                         cantidad_entrada=abs(diferencia) if diferencia < 0 else 0,
                         cantidad_salida=abs(diferencia) if diferencia > 0 else 0,
-                        costo_unitario=costo_unitario, costo_total=costo_total_dif,
+                        costo_unitario=costo_unitario,
+                        costo_total=costo_total_dif,
+                        numero_documento=requisicion.numero_requisicion,
+                        fecha_documento=requisicion.fecha,
                         observaciones=f"Ajuste por edición de Req. ID {requisicion.id}"
                     )
-                    self.session.add(ajuste)
 
                 detalle_obj.cantidad = cantidad_nueva
-                detalle_obj.producto_id = det_ui['producto_id'] # Permitir cambio de producto
-                detalle_obj.almacen_id = det_ui['almacen_id']   # Permitir cambio de almacén
+                detalle_obj.producto_id = det_ui['producto_id']
+                detalle_obj.almacen_id = det_ui['almacen_id']
 
             if not es_edicion:
-                 for det in self.detalles_requisicion:
-                      self.crear_detalle_y_movimiento(requisicion, det, f"Requisición {requisicion.numero_requisicion}")
+                for det in self.detalles_requisicion:
+                    self.crear_detalle_y_movimiento(requisicion, det, f"Requisición {requisicion.numero_requisicion}")
 
             self.session.commit()
             QMessageBox.information(self, "Éxito", f"Requisición {'actualizada' if es_edicion else 'registrada'} exitosamente.")
@@ -638,26 +653,66 @@ class RequisicionDialog(QDialog):
             empresa, det_dict['producto_id'], det_dict['almacen_id'], det_dict['cantidad']
         )
 
+        self._registrar_movimiento(
+            empresa_id=almacen.empresa_id,
+            producto_id=det_dict['producto_id'],
+            almacen_id=det_dict['almacen_id'],
+            tipo=TipoMovimiento.REQUISICION,
+            cantidad_entrada=0,
+            cantidad_salida=det_dict['cantidad'],
+            costo_unitario=costo_unitario,
+            costo_total=costo_total,
+            numero_documento=requisicion.numero_requisicion,
+            fecha_documento=requisicion.fecha,
+            destino_id=requisicion.destino_id,
+            observaciones=observacion
+        )
+
+    def _registrar_movimiento(self, *, empresa_id, producto_id, almacen_id, tipo,
+                              cantidad_entrada, cantidad_salida, costo_unitario,
+                              costo_total, numero_documento, fecha_documento,
+                              destino_id=None, observaciones=""):
+        """
+        Busca el último saldo, calcula el nuevo y registra un movimiento de stock.
+        """
         ultimo_mov = self.session.query(MovimientoStock).filter_by(
-            empresa_id=almacen.empresa_id, producto_id=det_dict['producto_id'], almacen_id=det_dict['almacen_id']
+            empresa_id=empresa_id,
+            producto_id=producto_id,
+            almacen_id=almacen_id
         ).order_by(MovimientoStock.id.desc()).first()
 
         saldo_anterior_cant = Decimal(str(ultimo_mov.saldo_cantidad)) if ultimo_mov else Decimal('0')
         saldo_anterior_costo = Decimal(str(ultimo_mov.saldo_costo_total)) if ultimo_mov else Decimal('0')
 
-        nuevo_saldo_cant = saldo_anterior_cant - Decimal(str(det_dict['cantidad']))
-        nuevo_saldo_costo = saldo_anterior_costo - Decimal(str(costo_total))
+        # Calcular nuevo saldo de cantidad
+        nuevo_saldo_cant = saldo_anterior_cant + Decimal(str(cantidad_entrada)) - Decimal(str(cantidad_salida))
 
+        # Calcular nuevo saldo de costo
+        nuevo_saldo_costo = saldo_anterior_costo
+        if cantidad_entrada > 0:
+            nuevo_saldo_costo += Decimal(str(costo_total))
+        elif cantidad_salida > 0:
+            nuevo_saldo_costo -= Decimal(str(costo_total))
+
+        # Crear la instancia del movimiento
         movimiento = MovimientoStock(
-            empresa_id=almacen.empresa_id, producto_id=det_dict['producto_id'], almacen_id=det_dict['almacen_id'],
-            tipo=TipoMovimiento.REQUISICION, numero_documento=requisicion.numero_requisicion, fecha_documento=requisicion.fecha,
-            destino_id=requisicion.destino_id, cantidad_entrada=0, cantidad_salida=det_dict['cantidad'],
-            costo_unitario=float(costo_unitario), costo_total=float(costo_total),
-            saldo_cantidad=float(nuevo_saldo_cant), saldo_costo_total=float(nuevo_saldo_costo),
-            observaciones=observacion
+            empresa_id=empresa_id,
+            producto_id=producto_id,
+            almacen_id=almacen_id,
+            tipo=tipo,
+            numero_documento=numero_documento,
+            fecha_documento=fecha_documento,
+            destino_id=destino_id,
+            cantidad_entrada=float(cantidad_entrada),
+            cantidad_salida=float(cantidad_salida),
+            costo_unitario=float(costo_unitario),
+            costo_total=float(costo_total),
+            saldo_cantidad=float(nuevo_saldo_cant),
+            saldo_costo_total=float(nuevo_saldo_costo),
+            observaciones=observaciones
         )
         self.session.add(movimiento)
-    
+
     def calcular_costo_salida(self, empresa, producto_id, almacen_id, cantidad):
         """
         Calcula el costo de salida según el método de valuación
