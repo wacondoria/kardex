@@ -15,6 +15,8 @@ from PyQt6.QtGui import QFont, QAction
 sys.path.insert(0, str(Path(__file__).parent / 'src'))
 
 from views.login_window import LoginWindow
+from views.seleccion_anio_window import SeleccionAnioWindow
+from utils.app_context import app_context
 from views.productos_window import ProductosWindow
 from views.proveedores_window import ProveedoresWindow
 from views.empresas_window import EmpresasWindow
@@ -26,6 +28,7 @@ from views.requisiciones_window import RequisicionesWindow
 from views.ordenes_compra_window import OrdenesCompraWindow
 from views.usuarios_window import UsuariosWindow
 from views.valorizacion_window import ValorizacionWindow
+from views.anio_contable_window import AnioContableWindow
 
 # --- Integración para actualización automática ---
 from utils.actualizador_tc import actualizar_tc_desde_excel
@@ -33,35 +36,67 @@ from models.database_model import obtener_session
 
 # --- MODIFICADO: Añadida función de migración de BD ---
 from sqlalchemy import create_engine, inspect, text
+from models.database_model import AnioContable, EstadoAnio
+from datetime import datetime
 
 def verificar_y_actualizar_db(db_url='sqlite:///kardex.db'):
     """
-    Verifica si la columna 'activo' existe en 'tipo_cambio' y la añade si no.
+    Verifica y actualiza la estructura de la base de datos.
+    - Añade la columna 'activo' a 'tipo_cambio' si no existe.
+    - Crea la tabla 'anio_contable' si no existe.
+    - Inserta el año actual si la tabla de años está vacía.
     """
     engine = create_engine(db_url)
     inspector = inspect(engine)
 
-    # Obtener columnas de la tabla 'tipo_cambio'
-    columns = [col['name'] for col in inspector.get_columns('tipo_cambio')]
-
-    # Si 'activo' no está, la añadimos
-    if 'activo' not in columns:
-        print("⚠️  Detectado modelo de 'tipo_cambio' antiguo. Actualizando BD...")
-        try:
+    # 1. Verificar columna 'activo' en 'tipo_cambio'
+    try:
+        columns = [col['name'] for col in inspector.get_columns('tipo_cambio')]
+        if 'activo' not in columns:
+            print("⚠️  Detectado modelo de 'tipo_cambio' antiguo. Actualizando BD...")
             with engine.connect() as connection:
-                # Usamos 'text' para ejecutar SQL de forma segura
                 connection.execute(text("ALTER TABLE tipo_cambio ADD COLUMN activo BOOLEAN DEFAULT 1 NOT NULL"))
-                connection.commit() # Confirmar la transacción
+                connection.commit()
             print("✓  Columna 'activo' añadida a 'tipo_cambio' exitosamente.")
+    except Exception as e:
+        print(f"🔷 Info: Tabla 'tipo_cambio' probablemente no existe aún. Se creará más tarde. ({e})")
+
+    # 2. Verificar y crear la tabla 'anio_contable'
+    if not inspector.has_table('anio_contable'):
+        print("⚠️  Tabla 'anio_contable' no encontrada. Creándola...")
+        try:
+            # Crea la tabla específica usando el modelo
+            AnioContable.__table__.create(engine)
+            print("✓  Tabla 'anio_contable' creada exitosamente.")
+
+            # Si se acaba de crear, es probable que esté vacía.
+            # Se recomienda poblarla con un año inicial.
+            with sessionmaker(bind=engine)() as session:
+                if session.query(AnioContable).count() == 0:
+                    print("🗓️  Poblando la tabla 'anio_contable' con el año actual...")
+                    anio_actual = AnioContable(
+                        anio=datetime.now().year,
+                        estado=EstadoAnio.ABIERTO
+                    )
+                    session.add(anio_actual)
+                    session.commit()
+                    print(f"✓  Año {datetime.now().year} añadido como 'Abierto'.")
+
         except Exception as e:
-            print(f"❌  Error al actualizar la tabla 'tipo_cambio': {e}")
+            print(f"❌  Error al crear o poblar la tabla 'anio_contable': {e}")
 
 class KardexMainWindow(QMainWindow):
     """Ventana principal del sistema"""
 
-    def __init__(self, user_info):
+    def __init__(self):
         super().__init__()
-        self.user_info = user_info
+        # Cargar datos desde el contexto global
+        self.user_info = app_context.get_user_info()
+        self.selected_year = app_context.get_selected_year()
+
+        # Guardar referencia en el contexto para acceso global
+        app_context.set_main_window(self)
+
         self.ventana_productos = None
         self.ventana_proveedores = None
         self.ventana_empresas = None
@@ -71,13 +106,13 @@ class KardexMainWindow(QMainWindow):
         self.ventana_backup = None
         self.ventana_usuarios = None
         self.ventana_valorizacion = None
-        # --- 1. Variable inicializada (esto ya estaba bien) ---
         self.ventana_requisiciones = None
         self.ventana_ordenes_compra = None
+        self.ventana_admin_anios = None
         self.init_ui()
 
     def init_ui(self):
-        self.setWindowTitle(f"Sistema Kardex Valorizado - {self.user_info['nombre_completo']}")
+        self.setWindowTitle(f"Sistema Kardex Valorizado - {self.user_info['nombre_completo']} | Año: {self.selected_year}")
         self.setGeometry(100, 100, 1200, 800)
 
         # Crear menú
@@ -192,6 +227,11 @@ class KardexMainWindow(QMainWindow):
         accion_usuarios.setEnabled(self.user_info['rol'] == 'ADMINISTRADOR')
         accion_usuarios.triggered.connect(self.abrir_usuarios)
         menu_sistema.addAction(accion_usuarios)
+
+        accion_admin_anios = QAction("🗓️ Administración de Años", self)
+        accion_admin_anios.setEnabled(self.user_info['rol'] == 'ADMINISTRADOR')
+        accion_admin_anios.triggered.connect(self.abrir_admin_anios)
+        menu_sistema.addAction(accion_admin_anios)
 
         menu_sistema.addSeparator()
 
@@ -373,15 +413,21 @@ class KardexMainWindow(QMainWindow):
         self.ventana_valorizacion.raise_()
         self.ventana_valorizacion.activateWindow()
 
+    def abrir_admin_anios(self):
+        """Abre la ventana de administración de años contables."""
+        if self.ventana_admin_anios is None:
+            self.ventana_admin_anios = AnioContableWindow()
+
+        self.ventana_admin_anios.show()
+        self.ventana_admin_anios.raise_()
+        self.ventana_admin_anios.activateWindow()
+
 
 def main():
-    # --- MODIFICADO: Llamada a la función de migración ---
     verificar_y_actualizar_db()
 
-    # --- Actualización automática de TC ---
     session = obtener_session()
     try:
-        # --- MODIFICADO: Ruta fija y nombre de hoja según lo solicitado ---
         ruta_excel = r"C:\Users\USER\OneDrive\MIM\DATABASS\BASE DE DATOS.xlsx"
         nombre_hoja = "TCbio"
         actualizar_tc_desde_excel(session, ruta_excel, nombre_hoja)
@@ -389,24 +435,33 @@ def main():
         print(f"Error durante la actualización de TC: {e}")
     finally:
         session.close()
-    # --- Fin de la actualización ---
 
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
 
-    # Mostrar ventana de login
+    # Variables para mantener las ventanas vivas
+    main_window = None
+    selection_window = None
+
     login = LoginWindow()
 
-    # Variable para guardar la ventana principal
-    main_window = None
-
     def on_login_exitoso(user_info):
-        """Callback cuando el login es exitoso"""
+        """Paso 1: El login fue exitoso. Ahora mostramos la selección de año."""
+        nonlocal selection_window
+        login.hide() # Ocultamos la ventana de login
+        selection_window = SeleccionAnioWindow(user_info)
+        # Conectamos la señal de la ventana de selección al siguiente paso
+        selection_window.login_exitoso_con_anio.connect(on_anio_seleccionado)
+        selection_window.show()
+
+    def on_anio_seleccionado(user_info):
+        """Paso 2: El año fue seleccionado. Ahora mostramos la ventana principal."""
         nonlocal main_window
-        main_window = KardexMainWindow(user_info)
+        selection_window.hide()
+        main_window = KardexMainWindow() # Ya no necesita user_info
         main_window.show()
 
-    # Conectar señal de login exitoso
+    # Conectar la señal del login al primer paso
     login.login_exitoso.connect(on_login_exitoso)
     login.show()
 

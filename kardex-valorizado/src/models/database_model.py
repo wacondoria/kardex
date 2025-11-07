@@ -54,6 +54,25 @@ class RolUsuario(enum.Enum):
     SUPERVISOR = "SUPERVISOR"
     OPERADOR = "OPERADOR"
 
+class EstadoAnio(enum.Enum):
+    ABIERTO = "Abierto"
+    CERRADO = "Cerrado"
+
+# ============================================
+# TABLA: AÑO CONTABLE
+# ============================================
+
+class AnioContable(Base):
+    __tablename__ = 'anio_contable'
+
+    id = Column(Integer, primary_key=True)
+    anio = Column(Integer, unique=True, nullable=False)
+    estado = Column(Enum(EstadoAnio), default=EstadoAnio.ABIERTO, nullable=False)
+    fecha_registro = Column(DateTime, default=datetime.now)
+
+    def __repr__(self):
+        return f"<AnioContable(anio={self.anio}, estado='{self.estado.value}')>"
+
 # ============================================
 # TABLA: EMPRESAS
 # ============================================
