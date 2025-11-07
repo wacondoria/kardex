@@ -373,8 +373,10 @@ class UsuariosWindow(QWidget):
         self.cargar_usuarios()
 
     def keyPressEvent(self, event):
-        """Captura la pulsación de F6 para editar."""
-        if event.key() == Qt.Key.Key_F6:
+        """Captura la pulsación de F2 para crear y F6 para editar."""
+        if event.key() == Qt.Key.Key_F2:
+            self.nuevo_usuario()
+        elif event.key() == Qt.Key.Key_F6:
             fila = self.tabla.currentRow()
             if fila != -1 and fila < len(self.usuarios_mostrados):
                 usuario_seleccionado = self.usuarios_mostrados[fila]

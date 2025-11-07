@@ -200,8 +200,10 @@ class TipoCambioWindow(QWidget):
         self.cargar_tipos_cambio()
 
     def keyPressEvent(self, event):
-        """Captura la pulsación de F6 para editar."""
-        if event.key() == Qt.Key.Key_F6:
+        """Captura la pulsación de F2 para crear y F6 para editar."""
+        if event.key() == Qt.Key.Key_F2:
+            self.nuevo_tipo_cambio()
+        elif event.key() == Qt.Key.Key_F6:
             fila = self.tabla.currentRow()
             if fila != -1 and fila < len(self.tipos_cambio_mostrados):
                 tc_seleccionado = self.tipos_cambio_mostrados[fila]
