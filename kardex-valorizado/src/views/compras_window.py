@@ -1463,9 +1463,9 @@ class ComprasWindow(QWidget):
 
         # Tabla
         self.tabla = QTableWidget()
-        self.tabla.setColumnCount(9) # <--- CORREGIDO A 9
+        self.tabla.setColumnCount(10)
         self.tabla.setHorizontalHeaderLabels([
-            "F. Contable", "F. Emisión", "Documento", "Proveedor", "Moneda", "Subtotal", "IGV", "Total", "Acciones"
+            "Nro. Proceso", "F. Contable", "F. Emisión", "Documento", "Proveedor", "Moneda", "Subtotal", "IGV", "Total", "Acciones"
         ])
 
         self.tabla.setStyleSheet("""
@@ -1474,11 +1474,12 @@ class ComprasWindow(QWidget):
         """)
 
         header = self.tabla.horizontalHeader()
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch) # Proveedor
-        header.setSectionResizeMode(8, QHeaderView.ResizeMode.Fixed) # Acciones
-        self.tabla.setColumnWidth(0, 90) # F. Contable
-        self.tabla.setColumnWidth(1, 90) # F. Emisión
-        self.tabla.setColumnWidth(8, 160) # Acciones
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch) # Proveedor
+        header.setSectionResizeMode(9, QHeaderView.ResizeMode.Fixed) # Acciones
+        self.tabla.setColumnWidth(0, 100) # Nro. Proceso
+        self.tabla.setColumnWidth(1, 90) # F. Contable
+        self.tabla.setColumnWidth(2, 90) # F. Emisión
+        self.tabla.setColumnWidth(9, 160) # Acciones
 
         self.tabla.setAlternatingRowColors(True)
         self.tabla.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -1604,16 +1605,18 @@ class ComprasWindow(QWidget):
     def mostrar_compras(self, compras):
         """Muestra compras en la tabla, convirtiendo a Soles si es necesario."""
 
-        self.tabla.setColumnCount(9)
+        self.tabla.setColumnCount(10)
         self.tabla.setHorizontalHeaderLabels([
-            "F. Contable", "F. Emisión", "Documento", "Proveedor", "Moneda", "Subtotal", "IGV", "Total", "Acciones"
+            "Nro. Proceso", "F. Contable", "F. Emisión", "Documento", "Proveedor", "Moneda", "Subtotal", "IGV", "Total", "Acciones"
         ])
         header = self.tabla.horizontalHeader()
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch) # Proveedor
-        header.setSectionResizeMode(8, QHeaderView.ResizeMode.Fixed) # Acciones
-        self.tabla.setColumnWidth(0, 90)
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch) # Proveedor
+        header.setSectionResizeMode(9, QHeaderV
+iew.ResizeMode.Fixed) # Acciones
+        self.tabla.setColumnWidth(0, 100)
         self.tabla.setColumnWidth(1, 90)
-        self.tabla.setColumnWidth(8, 160)
+        self.tabla.setColumnWidth(2, 90)
+        self.tabla.setColumnWidth(9, 160)
 
         self.tabla.setRowCount(len(compras))
 
@@ -1644,34 +1647,37 @@ class ComprasWindow(QWidget):
                 total_mostrar = total_orig
                 moneda_simbolo_mostrar = "S/" if compra.moneda == Moneda.SOLES else "$"
 
-            # Col 0: F. Contable
+            # Col 0: Nro. Proceso
+            self.tabla.setItem(row, 0, QTableWidgetItem(compra.numero_proceso or "N/A"))
+
+            # Col 1: F. Contable
             f_contable = getattr(compra, 'fecha_registro_contable', None)
             f_contable_str = f_contable.strftime('%d/%m/%Y') if f_contable else "--"
-            self.tabla.setItem(row, 0, QTableWidgetItem(f_contable_str))
+            self.tabla.setItem(row, 1, QTableWidgetItem(f_contable_str))
 
-            # Col 1: F. Emisión
-            self.tabla.setItem(row, 1, QTableWidgetItem(compra.fecha.strftime('%d/%m/%Y')))
+            # Col 2: F. Emisión
+            self.tabla.setItem(row, 2, QTableWidgetItem(compra.fecha.strftime('%d/%m/%Y')))
 
-            # Col 2: Documento
-            self.tabla.setItem(row, 2, QTableWidgetItem(f"{compra.tipo_documento.value} {compra.numero_documento}"))
+            # Col 3: Documento
+            self.tabla.setItem(row, 3, QTableWidgetItem(f"{compra.tipo_documento.value} {compra.numero_documento}"))
 
-            # Col 3: Proveedor
+            # Col 4: Proveedor
             proveedor_nombre = "Proveedor Desconocido"
             if compra.proveedor:
                  try:
                       proveedor_nombre = compra.proveedor.razon_social
                  except Exception as prov_err:
                       print(f"ADVERTENCIA: No se pudo acceder a proveedor.razon_social para Compra ID {compra.id}: {prov_err}")
-            self.tabla.setItem(row, 3, QTableWidgetItem(proveedor_nombre))
+            self.tabla.setItem(row, 4, QTableWidgetItem(proveedor_nombre))
 
-            # Col 4: Moneda
-            self.tabla.setItem(row, 4, QTableWidgetItem(moneda_simbolo_mostrar))
-            # Col 5: Subtotal
-            self.tabla.setItem(row, 5, QTableWidgetItem(f"{moneda_simbolo_mostrar} {subtotal_mostrar:.2f}"))
-            # Col 6: IGV
-            self.tabla.setItem(row, 6, QTableWidgetItem(f"{moneda_simbolo_mostrar} {igv_mostrar:.2f}"))
-            # Col 7: Total
-            self.tabla.setItem(row, 7, QTableWidgetItem(f"{moneda_simbolo_mostrar} {total_mostrar:.2f}"))
+            # Col 5: Moneda
+            self.tabla.setItem(row, 5, QTableWidgetItem(moneda_simbolo_mostrar))
+            # Col 6: Subtotal
+            self.tabla.setItem(row, 6, QTableWidgetItem(f"{moneda_simbolo_mostrar} {subtotal_mostrar:.2f}"))
+            # Col 7: IGV
+            self.tabla.setItem(row, 7, QTableWidgetItem(f"{moneda_simbolo_mostrar} {igv_mostrar:.2f}"))
+            # Col 8: Total
+            self.tabla.setItem(row, 8, QTableWidgetItem(f"{moneda_simbolo_mostrar} {total_mostrar:.2f}"))
 
             if compra.moneda == Moneda.DOLARES:
                  total_soles_calculado += (total_orig * tc)
@@ -1705,7 +1711,7 @@ class ComprasWindow(QWidget):
             botones_widget = QWidget()
             botones_widget.setLayout(botones_layout)
 
-            self.tabla.setCellWidget(row, 8, botones_widget)
+            self.tabla.setCellWidget(row, 9, botones_widget)
 
         self.lbl_contador.setText(f"📊 Total: {len(compras)} compra(s) | Total en soles: S/ {total_soles_calculado.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP):.2f}")
 
