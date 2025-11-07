@@ -14,6 +14,7 @@ import sys
 from pathlib import Path
 from datetime import datetime
 from decimal import Decimal
+from sqlalchemy import extract
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -21,6 +22,7 @@ from models.database_model import (obtener_session, Requisicion, RequisicionDeta
                                    Producto, Almacen, Empresa, Destino,
                                    MovimientoStock, TipoMovimiento, MetodoValuacion)
 from utils.widgets import UpperLineEdit
+from utils.app_context import app_context
 
 
 class RequisicionDialog(QDialog):
@@ -31,6 +33,7 @@ class RequisicionDialog(QDialog):
         self.session = obtener_session()
         self.user_info = user_info
         self.detalles_requisicion = []
+        self.selected_year = app_context.get_selected_year()
         self.init_ui()
         self.cargar_datos_iniciales()
     
@@ -79,7 +82,11 @@ class RequisicionDialog(QDialog):
         
         self.date_fecha = QDateEdit()
         self.date_fecha.setCalendarPopup(True)
-        self.date_fecha.setDate(QDate.currentDate())
+        today = QDate.currentDate()
+        if today.year() == self.selected_year:
+            self.date_fecha.setDate(today)
+        else:
+            self.date_fecha.setDate(QDate(self.selected_year, 1, 1))
         self.date_fecha.setDisplayFormat("dd/MM/yyyy")
         
         self.txt_numero = UpperLineEdit()
@@ -330,16 +337,20 @@ class RequisicionDialog(QDialog):
             self.lbl_stock_disponible.setStyleSheet("font-weight: bold; color: #ea4335;")
     
     def generar_numero(self):
-        """Genera el número correlativo de requisición"""
-        ultima = self.session.query(Requisicion).order_by(Requisicion.id.desc()).first()
+        """Genera el número correlativo de requisición, reseteando por año."""
+        # Find the last requisition *within the selected year*
+        ultima_del_anio = self.session.query(Requisicion).filter(
+            extract('year', Requisicion.fecha) == self.selected_year
+        ).order_by(Requisicion.id.desc()).first()
         
-        if ultima:
+        numero = 1
+        if ultima_del_anio:
             try:
-                numero = int(ultima.numero_requisicion.split('-')[1]) + 1
-            except:
-                numero = 1
-        else:
-            numero = 1
+                # Tries to parse 'REQ-NNNNNN' format
+                numero = int(ultima_del_anio.numero_requisicion.split('-')[1]) + 1
+            except (ValueError, IndexError):
+                # If parsing fails for any reason, fall back to counting for safety
+                numero = self.session.query(Requisicion).filter(extract('year', Requisicion.fecha) == self.selected_year).count() + 1
         
         self.txt_numero.setText(f"REQ-{numero:06d}")
     
@@ -604,17 +615,19 @@ class RequisicionesWindow(QWidget):
         # Filtros
         filtro_layout = QHBoxLayout()
         
+        selected_year = app_context.get_selected_year()
+
         lbl_desde = QLabel("Desde:")
         self.date_desde = QDateEdit()
         self.date_desde.setCalendarPopup(True)
-        self.date_desde.setDate(QDate.currentDate().addMonths(-1))
+        self.date_desde.setDate(QDate(selected_year, 1, 1))
         self.date_desde.setDisplayFormat("dd/MM/yyyy")
         self.date_desde.dateChanged.connect(self.cargar_requisiciones)
         
         lbl_hasta = QLabel("Hasta:")
         self.date_hasta = QDateEdit()
         self.date_hasta.setCalendarPopup(True)
-        self.date_hasta.setDate(QDate.currentDate())
+        self.date_hasta.setDate(QDate(selected_year, 12, 31))
         self.date_hasta.setDisplayFormat("dd/MM/yyyy")
         self.date_hasta.dateChanged.connect(self.cargar_requisiciones)
         
