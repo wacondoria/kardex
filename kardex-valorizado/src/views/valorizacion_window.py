@@ -5,7 +5,7 @@ Archivo: src/views/valorizacion_window.py
 
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                               QPushButton, QTableWidget, QTableWidgetItem,
-                              QMessageBox, QHeaderView, QGroupBox,
+                              QComboBox, QMessageBox, QHeaderView, QGroupBox,
                               QFileDialog, QCheckBox)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont, QColor
