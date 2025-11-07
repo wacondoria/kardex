@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 from datetime import datetime
 from decimal import Decimal
-from sqlalchemy import extract
+from sqlalchemy import extract, func
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -318,10 +318,36 @@ class RequisicionDialog(QDialog):
         for dest in destinos:
             self.cmb_destino.addItem(dest.nombre, dest.id)
         
-        # Productos
-        productos = self.session.query(Producto).filter_by(activo=True).order_by(Producto.nombre).all()
-        
-        for prod in productos:
+        # Productos: Cargar solo productos con stock > 0
+        # 1. Subconsulta para obtener el ID del último movimiento para cada producto/almacén
+        subquery_ultimo_mov_id = self.session.query(
+            func.max(MovimientoStock.id)
+        ).group_by(
+            MovimientoStock.producto_id,
+            MovimientoStock.almacen_id
+        ).subquery()
+
+        # 2. Subconsulta para obtener el saldo total de cada producto sumando los saldos de cada almacén
+        subquery_stock_total = self.session.query(
+            MovimientoStock.producto_id,
+            func.sum(MovimientoStock.saldo_cantidad).label('stock_total')
+        ).filter(
+            MovimientoStock.id.in_(subquery_ultimo_mov_id)
+        ).group_by(
+            MovimientoStock.producto_id
+        ).subquery()
+
+        # 3. Consulta principal para obtener productos activos con stock total > 0
+        productos_con_stock = self.session.query(
+            Producto
+        ).join(
+            subquery_stock_total, Producto.id == subquery_stock_total.c.producto_id
+        ).filter(
+            subquery_stock_total.c.stock_total > 0,
+            Producto.activo == True
+        ).order_by(Producto.nombre).all()
+
+        for prod in productos_con_stock:
             self.cmb_producto.addItem(f"{prod.codigo} - {prod.nombre}", prod.id)
         
         # Almacenes
