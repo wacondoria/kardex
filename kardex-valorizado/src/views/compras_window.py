@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                              QLineEdit, QDateEdit, QComboBox, QDoubleSpinBox,
                              QTextEdit, QCheckBox, QMessageBox, QDialog,
                              QFormLayout, QHeaderView, QGroupBox, QSpinBox,
-                             QCompleter, QSizePolicy, QFileDialog)
+                             QSizePolicy, QFileDialog)
 from PyQt6.QtCore import Qt, QDate, pyqtSignal, QEvent
 from PyQt6.QtGui import QFont, QKeyEvent
 import sys
@@ -44,7 +44,7 @@ from models.database_model import (obtener_session, Compra, CompraDetalle,
                                    Proveedor, Producto, Almacen, Empresa,
                                    TipoCambio, TipoDocumento, Moneda,
                                    MovimientoStock, TipoMovimiento)
-from utils.widgets import UppercaseValidator
+from utils.widgets import UppercaseValidator, SearchableComboBox
 from utils.app_context import app_context
 from utils.validation import verificar_estado_anio, AnioCerradoError
 
@@ -115,8 +115,7 @@ class CompraDialog(QDialog):
 
         # Proveedor (CON BOTÓN +)
         proveedor_layout = QHBoxLayout()
-        self.cmb_proveedor = QComboBox()
-        self.cmb_proveedor.setEditable(True)
+        self.cmb_proveedor = SearchableComboBox()
         self.cmb_proveedor.setMinimumWidth(400)
         self.cmb_proveedor.currentIndexChanged.connect(self.proveedor_seleccionado)
 
@@ -222,9 +221,8 @@ class CompraDialog(QDialog):
         # Selector de producto
         selector_layout = QHBoxLayout()
 
-        self.cmb_producto = QComboBox()
+        self.cmb_producto = SearchableComboBox()
         self.cmb_producto.setMinimumWidth(300)
-        self.cmb_producto.setEditable(True)
         self.cmb_producto.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
 
         self.btn_nuevo_producto = QPushButton("+")
@@ -233,7 +231,7 @@ class CompraDialog(QDialog):
         self.btn_nuevo_producto.setStyleSheet("background-color: #34a853; color: white; font-weight: bold; border-radius: 15px;")
         self.btn_nuevo_producto.clicked.connect(self.crear_nuevo_producto)
 
-        self.cmb_almacen = QComboBox()
+        self.cmb_almacen = SearchableComboBox()
 
         self.spn_cantidad = SelectAllSpinBox()
         self.spn_cantidad.setRange(0.00, 999999)
@@ -452,11 +450,6 @@ class CompraDialog(QDialog):
             QMessageBox.warning(self, "Sin proveedores", "No hay proveedores registrados.")
         for prov in proveedores:
             self.cmb_proveedor.addItem(f"{prov.ruc} - {prov.razon_social}", prov.id)
-        lista_nombres_proveedores = [self.cmb_proveedor.itemText(i) for i in range(self.cmb_proveedor.count())]
-        completer_proveedor = QCompleter(lista_nombres_proveedores, self)
-        completer_proveedor.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
-        completer_proveedor.setFilterMode(Qt.MatchFlag.MatchContains)
-        self.cmb_proveedor.setCompleter(completer_proveedor)
         self.cmb_proveedor.setCurrentIndex(-1)
 
         # Productos
@@ -466,11 +459,6 @@ class CompraDialog(QDialog):
             QMessageBox.warning(self, "Sin productos", "No hay productos registrados.")
         for prod in self.lista_completa_productos:
             self.cmb_producto.addItem(f"{prod.codigo} - {prod.nombre}", prod.id)
-        lista_nombres_productos = [self.cmb_producto.itemText(i) for i in range(self.cmb_producto.count())]
-        completer = QCompleter(lista_nombres_productos, self)
-        completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
-        completer.setFilterMode(Qt.MatchFlag.MatchContains)
-        self.cmb_producto.setCompleter(completer)
         self.cmb_producto.setCurrentIndex(-1)
 
         # Almacenes
@@ -578,7 +566,7 @@ class CompraDialog(QDialog):
 
         for row, det in enumerate(self.detalles_compra):
             # --- PRODUCTO (COMBOBOX) ---
-            combo_producto = QComboBox(self.tabla_productos)
+            combo_producto = SearchableComboBox(self.tabla_productos)
             for prod in self.lista_completa_productos:
                 combo_producto.addItem(f"{prod.codigo} - {prod.nombre}", prod.id)
 
@@ -1414,7 +1402,7 @@ class ComprasWindow(QWidget):
         # --- NUEVOS FILTROS DE PERIODO ---
         filtro_layout.addWidget(QLabel("<b>Periodo Contable:</b>"))
 
-        self.cmb_mes_filtro = QComboBox()
+        self.cmb_mes_filtro = SearchableComboBox()
         meses_espanol = [
             "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
             "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
@@ -1428,22 +1416,15 @@ class ComprasWindow(QWidget):
         self.cmb_mes_filtro.currentIndexChanged.connect(self.cargar_compras)
         # --- FIN NUEVOS FILTROS ---
 
-        self.cmb_proveedor_filtro = QComboBox()
+        self.cmb_proveedor_filtro = SearchableComboBox()
         self.cmb_proveedor_filtro.addItem("Todos los proveedores", None)
         self.cmb_proveedor_filtro.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed) # Que se expanda
-        self.cmb_proveedor_filtro.setEditable(True)
         proveedores = self.session.query(Proveedor).join(Compra).filter(
             Proveedor.activo==True,
             extract('year', Compra.fecha) == app_context.get_selected_year()
         ).distinct().order_by(Proveedor.razon_social).all()
         for prov in proveedores:
             self.cmb_proveedor_filtro.addItem(prov.razon_social, prov.id)
-
-        lista_proveedores = [self.cmb_proveedor_filtro.itemText(i) for i in range(self.cmb_proveedor_filtro.count())]
-        completer_proveedor = QCompleter(lista_proveedores, self)
-        completer_proveedor.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
-        completer_proveedor.setFilterMode(Qt.MatchFlag.MatchContains)
-        self.cmb_proveedor_filtro.setCompleter(completer_proveedor)
 
         self.cmb_proveedor_filtro.currentIndexChanged.connect(self.cargar_compras)
 

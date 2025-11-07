@@ -3,9 +3,9 @@ Valorización de Inventario - Sistema Kardex Valorizado
 Archivo: src/views/valorizacion_window.py
 """
 
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                               QPushButton, QTableWidget, QTableWidgetItem,
-                              QComboBox, QMessageBox, QHeaderView, QGroupBox,
+                              QMessageBox, QHeaderView, QGroupBox,
                               QFileDialog, QCheckBox)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont, QColor
@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models.database_model import (obtener_session, Producto, Empresa, Almacen,
                                    MovimientoStock, Categoria, Moneda)
+from utils.widgets import SearchableComboBox
 
 
 class ValorizacionWindow(QWidget):
@@ -56,18 +57,18 @@ class ValorizacionWindow(QWidget):
         fila1 = QHBoxLayout()
         
         fila1.addWidget(QLabel("Empresa:"))
-        self.cmb_empresa = QComboBox()
+        self.cmb_empresa = SearchableComboBox()
         self.cmb_empresa.setMinimumWidth(300)
         self.cmb_empresa.currentIndexChanged.connect(self.empresa_cambiada)
         fila1.addWidget(self.cmb_empresa, 2)
         
         fila1.addWidget(QLabel("Almacén:"))
-        self.cmb_almacen = QComboBox()
+        self.cmb_almacen = SearchableComboBox()
         self.cmb_almacen.addItem("Todos los almacenes", None)
         fila1.addWidget(self.cmb_almacen, 1)
         
         fila1.addWidget(QLabel("Categoría:"))
-        self.cmb_categoria = QComboBox()
+        self.cmb_categoria = SearchableComboBox()
         self.cmb_categoria.addItem("Todas las categorías", None)
         fila1.addWidget(self.cmb_categoria, 1)
         

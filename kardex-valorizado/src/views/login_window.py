@@ -5,7 +5,7 @@ Archivo: src/views/login_window.py
 """
 
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QLineEdit,
-                             QPushButton, QMessageBox, QFrame, QComboBox,
+                             QPushButton, QMessageBox, QFrame,
                              QGridLayout, QSpacerItem, QSizePolicy)
 from PyQt6.QtCore import Qt, pyqtSignal, QSize
 from PyQt6.QtGui import QFont, QPixmap, QIcon
@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from models.database_model import (obtener_session, Usuario, Licencia,
                                    AnioContable, EstadoAnio)
 from utils.app_context import app_context
+from utils.widgets import SearchableComboBox
 
 # --- NO SE USA EL TEMA OSCURO ---
 # from utils.theme import DARK_THEME_QSS 
@@ -92,7 +93,7 @@ class LoginWindow(QWidget):
         self.btn_verificar.setMinimumSize(70, 28)
 
         self.anio_label = QLabel("Seleccionar Año:")
-        self.anio_combo = QComboBox()
+        self.anio_combo = SearchableComboBox()
         self.btn_aceptar = QPushButton("✅ Aceptar")
         self.btn_aceptar.setMinimumSize(70, 28)
 

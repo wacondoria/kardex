@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                               QPushButton, QTableWidget, QTableWidgetItem,
                               QLineEdit, QDateEdit, QComboBox, QDoubleSpinBox,
                               QTextEdit, QMessageBox, QDialog, QFormLayout, 
-                              QHeaderView, QGroupBox, QCompleter)
+                              QHeaderView, QGroupBox)
 from PyQt6.QtCore import Qt, QDate
 from PyQt6.QtGui import QFont, QColor
 import sys
@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from models.database_model import (obtener_session, OrdenCompra, OrdenCompraDetalle,
                                    Proveedor, Producto, Empresa, TipoCambio,
                                    Moneda, EstadoOrden, Usuario)
-from utils.widgets import UpperLineEdit
+from utils.widgets import UpperLineEdit, SearchableComboBox
 
 
 class OrdenCompraDialog(QDialog):
@@ -80,12 +80,12 @@ class OrdenCompraDialog(QDialog):
         fila1 = QHBoxLayout()
         
         fila1.addWidget(QLabel("Empresa:"))
-        self.cmb_empresa = QComboBox()
+        self.cmb_empresa = SearchableComboBox()
         self.cmb_empresa.setMinimumWidth(250)
         fila1.addWidget(self.cmb_empresa, 2)
         
         fila1.addWidget(QLabel("Proveedor:"))
-        self.cmb_proveedor = QComboBox()
+        self.cmb_proveedor = SearchableComboBox()
         self.cmb_proveedor.setMinimumWidth(300)
         fila1.addWidget(self.cmb_proveedor, 3)
         
@@ -143,7 +143,7 @@ class OrdenCompraDialog(QDialog):
         # Selector
         selector_layout = QHBoxLayout()
         
-        self.cmb_producto = QComboBox()
+        self.cmb_producto = SearchableComboBox()
         self.cmb_producto.setMinimumWidth(300)
         
         self.spn_cantidad = QDoubleSpinBox()
@@ -251,25 +251,11 @@ class OrdenCompraDialog(QDialog):
         proveedores = self.session.query(Proveedor).filter_by(activo=True).all()
         for prov in proveedores:
             self.cmb_proveedor.addItem(f"{prov.ruc} - {prov.razon_social}", prov.id)
-
-        self.cmb_proveedor.setEditable(True)
-        lista_proveedores = [self.cmb_proveedor.itemText(i) for i in range(self.cmb_proveedor.count())]
-        completer_proveedor = QCompleter(lista_proveedores, self)
-        completer_proveedor.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
-        completer_proveedor.setFilterMode(Qt.MatchFlag.MatchContains)
-        self.cmb_proveedor.setCompleter(completer_proveedor)
         
         # Productos
         productos = self.session.query(Producto).filter_by(activo=True).all()
         for prod in productos:
             self.cmb_producto.addItem(f"{prod.codigo} - {prod.nombre}", prod.id)
-
-        self.cmb_producto.setEditable(True)
-        lista_productos = [self.cmb_producto.itemText(i) for i in range(self.cmb_producto.count())]
-        completer_producto = QCompleter(lista_productos, self)
-        completer_producto.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
-        completer_producto.setFilterMode(Qt.MatchFlag.MatchContains)
-        self.cmb_producto.setCompleter(completer_producto)
     
     def cargar_orden(self):
         """Carga datos de orden existente"""
@@ -550,7 +536,7 @@ class OrdenesCompraWindow(QWidget):
         # Filtros
         filtro_layout = QHBoxLayout()
         
-        self.cmb_estado_filtro = QComboBox()
+        self.cmb_estado_filtro = SearchableComboBox()
         self.cmb_estado_filtro.addItem("Todos los estados", None)
         self.cmb_estado_filtro.addItem("🟡 Pendiente", EstadoOrden.PENDIENTE.value)
         self.cmb_estado_filtro.addItem("🟠 Parcial", EstadoOrden.PARCIAL.value)

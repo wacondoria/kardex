@@ -33,7 +33,7 @@ try:
 except ImportError:
     from models.database_model import obtener_session, Producto, Categoria
     MovimientoStock = None
-from utils.widgets import UpperLineEdit
+from utils.widgets import UpperLineEdit, SearchableComboBox
 
 UNIDADES_SUNAT = [
     "UND - Unidad", "KG - Kilogramo", "GR - Gramo", "LT - Litro",
@@ -113,8 +113,7 @@ class ProductoDialog(QDialog):
 
         # --- CÓDIGO PREFIJO ---
         codigo_layout = QHBoxLayout()
-        self.cmb_codigo = QComboBox()
-        self.cmb_codigo.setEditable(True)
+        self.cmb_codigo = SearchableComboBox()
         self.cmb_codigo.setPlaceholderText("Ej: TUBO0")
         self.cmb_codigo.setToolTip("Seleccione un prefijo existente o escriba uno nuevo (5 caracteres)")
 
@@ -137,8 +136,7 @@ class ProductoDialog(QDialog):
         form_layout.addRow("Código (Prefijo):*", codigo_layout)
 
         # --- MEJORA: QLineEdit a QComboBox editable para Nombre ---
-        self.cmb_nombre = QComboBox()
-        self.cmb_nombre.setEditable(True)
+        self.cmb_nombre = SearchableComboBox()
         self.cmb_nombre.setToolTip("Escriba un nombre nuevo o seleccione uno existente para editarlo")
         self.cmb_nombre.lineEdit().textChanged.connect(lambda text: self.cmb_nombre.lineEdit().setText(text.upper()))
         # El placeholder se establece en init y en actualizar_nombres_por_prefijo
@@ -151,11 +149,11 @@ class ProductoDialog(QDialog):
         self.txt_descripcion.setPlaceholderText("Descripción detallada del producto")
         form_layout.addRow("Descripción:", self.txt_descripcion)
 
-        self.cmb_categoria = QComboBox()
+        self.cmb_categoria = SearchableComboBox()
         self.cargar_categorias() # Esto ahora también carga los prefijos
         form_layout.addRow("Categoría:*", self.cmb_categoria)
 
-        self.cmb_unidad = QComboBox()
+        self.cmb_unidad = SearchableComboBox()
         self.cmb_unidad.addItems(UNIDADES_SUNAT)
         form_layout.addRow("Unidad Medida:*", self.cmb_unidad)
 
@@ -535,7 +533,7 @@ class ProductosWindow(QWidget):
         """)
         self.txt_buscar.textChanged.connect(self.buscar_productos)
 
-        self.cmb_categoria_filtro = QComboBox()
+        self.cmb_categoria_filtro = SearchableComboBox()
         self.cmb_categoria_filtro.setStyleSheet("padding: 8px; min-width: 200px;")
         self.cargar_categorias_filtro()
         self.cmb_categoria_filtro.currentIndexChanged.connect(self.buscar_productos)
