@@ -5,7 +5,7 @@ Archivo: src/views/kardex_window.py
 
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                               QPushButton, QTableWidget, QTableWidgetItem,
-                              QDateEdit, QMessageBox, QHeaderView,
+                              QDateEdit, QMessageBox, QHeaderView, QComboBox,
                               QGroupBox, QRadioButton, QButtonGroup, QFileDialog)
 from PyQt6.QtCore import Qt, QDate
 from PyQt6.QtGui import QFont
