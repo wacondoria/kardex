@@ -155,6 +155,9 @@ class RequisicionDialog(QDialog):
         
         self.lbl_stock_disponible = QLabel("Stock: -")
         self.lbl_stock_disponible.setStyleSheet("font-weight: bold; color: #1a73e8;")
+
+        self.lbl_costo_stock_disponible = QLabel("Costo Stock: S/ -")
+        self.lbl_costo_stock_disponible.setStyleSheet("font-weight: bold; color: #1a73e8;")
         
         self.spn_cantidad = QDoubleSpinBox()
         self.spn_cantidad.setRange(0.01, 999999)
@@ -178,6 +181,7 @@ class RequisicionDialog(QDialog):
         selector_layout.addWidget(QLabel("Almacén:"))
         selector_layout.addWidget(self.cmb_almacen, 1)
         selector_layout.addWidget(self.lbl_stock_disponible)
+        selector_layout.addWidget(self.lbl_costo_stock_disponible)
         selector_layout.addWidget(QLabel("Cantidad:"))
         selector_layout.addWidget(self.spn_cantidad)
         selector_layout.addWidget(btn_agregar)
@@ -186,16 +190,16 @@ class RequisicionDialog(QDialog):
         
         # Tabla de productos
         self.tabla_productos = QTableWidget()
-        self.tabla_productos.setColumnCount(5)
+        self.tabla_productos.setColumnCount(7)
         self.tabla_productos.setHorizontalHeaderLabels([
-            "Producto", "Almacén", "Stock Disponible", "Cantidad a Sacar", "Acción"
+            "Producto", "Almacén", "Stock Disp.", "Cantidad", "Costo Unit.", "Costo Total", "Acción"
         ])
         self.tabla_productos.setMaximumHeight(200)
         
         header = self.tabla_productos.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.Fixed)
-        self.tabla_productos.setColumnWidth(4, 80)
+        header.setSectionResizeMode(6, QHeaderView.ResizeMode.Fixed)
+        self.tabla_productos.setColumnWidth(6, 80)
         
         productos_layout.addWidget(self.tabla_productos)
         
@@ -210,7 +214,7 @@ class RequisicionDialog(QDialog):
         layout.addWidget(self.txt_observaciones)
         
         # Resumen
-        self.lbl_resumen = QLabel("Total productos: 0")
+        self.lbl_resumen = QLabel("Total productos: 0 | Costo Total: S/ 0.00")
         self.lbl_resumen.setStyleSheet("""
             background-color: #e8f0fe;
             padding: 10px;
@@ -390,6 +394,7 @@ class RequisicionDialog(QDialog):
         
         if not prod_id or not alm_id:
             self.lbl_stock_disponible.setText("Stock: -")
+            self.lbl_costo_stock_disponible.setText("Costo Stock: S/ -")
             return
         
         almacen = self.session.query(Almacen).get(alm_id)
@@ -403,12 +408,17 @@ class RequisicionDialog(QDialog):
         
         if ultimo_mov:
             stock = ultimo_mov.saldo_cantidad
+            costo_stock = ultimo_mov.saldo_costo_total
             color = "#34a853" if stock > 0 else "#ea4335"
             self.lbl_stock_disponible.setText(f"Stock: {stock:.2f}")
+            self.lbl_costo_stock_disponible.setText(f"Costo Stock: S/ {costo_stock:.2f}")
             self.lbl_stock_disponible.setStyleSheet(f"font-weight: bold; color: {color};")
+            self.lbl_costo_stock_disponible.setStyleSheet(f"font-weight: bold; color: {color};")
         else:
             self.lbl_stock_disponible.setText("Stock: 0.00")
+            self.lbl_costo_stock_disponible.setText("Costo Stock: S/ 0.00")
             self.lbl_stock_disponible.setStyleSheet("font-weight: bold; color: #ea4335;")
+            self.lbl_costo_stock_disponible.setStyleSheet("font-weight: bold; color: #ea4335;")
     
     def generar_numero(self):
         """Genera el número correlativo de requisición, reseteando por año."""
@@ -482,6 +492,11 @@ class RequisicionDialog(QDialog):
         
         producto = self.session.query(Producto).get(prod_id)
         
+        empresa = self.session.query(Empresa).get(almacen.empresa_id)
+        costo_unitario, costo_total = self.calcular_costo_salida(
+            empresa, prod_id, alm_id, cantidad
+        )
+
         # Agregar a lista
         detalle = {
             'producto_id': prod_id,
@@ -489,7 +504,9 @@ class RequisicionDialog(QDialog):
             'almacen_id': alm_id,
             'almacen_nombre': almacen.nombre,
             'stock_disponible': stock_disponible,
-            'cantidad': cantidad
+            'cantidad': cantidad,
+            'costo_unitario': costo_unitario,
+            'costo_total': costo_total
         }
         
         self.detalles_requisicion.append(detalle)
@@ -502,20 +519,24 @@ class RequisicionDialog(QDialog):
         """Actualiza la tabla de productos"""
         self.tabla_productos.setRowCount(len(self.detalles_requisicion))
         
+        costo_total_requisicion = 0
         for row, det in enumerate(self.detalles_requisicion):
             self.tabla_productos.setItem(row, 0, QTableWidgetItem(det['producto_nombre']))
             self.tabla_productos.setItem(row, 1, QTableWidgetItem(det['almacen_nombre']))
             self.tabla_productos.setItem(row, 2, QTableWidgetItem(f"{det['stock_disponible']:.2f}"))
             self.tabla_productos.setItem(row, 3, QTableWidgetItem(f"{det['cantidad']:.2f}"))
+            self.tabla_productos.setItem(row, 4, QTableWidgetItem(f"S/ {det['costo_unitario']:.2f}"))
+            self.tabla_productos.setItem(row, 5, QTableWidgetItem(f"S/ {det['costo_total']:.2f}"))
+            costo_total_requisicion += det['costo_total']
             
             # Botón eliminar
             btn_eliminar = QPushButton("✕")
             btn_eliminar.setStyleSheet("background-color: #ea4335; color: white; border-radius: 3px;")
             btn_eliminar.clicked.connect(lambda checked, r=row: self.eliminar_producto(r))
-            self.tabla_productos.setCellWidget(row, 4, btn_eliminar)
+            self.tabla_productos.setCellWidget(row, 6, btn_eliminar)
         
         # Actualizar resumen
-        self.lbl_resumen.setText(f"Total productos: {len(self.detalles_requisicion)}")
+        self.lbl_resumen.setText(f"Total productos: {len(self.detalles_requisicion)} | Costo Total: S/ {costo_total_requisicion:.2f}")
     
     def eliminar_producto(self, row):
         """Elimina un producto de la lista"""
