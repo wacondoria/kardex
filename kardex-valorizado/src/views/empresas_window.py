@@ -412,8 +412,13 @@ class EmpresasWindow(QWidget):
         self.cargar_empresas()
 
     def keyPressEvent(self, event):
-        """Captura la pulsación de F6 para editar."""
-        if event.key() == Qt.Key.Key_F6:
+        """Captura la pulsación de F2 para crear y F6 para editar."""
+        if event.key() == Qt.Key.Key_F2:
+            if self.tabs.currentIndex() == 0:
+                self.nueva_empresa()
+            elif self.tabs.currentIndex() == 1:
+                self.nuevo_almacen()
+        elif event.key() == Qt.Key.Key_F6:
             if self.tabs.currentIndex() == 0:  # Pestaña de Empresas
                 fila = self.tabla_empresas.currentRow()
                 if fila != -1 and fila < len(self.empresas_mostradas):
