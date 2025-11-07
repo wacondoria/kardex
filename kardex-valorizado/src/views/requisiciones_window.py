@@ -593,7 +593,7 @@ class RequisicionDialog(QDialog):
             # 3. Modificar detalles existentes
             for det_ui in detalles_a_modificar_ui:
                 detalle_obj = self.session.get(RequisicionDetalle, det_ui['detalle_original_id'])
-                cantidad_original = detalle_obj.cantidad
+                cantidad_original = Decimal(str(detalle_obj.cantidad))
                 cantidad_nueva = Decimal(str(det_ui['cantidad']))
                 diferencia = cantidad_nueva - cantidad_original
 
