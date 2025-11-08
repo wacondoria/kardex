@@ -129,6 +129,29 @@ DARK_THEME_STYLESHEET = """
         background: #555;
         min-width: 20px;
     }
+
+    /* --- Botones de Acción --- */
+    #EditButton {
+        background-color: #28a745; /* Verde */
+        color: white;
+    }
+    #EditButton:hover {
+        background-color: #218838;
+    }
+    #DeleteButton {
+        background-color: #dc3545; /* Rojo */
+        color: white;
+    }
+    #DeleteButton:hover {
+        background-color: #c82333;
+    }
+    #ViewButton {
+        background-color: #007bff; /* Azul */
+        color: white;
+    }
+    #ViewButton:hover {
+        background-color: #0069d9;
+    }
 """
 
 LIGHT_THEME_STYLESHEET = """
@@ -251,6 +274,32 @@ LIGHT_THEME_STYLESHEET = """
     QScrollBar::handle:horizontal {
         background: #ced4da;
         min-width: 20px;
+    }
+
+    /* --- Botones de Acción --- */
+    #EditButton {
+        background-color: #28a745; /* Verde */
+        color: white;
+        border: 1px solid #218838;
+    }
+    #EditButton:hover {
+        background-color: #218838;
+    }
+    #DeleteButton {
+        background-color: #dc3545; /* Rojo */
+        color: white;
+        border: 1px solid #c82333;
+    }
+    #DeleteButton:hover {
+        background-color: #c82333;
+    }
+    #ViewButton {
+        background-color: #007bff; /* Azul */
+        color: white;
+        border: 1px solid #0069d9;
+    }
+    #ViewButton:hover {
+        background-color: #0069d9;
     }
 """
 

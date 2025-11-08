@@ -44,7 +44,8 @@ from models.database_model import (obtener_session, Compra, CompraDetalle,
                                    Proveedor, Producto, Almacen, Empresa,
                                    TipoCambio, TipoDocumento, Moneda,
                                    MovimientoStock, TipoMovimiento)
-from utils.widgets import UppercaseValidator, SearchableComboBox
+from utils.widgets import (UppercaseValidator, SearchableComboBox, EditButton,
+                           DeleteButton, ViewButton)
 from utils.app_context import app_context
 from utils.validation import verificar_estado_anio, AnioCerradoError
 
@@ -604,8 +605,7 @@ class CompraDialog(QDialog):
             item_subtotal.setFlags(item_subtotal.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self.tabla_productos.setItem(row, 4, item_subtotal)
 
-            btn_eliminar = QPushButton("✕")
-            btn_eliminar.setStyleSheet("background-color: #ea4335; color: white; border-radius: 3px;")
+            btn_eliminar = DeleteButton("✕")
             btn_eliminar.clicked.connect(lambda checked, r=row: self.eliminar_producto(r))
             self.tabla_productos.setCellWidget(row, 5, btn_eliminar)
 
@@ -1707,20 +1707,17 @@ class ComprasWindow(QWidget):
             botones_layout.setContentsMargins(0, 0, 0, 0)
             botones_layout.setSpacing(5)
 
-            btn_ver = QPushButton("👁️ Ver")
-            btn_ver.setStyleSheet("QPushButton { background-color: #1a73e8; color: white; padding: 5px; border-radius: 3px; } QPushButton:hover { background-color: #1e88e5; }")
+            btn_ver = ViewButton("Ver")
             btn_ver.clicked.connect(lambda checked, c=compra: self.ver_detalle(c))
             botones_layout.addWidget(btn_ver)
 
-            btn_editar = QPushButton("✏️ Editar")
-            btn_editar.setStyleSheet("QPushButton { background-color: #fbbc04; color: white; padding: 5px; border-radius: 3px; } QPushButton:hover { background-color: #fdd835; }")
+            btn_editar = EditButton("Editar")
             btn_editar.clicked.connect(lambda checked, c=compra: self.editar_compra(c))
             if self.user_info and self.user_info.get('licencia_vencida'):
                  btn_editar.setEnabled(False)
             botones_layout.addWidget(btn_editar)
 
-            btn_eliminar = QPushButton("🗑️ Eliminar")
-            btn_eliminar.setStyleSheet("QPushButton { background-color: #ea4335; color: white; padding: 5px; border-radius: 3px; } QPushButton:hover { background-color: #e57373; }")
+            btn_eliminar = DeleteButton("Eliminar")
             btn_eliminar.clicked.connect(lambda checked, c=compra: self.eliminar_compra(c))
             if self.user_info and self.user_info.get('licencia_vencida'):
                  btn_eliminar.setEnabled(False)

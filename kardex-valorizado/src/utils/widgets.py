@@ -63,7 +63,38 @@ class UppercaseValidator(QValidator):
     def validate(self, input_str, pos):
         return (QValidator.State.Acceptable, input_str.upper(), pos)
 
+from PyQt6.QtWidgets import QPushButton
+from PyQt6.QtGui import QIcon
+import os
+
 class UpperLineEdit(QLineEdit):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setValidator(UppercaseValidator())
+
+
+class EditButton(QPushButton):
+    """Botón de edición con estilo y icono predefinido."""
+    def __init__(self, text="Editar", parent=None):
+        super().__init__(text, parent)
+        self.setObjectName("EditButton")
+        icon_path = os.path.join(os.path.dirname(__file__), '..', 'resources', 'edit.png')
+        self.setIcon(QIcon(icon_path))
+
+
+class DeleteButton(QPushButton):
+    """Botón de eliminación con estilo y icono predefinido."""
+    def __init__(self, text="Eliminar", parent=None):
+        super().__init__(text, parent)
+        self.setObjectName("DeleteButton")
+        icon_path = os.path.join(os.path.dirname(__file__), '..', 'resources', 'delete.png')
+        self.setIcon(QIcon(icon_path))
+
+
+class ViewButton(QPushButton):
+    """Botón de visualización con estilo y icono predefinido."""
+    def __init__(self, text="Ver", parent=None):
+        super().__init__(text, parent)
+        self.setObjectName("ViewButton")
+        icon_path = os.path.join(os.path.dirname(__file__), '..', 'resources', 'view.png')
+        self.setIcon(QIcon(icon_path))

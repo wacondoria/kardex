@@ -33,7 +33,7 @@ try:
 except ImportError:
     from models.database_model import obtener_session, Producto, Categoria
     MovimientoStock = None
-from utils.widgets import UpperLineEdit, SearchableComboBox
+from utils.widgets import UpperLineEdit, SearchableComboBox, EditButton, DeleteButton
 
 UNIDADES_SUNAT = [
     "UND - Unidad", "KG - Kilogramo", "GR - Gramo", "LT - Litro",
@@ -643,20 +643,10 @@ class ProductosWindow(QWidget):
             btn_layout.setContentsMargins(5, 5, 5, 5)
             btn_layout.setSpacing(5)
 
-            btn_editar = QPushButton("Editar")
-            btn_editar.setStyleSheet("""
-                QPushButton { background-color: #34a853; color: white; padding: 5px 10px;
-                    border: none; border-radius: 3px; }
-                QPushButton:hover { background-color: #2d8e47; }
-            """)
+            btn_editar = EditButton()
             btn_editar.clicked.connect(lambda checked, p=prod: self.editar_producto(p))
 
-            btn_eliminar = QPushButton("Eliminar")
-            btn_eliminar.setStyleSheet("""
-                QPushButton { background-color: #ea4335; color: white; padding: 5px 10px;
-                    border: none; border-radius: 3px; }
-                QPushButton:hover { background-color: #c5221f; }
-            """)
+            btn_eliminar = DeleteButton()
             btn_eliminar.clicked.connect(lambda checked, p=prod: self.eliminar_producto(p))
 
             if self.user_info and self.user_info.get('licencia_vencida'):
