@@ -282,14 +282,22 @@ class RequisicionDialog(QDialog):
         for det_obj in self.detalles_originales_obj:
             producto = self.session.query(Producto).get(det_obj.producto_id)
             almacen = self.session.query(Almacen).get(det_obj.almacen_id)
+            empresa = self.session.query(Empresa).get(almacen.empresa_id)
+
+            # Para la edición, calculamos el costo basado en la cantidad original
+            costo_unitario, costo_total = self.calcular_costo_salida(
+                empresa, det_obj.producto_id, det_obj.almacen_id, float(det_obj.cantidad)
+            )
 
             detalle_dict = {
                 'producto_id': det_obj.producto_id,
                 'producto_nombre': f"{producto.codigo} - {producto.nombre}",
                 'almacen_id': det_obj.almacen_id,
                 'almacen_nombre': almacen.nombre,
-                'stock_disponible': 0, # Se recalculará si es necesario, no es crítico para la edición
+                'stock_disponible': 0, # No es crítico para la edición
                 'cantidad': float(det_obj.cantidad),
+                'costo_unitario': costo_unitario,
+                'costo_total': costo_total,
                 'detalle_original_id': det_obj.id
             }
             self.detalles_requisicion.append(detalle_dict)
