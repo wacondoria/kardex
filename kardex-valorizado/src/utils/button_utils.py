@@ -25,10 +25,11 @@ COLORS = {
 }
 
 # Definición de rutas a los íconos
+BASE_PATH = Path(__file__).resolve().parent.parent
 ICON_PATHS = {
-    'edit': 'kardex-valorizado/src/resources/edit.png',
-    'delete': 'kardex-valorizado/src/resources/delete.png',
-    'view': 'kardex-valorizado/src/resources/view.png'
+    'edit': str(BASE_PATH / 'resources/edit.png'),
+    'delete': str(BASE_PATH / 'resources/delete.png'),
+    'view': str(BASE_PATH / 'resources/view.png')
 }
 
 def style_button(button: QPushButton, button_type: str, text: str = ""):
