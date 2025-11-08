@@ -45,6 +45,21 @@ class LoginWindow(QWidget):
         self.setWindowTitle("KARDEX v1.4.4 - Modulo De Inventarios valorizado")
         self.setFixedSize(400, 250)
 
+        self.setStyleSheet("""
+            QWidget#LoginWindow { background-color: #E0E0E0; }
+            QLabel { color: #003366; font-weight: bold; font-size: 11px; font-family: Arial; }
+            QLineEdit {
+                border: 1px solid #8C8C8C;
+                background-color: #FFFFFF;
+                padding: 4px;
+                border-radius: 3px;
+                box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+            }
+            QPushButton {
+                background-color: #F0F0F0; border: 1px solid #8C8C8C;
+                padding: 4px; text-align: right;
+            }
+        """)
         self.setObjectName("LoginWindow")
 
         # Layout principal
@@ -103,6 +118,7 @@ class LoginWindow(QWidget):
         # === INFO DE LICENCIA ===
         self.lbl_licencia = QLabel()
         self.lbl_licencia.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.lbl_licencia.setStyleSheet("font-size: 9px; font-weight: normal; color: #555;")
         self.verificar_licencia_startup()
         main_layout.addWidget(self.lbl_licencia)
 
