@@ -39,6 +39,7 @@ class AnioContableWindow(QWidget):
         # Título
         titulo = QLabel("🗓️ Administración de Años Contables")
         titulo.setFont(QFont("Arial", 16, QFont.Weight.Bold))
+        titulo.setStyleSheet("color: #1a73e8;")
         layout.addWidget(titulo)
 
         # Tabla de años
