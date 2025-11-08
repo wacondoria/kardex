@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent / 'src'))
 
 from views.login_window import LoginWindow
 from utils.app_context import app_context
-from utils.themes import dark_theme
+from utils.themes import dark_theme, light_theme
 from views.productos_window import ProductosWindow
 from views.proveedores_window import ProveedoresWindow
 from views.empresas_window import EmpresasWindow
@@ -486,7 +486,14 @@ def main():
 
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
-    app.setStyleSheet(dark_theme())
+
+    # Detectar si el sistema está en modo oscuro
+    palette = app.palette()
+    window_color = palette.color(palette.ColorRole.Window)
+    if window_color.lightness() < 128:
+        app.setStyleSheet(dark_theme())
+    else:
+        app.setStyleSheet(light_theme())
 
     main_window = None
     login_window = LoginWindow()
