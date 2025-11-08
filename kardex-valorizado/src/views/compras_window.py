@@ -105,6 +105,7 @@ class CompraDialog(QDialog):
         # Título
         titulo = QLabel("🛒 Nueva Compra")
         titulo.setFont(QFont("Arial", 16, QFont.Weight.Bold))
+        titulo.setStyleSheet("color: #1a73e8; padding: 10px;")
         layout.addWidget(titulo)
 
         # === DATOS DE LA COMPRA ===
@@ -121,9 +122,11 @@ class CompraDialog(QDialog):
         self.btn_nuevo_proveedor = QPushButton("+")
         self.btn_nuevo_proveedor.setToolTip("Crear nuevo proveedor")
         self.btn_nuevo_proveedor.setFixedSize(30, 30)
+        self.btn_nuevo_proveedor.setStyleSheet("background-color: #34a853; color: white; font-weight: bold; border-radius: 15px;")
         self.btn_nuevo_proveedor.clicked.connect(self.crear_nuevo_proveedor)
 
         self.lbl_proveedor_info = QLabel()
+        self.lbl_proveedor_info.setStyleSheet("color: #666; font-size: 10px;")
 
         proveedor_layout.addWidget(self.cmb_proveedor)
         proveedor_layout.addWidget(self.btn_nuevo_proveedor)
@@ -200,6 +203,7 @@ class CompraDialog(QDialog):
         self.spn_tipo_cambio.setEnabled(False)
 
         self.lbl_tc_info = QLabel("Tipo cambio VENTA")
+        self.lbl_tc_info.setStyleSheet("color: #666; font-size: 10px;")
 
         fila2.addWidget(QLabel("Moneda:"))
         fila2.addWidget(self.cmb_moneda)
@@ -212,6 +216,7 @@ class CompraDialog(QDialog):
 
         # IGV
         self.chk_incluye_igv = QCheckBox("Los precios INCLUYEN IGV (18%)")
+        self.chk_incluye_igv.setStyleSheet("font-weight: bold; color: #ea4335;")
         self.chk_incluye_igv.toggled.connect(self.recalcular_totales)
         form_compra.addRow("", self.chk_incluye_igv)
 
@@ -232,6 +237,7 @@ class CompraDialog(QDialog):
         self.btn_nuevo_producto = QPushButton("+")
         self.btn_nuevo_producto.setToolTip("Crear nuevo producto")
         self.btn_nuevo_producto.setFixedSize(30, 30)
+        self.btn_nuevo_producto.setStyleSheet("background-color: #34a853; color: white; font-weight: bold; border-radius: 15px;")
         self.btn_nuevo_producto.clicked.connect(self.crear_nuevo_producto)
 
         self.cmb_almacen = SearchableComboBox()
@@ -246,6 +252,15 @@ class CompraDialog(QDialog):
         self.spn_precio.setDecimals(2)
 
         self.btn_agregar = QPushButton("+ Agregar")
+        self.btn_agregar.setStyleSheet("""
+            QPushButton {
+                background-color: #34a853;
+                color: white;
+                padding: 8px 20px;
+                border-radius: 5px;
+                font-weight: bold;
+            }
+        """)
         self.btn_agregar.clicked.connect(self.agregar_producto)
 
         # Instalar filtros de eventos
@@ -310,10 +325,13 @@ class CompraDialog(QDialog):
         resumen_layout = QFormLayout()
 
         self.lbl_subtotal = QLabel("S/ 0.00")
+        self.lbl_subtotal.setStyleSheet("font-size: 14px; font-weight: bold;")
 
         self.lbl_igv = QLabel("S/ 0.00")
+        self.lbl_igv.setStyleSheet("font-size: 14px;")
 
         self.lbl_total = QLabel("S/ 0.00")
+        self.lbl_total.setStyleSheet("font-size: 16px; font-weight: bold; color: #1a73e8;")
 
         resumen_layout.addRow("Subtotal (sin IGV):", self.lbl_subtotal)
         resumen_layout.addRow("IGV (18%):", self.lbl_igv)
@@ -336,9 +354,25 @@ class CompraDialog(QDialog):
         btn_layout.addStretch()
 
         btn_cancelar = QPushButton("Cancelar")
+        btn_cancelar.setStyleSheet("""
+            QPushButton {
+                background-color: #f1f3f4;
+                padding: 10px 30px;
+                border-radius: 5px;
+            }
+        """)
         btn_cancelar.clicked.connect(self.reject)
 
         self.btn_guardar = QPushButton("Guardar Compra")
+        self.btn_guardar.setStyleSheet("""
+            QPushButton {
+                background-color: #1a73e8;
+                color: white;
+                padding: 10px 30px;
+                border-radius: 5px;
+                font-weight: bold;
+            }
+        """)
         self.btn_guardar.clicked.connect(self.guardar_compra)
 
         btn_layout.addWidget(btn_cancelar)
@@ -571,6 +605,7 @@ class CompraDialog(QDialog):
             self.tabla_productos.setItem(row, 4, item_subtotal)
 
             btn_eliminar = QPushButton("✕")
+            btn_eliminar.setStyleSheet("background-color: #ea4335; color: white; border-radius: 3px;")
             btn_eliminar.clicked.connect(lambda checked, r=row: self.eliminar_producto(r))
             self.tabla_productos.setCellWidget(row, 5, btn_eliminar)
 
@@ -1294,6 +1329,7 @@ class DetalleCompraDialog(QDialog):
         form_totales.addRow(QLabel("<b>IGV (18%):</b>"), self.lbl_igv_detalle)
 
         self.lbl_total_detalle = QLabel(f"{simbolo} --.--")
+        self.lbl_total_detalle.setStyleSheet("font-size: 14px; font-weight: bold; color: #1a73e8;")
         form_totales.addRow(QLabel("<b>TOTAL:</b>"), self.lbl_total_detalle)
         # --- FIN CORRECCIÓN ---
 
@@ -1375,8 +1411,16 @@ class ComprasWindow(QWidget):
 
         titulo = QLabel("🛒 Gestión de Compras")
         titulo.setFont(QFont("Arial", 18, QFont.Weight.Bold))
+        titulo.setStyleSheet("color: #1a73e8;")
 
         btn_nueva = QPushButton("+ Nueva Compra")
+        btn_nueva.setStyleSheet("""
+            QPushButton {
+                background-color: #1a73e8; color: white;
+                padding: 10px 20px; border-radius: 5px; font-weight: bold;
+            }
+            QPushButton:hover { background-color: #1557b0; }
+        """)
         btn_nueva.clicked.connect(self.nueva_compra)
 
         # --- LÓGICA DE LICENCIA (AGRUPADA) ---
@@ -1435,6 +1479,7 @@ class ComprasWindow(QWidget):
 
         # Contador
         self.lbl_contador = QLabel("Cargando...")
+        self.lbl_contador.setStyleSheet("color: #666; font-size: 11px;")
 
         # Tabla
         self.tabla = QTableWidget()
@@ -1442,6 +1487,11 @@ class ComprasWindow(QWidget):
         self.tabla.setHorizontalHeaderLabels([
             "Nro. Proceso", "F. Contable", "F. Emisión", "Documento", "Proveedor", "Moneda", "Subtotal", "IGV", "Total", "Acciones"
         ])
+
+        self.tabla.setStyleSheet("""
+            QTableWidget { border: 1px solid #ddd; border-radius: 5px; background-color: white; }
+            QHeaderView::section { background-color: #f1f3f4; padding: 10px; border: none; font-weight: bold; }
+        """)
 
         header = self.tabla.horizontalHeader()
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch) # Proveedor
@@ -1658,16 +1708,19 @@ class ComprasWindow(QWidget):
             botones_layout.setSpacing(5)
 
             btn_ver = QPushButton("👁️ Ver")
+            btn_ver.setStyleSheet("QPushButton { background-color: #1a73e8; color: white; padding: 5px; border-radius: 3px; } QPushButton:hover { background-color: #1e88e5; }")
             btn_ver.clicked.connect(lambda checked, c=compra: self.ver_detalle(c))
             botones_layout.addWidget(btn_ver)
 
             btn_editar = QPushButton("✏️ Editar")
+            btn_editar.setStyleSheet("QPushButton { background-color: #fbbc04; color: white; padding: 5px; border-radius: 3px; } QPushButton:hover { background-color: #fdd835; }")
             btn_editar.clicked.connect(lambda checked, c=compra: self.editar_compra(c))
             if self.user_info and self.user_info.get('licencia_vencida'):
                  btn_editar.setEnabled(False)
             botones_layout.addWidget(btn_editar)
 
             btn_eliminar = QPushButton("🗑️ Eliminar")
+            btn_eliminar.setStyleSheet("QPushButton { background-color: #ea4335; color: white; padding: 5px; border-radius: 3px; } QPushButton:hover { background-color: #e57373; }")
             btn_eliminar.clicked.connect(lambda checked, c=compra: self.eliminar_compra(c))
             if self.user_info and self.user_info.get('licencia_vencida'):
                  btn_eliminar.setEnabled(False)
