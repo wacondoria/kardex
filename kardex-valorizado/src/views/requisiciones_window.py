@@ -24,6 +24,7 @@ from models.database_model import (obtener_session, Requisicion, RequisicionDeta
                                    MovimientoStock, TipoMovimiento, MetodoValuacion)
 from utils.widgets import UpperLineEdit, SearchableComboBox
 from utils.app_context import app_context
+from utils.button_utils import style_button
 
 
 class RequisicionDialog(QDialog):
@@ -913,26 +914,12 @@ class RequisicionesWindow(QWidget):
             self.tabla.setItem(row, 4, QTableWidgetItem(str(cant_productos)))
             
             # Botón ver
-            btn_ver = QPushButton("Ver")
-            btn_ver.setStyleSheet("""
-                QPushButton {
-                    background-color: #1a73e8;
-                    color: white;
-                    padding: 5px 10px;
-                    border-radius: 3px;
-                }
-            """)
+            btn_ver = QPushButton()
+            style_button(btn_ver, 'view', "Ver")
             btn_ver.clicked.connect(lambda checked, r=req: self.ver_detalle(r))
 
-            btn_editar = QPushButton("Editar")
-            btn_editar.setStyleSheet("""
-                QPushButton {
-                    background-color: #fbbc04;
-                    color: white;
-                    padding: 5px 10px;
-                    border-radius: 3px;
-                }
-            """)
+            btn_editar = QPushButton()
+            style_button(btn_editar, 'edit', "Editar")
             btn_editar.clicked.connect(lambda checked, r=req: self.editar_requisicion(r))
 
             # Layout for buttons

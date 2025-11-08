@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from models.database_model import (obtener_session, Usuario, RolUsuario, 
                                    Empresa, UsuarioEmpresa)
 from utils.widgets import UpperLineEdit
+from utils.button_utils import style_button
 
 
 class UsuarioDialog(QDialog):
@@ -518,15 +519,8 @@ class UsuariosWindow(QWidget):
             btn_layout = QHBoxLayout()
             btn_layout.setContentsMargins(5, 5, 5, 5)
             
-            btn_editar = QPushButton("Editar")
-            btn_editar.setStyleSheet("""
-                QPushButton {
-                    background-color: #34a853;
-                    color: white;
-                    padding: 5px 10px;
-                    border-radius: 3px;
-                }
-            """)
+            btn_editar = QPushButton()
+            style_button(btn_editar, 'edit', "Editar")
             btn_editar.clicked.connect(lambda checked, u=user: self.editar_usuario(u))
             
             btn_toggle = QPushButton("Activar" if not user.activo else "Desactivar")
