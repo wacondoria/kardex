@@ -27,6 +27,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from models.database_model import obtener_session, Proveedor
 from sqlalchemy import or_
 from utils.widgets import UpperLineEdit
+from utils.button_utils import style_button
 
 
 class ProveedorDialog(QDialog):
@@ -451,34 +452,12 @@ class ProveedoresWindow(QWidget):
             btn_layout = QHBoxLayout() # <--- ESTA LÍNEA FALTABA O ESTABA MAL UBICADA
             btn_layout.setContentsMargins(5, 5, 5, 5)
 
-            btn_editar = QPushButton("Editar")
-            btn_editar.setStyleSheet("""
-                QPushButton {
-                    background-color: #34a853;
-                    color: white;
-                    padding: 5px 10px;
-                    border: none;
-                    border-radius: 3px;
-                }
-                QPushButton:hover {
-                    background-color: #2d8e47;
-                }
-            """)
+            btn_editar = QPushButton()
+            style_button(btn_editar, 'edit', "Editar")
             btn_editar.clicked.connect(lambda checked, p=prov: self.editar_proveedor(p))
 
-            btn_eliminar = QPushButton("Eliminar")
-            btn_eliminar.setStyleSheet("""
-                QPushButton {
-                    background-color: #ea4335;
-                    color: white;
-                    padding: 5px 10px;
-                    border: none;
-                    border-radius: 3px;
-                }
-                QPushButton:hover {
-                    background-color: #c5221f;
-                }
-            """)
+            btn_eliminar = QPushButton()
+            style_button(btn_eliminar, 'delete', "Eliminar")
             btn_eliminar.clicked.connect(lambda checked, p=prov: self.eliminar_proveedor(p))
 
             # (Fin de la sección que faltaba)

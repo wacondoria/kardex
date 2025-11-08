@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from models.database_model import (obtener_session, Empresa, Almacen,
                                    MetodoValuacion, UsuarioEmpresa)
 from utils.widgets import UpperLineEdit, SearchableComboBox
+from utils.button_utils import style_button
 
 
 class AlmacenDialog(QDialog):
@@ -604,26 +605,12 @@ class EmpresasWindow(QWidget):
             btn_layout = QHBoxLayout()
             btn_layout.setContentsMargins(5, 5, 5, 5)
 
-            btn_editar = QPushButton("Editar")
-            btn_editar.setStyleSheet("""
-                QPushButton {
-                    background-color: #34a853;
-                    color: white;
-                    padding: 5px 10px;
-                    border-radius: 3px;
-                }
-            """)
+            btn_editar = QPushButton()
+            style_button(btn_editar, 'edit', "Editar")
             btn_editar.clicked.connect(lambda checked, e=emp: self.editar_empresa(e))
 
-            btn_eliminar = QPushButton("Eliminar")
-            btn_eliminar.setStyleSheet("""
-                QPushButton {
-                    background-color: #ea4335;
-                    color: white;
-                    padding: 5px 10px;
-                    border-radius: 3px;
-                }
-            """)
+            btn_eliminar = QPushButton()
+            style_button(btn_eliminar, 'delete', "Eliminar")
             btn_eliminar.clicked.connect(lambda checked, e=emp: self.eliminar_empresa(e))
 
             btn_layout.addWidget(btn_editar)
@@ -664,12 +651,12 @@ class EmpresasWindow(QWidget):
             btn_layout = QHBoxLayout()
             btn_layout.setContentsMargins(5, 5, 5, 5)
 
-            btn_editar = QPushButton("Editar")
-            btn_editar.setStyleSheet("background-color: #34a853; color: white; padding: 5px; border-radius: 3px;")
+            btn_editar = QPushButton()
+            style_button(btn_editar, 'edit', "Editar")
             btn_editar.clicked.connect(lambda checked, a=alm: self.editar_almacen(a))
 
-            btn_eliminar = QPushButton("Eliminar")
-            btn_eliminar.setStyleSheet("background-color: #ea4335; color: white; padding: 5px; border-radius: 3px;")
+            btn_eliminar = QPushButton()
+            style_button(btn_eliminar, 'delete', "Eliminar")
             btn_eliminar.clicked.connect(lambda checked, a=alm: self.eliminar_almacen(a))
 
             btn_layout.addWidget(btn_editar)

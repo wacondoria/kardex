@@ -47,6 +47,7 @@ from models.database_model import (obtener_session, Compra, CompraDetalle,
 from utils.widgets import UppercaseValidator, SearchableComboBox
 from utils.app_context import app_context
 from utils.validation import verificar_estado_anio, AnioCerradoError
+from utils.button_utils import style_button
 
 # ============================================
 # CLASES AUXILIARES (para seleccionar texto)
@@ -1707,20 +1708,20 @@ class ComprasWindow(QWidget):
             botones_layout.setContentsMargins(0, 0, 0, 0)
             botones_layout.setSpacing(5)
 
-            btn_ver = QPushButton("👁️ Ver")
-            btn_ver.setStyleSheet("QPushButton { background-color: #1a73e8; color: white; padding: 5px; border-radius: 3px; } QPushButton:hover { background-color: #1e88e5; }")
+            btn_ver = QPushButton()
+            style_button(btn_ver, 'view', "Ver")
             btn_ver.clicked.connect(lambda checked, c=compra: self.ver_detalle(c))
             botones_layout.addWidget(btn_ver)
 
-            btn_editar = QPushButton("✏️ Editar")
-            btn_editar.setStyleSheet("QPushButton { background-color: #fbbc04; color: white; padding: 5px; border-radius: 3px; } QPushButton:hover { background-color: #fdd835; }")
+            btn_editar = QPushButton()
+            style_button(btn_editar, 'edit', "Editar")
             btn_editar.clicked.connect(lambda checked, c=compra: self.editar_compra(c))
             if self.user_info and self.user_info.get('licencia_vencida'):
                  btn_editar.setEnabled(False)
             botones_layout.addWidget(btn_editar)
 
-            btn_eliminar = QPushButton("🗑️ Eliminar")
-            btn_eliminar.setStyleSheet("QPushButton { background-color: #ea4335; color: white; padding: 5px; border-radius: 3px; } QPushButton:hover { background-color: #e57373; }")
+            btn_eliminar = QPushButton()
+            style_button(btn_eliminar, 'delete', "Eliminar")
             btn_eliminar.clicked.connect(lambda checked, c=compra: self.eliminar_compra(c))
             if self.user_info and self.user_info.get('licencia_vencida'):
                  btn_eliminar.setEnabled(False)
