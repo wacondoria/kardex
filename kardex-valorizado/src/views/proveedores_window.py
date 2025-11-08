@@ -48,24 +48,6 @@ class ProveedorDialog(QDialog):
     def init_ui(self):
         self.setWindowTitle("Nuevo Proveedor" if not self.proveedor else "Editar Proveedor")
         self.setFixedSize(550, 500)
-        self.setStyleSheet("""
-            QDialog {
-                background-color: #f5f5f5;
-            }
-            QLabel {
-                color: #333;
-            }
-            QLineEdit, QTextEdit {
-                padding: 8px;
-                border: 2px solid #ddd;
-                border-radius: 4px;
-                background-color: white;
-                font-size: 11px;
-            }
-            QLineEdit:focus, QTextEdit:focus {
-                border: 2px solid #1a73e8;
-            }
-        """)
 
         layout = QVBoxLayout()
         layout.setSpacing(15)
@@ -74,7 +56,6 @@ class ProveedorDialog(QDialog):
         # Título
         titulo = QLabel("🏪 " + ("Nuevo Proveedor" if not self.proveedor else "Editar Proveedor"))
         titulo.setFont(QFont("Arial", 16, QFont.Weight.Bold))
-        titulo.setStyleSheet("color: #1a73e8; padding: 10px;")
         layout.addWidget(titulo)
 
         # Formulario
@@ -82,7 +63,6 @@ class ProveedorDialog(QDialog):
         self.lbl_id_etiqueta = QLabel("ID Interno:")
         self.txt_id_display = QLineEdit()
         self.txt_id_display.setEnabled(False)
-        self.txt_id_display.setStyleSheet("background-color: #eee; color: #555; font-weight: bold;")
 
         # Ocultarlos por defecto (solo se muestran al editar)
         self.lbl_id_etiqueta.hide()
@@ -133,7 +113,6 @@ class ProveedorDialog(QDialog):
 
         # Nota
         nota = QLabel("* Campos obligatorios")
-        nota.setStyleSheet("color: #666; font-size: 10px; font-style: italic;")
         layout.addWidget(nota)
 
         layout.addStretch()
@@ -143,38 +122,9 @@ class ProveedorDialog(QDialog):
         btn_layout.addStretch()
 
         btn_cancelar = QPushButton("Cancelar")
-        btn_cancelar.setStyleSheet("""
-            QPushButton {
-                background-color: #f1f3f4;
-                color: #333;
-                padding: 10px 30px;
-                border: none;
-                border-radius: 5px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #e8eaed;
-            }
-        """)
         btn_cancelar.clicked.connect(self.reject)
 
         self.btn_guardar = QPushButton("Guardar")
-        self.btn_guardar.setStyleSheet("""
-            QPushButton {
-                background-color: #1a73e8;
-                color: white;
-                padding: 10px 30px;
-                border: none;
-                border-radius: 5px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #1557b0;
-            }
-            QPushButton:disabled {
-                background-color: #ccc;
-            }
-        """)
         self.btn_guardar.clicked.connect(self.guardar)
 
         btn_layout.addWidget(btn_cancelar)
@@ -332,22 +282,8 @@ class ProveedoresWindow(QWidget):
 
         titulo = QLabel("🏪 Gestión de Proveedores")
         titulo.setFont(QFont("Arial", 18, QFont.Weight.Bold))
-        titulo.setStyleSheet("color: #1a73e8;")
 
         btn_nuevo = QPushButton("+ Nuevo Proveedor")
-        btn_nuevo.setStyleSheet("""
-            QPushButton {
-                background-color: #1a73e8;
-                color: white;
-                padding: 10px 20px;
-                border: none;
-                border-radius: 5px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #1557b0;
-            }
-        """)
         btn_nuevo.clicked.connect(self.nuevo_proveedor)
 
         header_layout.addWidget(titulo)
@@ -358,22 +294,10 @@ class ProveedoresWindow(QWidget):
         self.txt_buscar = UpperLineEdit()
         self.txt_buscar.setClearButtonEnabled(True)
         self.txt_buscar.setPlaceholderText("🔍 Buscar por RUC, razón social o contacto...")
-        self.txt_buscar.setStyleSheet("""
-            QLineEdit {
-                padding: 10px;
-                border: 2px solid #ddd;
-                border-radius: 5px;
-                font-size: 12px;
-            }
-            QLineEdit:focus {
-                border: 2px solid #1a73e8;
-            }
-        """)
         self.txt_buscar.textChanged.connect(self.buscar_proveedores)
 
         # Contador
         self.lbl_contador = QLabel()
-        self.lbl_contador.setStyleSheet("color: #666; font-size: 11px; padding: 5px;")
 
         # Tabla
         self.tabla = QTableWidget()
@@ -381,20 +305,6 @@ class ProveedoresWindow(QWidget):
         self.tabla.setHorizontalHeaderLabels([
             "ID", "RUC", "Razón Social", "Teléfono", "Email", "Contacto", "Dirección", "Acciones"
         ])
-
-        self.tabla.setStyleSheet("""
-            QTableWidget {
-                border: 1px solid #ddd;
-                border-radius: 5px;
-                background-color: white;
-            }
-            QHeaderView::section {
-                background-color: #f1f3f4;
-                padding: 10px;
-                border: none;
-                font-weight: bold;
-            }
-        """)
 
         header = self.tabla.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents) # NUEVO: Columna ID
@@ -452,33 +362,9 @@ class ProveedoresWindow(QWidget):
             btn_layout.setContentsMargins(5, 5, 5, 5)
 
             btn_editar = QPushButton("Editar")
-            btn_editar.setStyleSheet("""
-                QPushButton {
-                    background-color: #34a853;
-                    color: white;
-                    padding: 5px 10px;
-                    border: none;
-                    border-radius: 3px;
-                }
-                QPushButton:hover {
-                    background-color: #2d8e47;
-                }
-            """)
             btn_editar.clicked.connect(lambda checked, p=prov: self.editar_proveedor(p))
 
             btn_eliminar = QPushButton("Eliminar")
-            btn_eliminar.setStyleSheet("""
-                QPushButton {
-                    background-color: #ea4335;
-                    color: white;
-                    padding: 5px 10px;
-                    border: none;
-                    border-radius: 3px;
-                }
-                QPushButton:hover {
-                    background-color: #c5221f;
-                }
-            """)
             btn_eliminar.clicked.connect(lambda checked, p=prov: self.eliminar_proveedor(p))
 
             # (Fin de la sección que faltaba)

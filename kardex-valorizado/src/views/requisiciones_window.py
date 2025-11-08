@@ -47,27 +47,6 @@ class RequisicionDialog(QDialog):
     def init_ui(self):
         self.setWindowTitle("Nueva Requisición" if not self.requisicion_original else "Editar Requisición")
         self.setMinimumSize(1000, 650)
-        self.setStyleSheet("""
-            QDialog {
-                background-color: #f5f5f5;
-            }
-            QLabel {
-                color: #333;
-            }
-            QLineEdit, QDateEdit, QComboBox, QDoubleSpinBox, QTextEdit {
-                padding: 8px;
-                border: 2px solid #ddd;
-                border-radius: 4px;
-                background-color: white;
-                color: black;
-            }
-            QComboBox QAbstractItemView {
-                background-color: white;
-                color: black;
-                selection-background-color: #1a73e8;
-                selection-color: white;
-            }
-        """)
         
         layout = QVBoxLayout()
         layout.setContentsMargins(20, 20, 20, 20)
@@ -76,7 +55,6 @@ class RequisicionDialog(QDialog):
         # Título
         titulo = QLabel("📤 Nueva Requisición de Salida")
         titulo.setFont(QFont("Arial", 16, QFont.Weight.Bold))
-        titulo.setStyleSheet("color: #1a73e8; padding: 10px;")
         layout.addWidget(titulo)
         
         # === DATOS DE LA REQUISICIÓN ===
@@ -99,7 +77,6 @@ class RequisicionDialog(QDialog):
         self.txt_numero = UpperLineEdit()
         self.txt_numero.setPlaceholderText("Se generará automáticamente")
         self.txt_numero.setReadOnly(True)
-        self.txt_numero.setStyleSheet("background-color: #f0f0f0;")
         
         fila1.addWidget(QLabel("Fecha:"))
         fila1.addWidget(self.date_fecha)
@@ -115,14 +92,6 @@ class RequisicionDialog(QDialog):
         self.cmb_destino.setMinimumWidth(300)
         
         btn_nuevo_destino = QPushButton("+ Nuevo")
-        btn_nuevo_destino.setStyleSheet("""
-            QPushButton {
-                background-color: #34a853;
-                color: white;
-                padding: 5px 15px;
-                border-radius: 3px;
-            }
-        """)
         btn_nuevo_destino.clicked.connect(self.nuevo_destino)
         
         destino_layout.addWidget(self.cmb_destino)
@@ -154,10 +123,8 @@ class RequisicionDialog(QDialog):
         self.cmb_almacen.currentIndexChanged.connect(self.almacen_seleccionado)
         
         self.lbl_stock_disponible = QLabel("Stock: -")
-        self.lbl_stock_disponible.setStyleSheet("font-weight: bold; color: #1a73e8;")
 
         self.lbl_costo_stock_disponible = QLabel("Costo Stock: S/ -")
-        self.lbl_costo_stock_disponible.setStyleSheet("font-weight: bold; color: #1a73e8;")
         
         self.spn_cantidad = QDoubleSpinBox()
         self.spn_cantidad.setRange(0.01, 999999)
@@ -165,15 +132,6 @@ class RequisicionDialog(QDialog):
         self.spn_cantidad.setValue(1.00)
         
         btn_agregar = QPushButton("+ Agregar")
-        btn_agregar.setStyleSheet("""
-            QPushButton {
-                background-color: #34a853;
-                color: white;
-                padding: 8px 20px;
-                border-radius: 5px;
-                font-weight: bold;
-            }
-        """)
         btn_agregar.clicked.connect(self.agregar_producto)
         
         selector_layout.addWidget(QLabel("Producto:"))
@@ -215,13 +173,6 @@ class RequisicionDialog(QDialog):
         
         # Resumen
         self.lbl_resumen = QLabel("Total productos: 0 | Costo Total: S/ 0.00")
-        self.lbl_resumen.setStyleSheet("""
-            background-color: #e8f0fe;
-            padding: 10px;
-            border-radius: 5px;
-            font-weight: bold;
-            color: #1a73e8;
-        """)
         layout.addWidget(self.lbl_resumen)
         
         # Botones
@@ -229,25 +180,9 @@ class RequisicionDialog(QDialog):
         btn_layout.addStretch()
         
         btn_cancelar = QPushButton("Cancelar")
-        btn_cancelar.setStyleSheet("""
-            QPushButton {
-                background-color: #f1f3f4;
-                padding: 10px 30px;
-                border-radius: 5px;
-            }
-        """)
         btn_cancelar.clicked.connect(self.reject)
         
         self.btn_guardar = QPushButton("Guardar Requisición")
-        self.btn_guardar.setStyleSheet("""
-            QPushButton {
-                background-color: #1a73e8;
-                color: white;
-                padding: 10px 30px;
-                border-radius: 5px;
-                font-weight: bold;
-            }
-        """)
         self.btn_guardar.clicked.connect(self.guardar_requisicion)
         
         btn_layout.addWidget(btn_cancelar)
@@ -539,7 +474,6 @@ class RequisicionDialog(QDialog):
             
             # Botón eliminar
             btn_eliminar = QPushButton("✕")
-            btn_eliminar.setStyleSheet("background-color: #ea4335; color: white; border-radius: 3px;")
             btn_eliminar.clicked.connect(lambda checked, r=row: self.eliminar_producto(r))
             self.tabla_productos.setCellWidget(row, 6, btn_eliminar)
         
@@ -800,18 +734,8 @@ class RequisicionesWindow(QWidget):
         
         titulo = QLabel("📤 Gestión de Requisiciones")
         titulo.setFont(QFont("Arial", 18, QFont.Weight.Bold))
-        titulo.setStyleSheet("color: #1a73e8;")
         
         btn_nueva = QPushButton("+ Nueva Requisición")
-        btn_nueva.setStyleSheet("""
-            QPushButton {
-                background-color: #1a73e8;
-                color: white;
-                padding: 10px 20px;
-                border-radius: 5px;
-                font-weight: bold;
-            }
-        """)
         btn_nueva.clicked.connect(self.nueva_requisicion)
         
         if self.user_info and self.user_info.get('licencia_vencida'):
@@ -849,7 +773,6 @@ class RequisicionesWindow(QWidget):
         
         # Contador
         self.lbl_contador = QLabel()
-        self.lbl_contador.setStyleSheet("color: #666; font-size: 11px;")
         
         # Tabla
         self.tabla = QTableWidget()
@@ -857,19 +780,6 @@ class RequisicionesWindow(QWidget):
         self.tabla.setHorizontalHeaderLabels([
             "Fecha", "Número", "Destino", "Solicitante", "Productos", "Acciones"
         ])
-        
-        self.tabla.setStyleSheet("""
-            QTableWidget {
-                border: 1px solid #ddd;
-                border-radius: 5px;
-                background-color: white;
-            }
-            QHeaderView::section {
-                background-color: #f1f3f4;
-                padding: 10px;
-                font-weight: bold;
-            }
-        """)
         
         header = self.tabla.horizontalHeader()
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
@@ -914,25 +824,9 @@ class RequisicionesWindow(QWidget):
             
             # Botón ver
             btn_ver = QPushButton("Ver")
-            btn_ver.setStyleSheet("""
-                QPushButton {
-                    background-color: #1a73e8;
-                    color: white;
-                    padding: 5px 10px;
-                    border-radius: 3px;
-                }
-            """)
             btn_ver.clicked.connect(lambda checked, r=req: self.ver_detalle(r))
 
             btn_editar = QPushButton("Editar")
-            btn_editar.setStyleSheet("""
-                QPushButton {
-                    background-color: #fbbc04;
-                    color: white;
-                    padding: 5px 10px;
-                    border-radius: 3px;
-                }
-            """)
             btn_editar.clicked.connect(lambda checked, r=req: self.editar_requisicion(r))
 
             # Layout for buttons

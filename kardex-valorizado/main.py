@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent / 'src'))
 
 from views.login_window import LoginWindow
 from utils.app_context import app_context
+from utils.themes import dark_theme
 from views.productos_window import ProductosWindow
 from views.proveedores_window import ProveedoresWindow
 from views.empresas_window import EmpresasWindow
@@ -201,7 +202,6 @@ class KardexMainWindow(QMainWindow):
         )
         instrucciones.setFont(QFont("Arial", 11))
         instrucciones.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        instrucciones.setStyleSheet("color: #666;")
 
         layout.addWidget(bienvenida)
         layout.addWidget(info)
@@ -309,25 +309,6 @@ class KardexMainWindow(QMainWindow):
         """Crea la barra de herramientas"""
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setStyleSheet("""
-            QToolBar {
-                background-color: #f1f3f4;
-                border: none;
-                padding: 5px;
-                spacing: 5px;
-            }
-            QPushButton {
-                background-color: white;
-                border: 1px solid #ddd;
-                border-radius: 5px;
-                padding: 8px 15px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #e8f0fe;
-                border: 1px solid #1a73e8;
-            }
-        """)
         self.addToolBar(toolbar)
 
         # Botón Productos
@@ -505,6 +486,7 @@ def main():
 
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
+    app.setStyleSheet(dark_theme())
 
     main_window = None
     login_window = LoginWindow()
