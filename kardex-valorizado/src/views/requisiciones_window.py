@@ -928,6 +928,12 @@ class RequisicionesWindow(QWidget):
             btn_layout.setSpacing(5)
             btn_layout.addWidget(btn_ver)
             btn_layout.addWidget(btn_editar)
+
+            btn_eliminar = QPushButton()
+            style_button(btn_eliminar, 'delete', "Eliminar")
+            btn_eliminar.clicked.connect(lambda checked, r=req: self.eliminar_requisicion(r))
+            btn_layout.addWidget(btn_eliminar)
+
             btn_layout.addStretch()
             
             btn_widget = QWidget()
@@ -948,6 +954,56 @@ class RequisicionesWindow(QWidget):
         dialog = RequisicionDialog(self, self.user_info, requisicion_a_editar=requisicion)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.cargar_requisiciones()
+
+    def eliminar_requisicion(self, requisicion):
+        """Elimina una requisición y revierte los movimientos de stock."""
+        confirmar = QMessageBox.warning(
+            self, "Confirmar Eliminación",
+            f"¿Está seguro de eliminar la requisición {requisicion.numero_requisicion}?\n\n"
+            "Esta acción revertirá los movimientos de stock asociados.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+
+        if confirmar == QMessageBox.StandardButton.No:
+            return
+
+        try:
+            # Revertir cada movimiento
+            for detalle in requisicion.detalles:
+                almacen = self.session.get(Almacen, detalle.almacen_id)
+                empresa = self.session.get(Empresa, almacen.empresa_id)
+
+                costo_unitario, costo_total = RequisicionDialog.calcular_costo_salida(
+                    self, empresa, detalle.producto_id, detalle.almacen_id, float(detalle.cantidad)
+                )
+
+                RequisicionDialog._registrar_movimiento(
+                    self,
+                    empresa_id=almacen.empresa_id,
+                    producto_id=detalle.producto_id,
+                    almacen_id=detalle.almacen_id,
+                    tipo=TipoMovimiento.DEVOLUCION_REQUISICION,
+                    cantidad_entrada=detalle.cantidad,
+                    cantidad_salida=0,
+                    costo_unitario=costo_unitario,
+                    costo_total=costo_total,
+                    numero_documento=requisicion.numero_requisicion,
+                    fecha_documento=requisicion.fecha,
+                    observaciones=f"Reversión por eliminación de Requisición ID {requisicion.id}"
+                )
+
+            # Eliminar detalles y la requisición
+            self.session.query(RequisicionDetalle).filter_by(requisicion_id=requisicion.id).delete()
+            self.session.delete(requisicion)
+            self.session.commit()
+
+            QMessageBox.information(self, "Éxito", "Requisición eliminada y stock revertido.")
+            self.cargar_requisiciones()
+
+        except Exception as e:
+            self.session.rollback()
+            QMessageBox.critical(self, "Error", f"No se pudo eliminar la requisición:\n{e}")
     
     def ver_detalle(self, requisicion):
         """Muestra el detalle de la requisición"""
