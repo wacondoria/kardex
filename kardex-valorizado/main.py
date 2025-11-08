@@ -33,6 +33,7 @@ from views.sistemas_importacion_window import SistemasImportacionWindow
 # --- Integración para actualización automática ---
 from utils.actualizador_tc import actualizar_tc_desde_excel
 from models.database_model import obtener_session
+from utils.themes import get_theme_stylesheet
 
 # --- MODIFICADO: Añadida función de migración de BD ---
 from sqlalchemy import create_engine, inspect, text
@@ -309,25 +310,6 @@ class KardexMainWindow(QMainWindow):
         """Crea la barra de herramientas"""
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setStyleSheet("""
-            QToolBar {
-                background-color: #f1f3f4;
-                border: none;
-                padding: 5px;
-                spacing: 5px;
-            }
-            QPushButton {
-                background-color: white;
-                border: 1px solid #ddd;
-                border-radius: 5px;
-                padding: 8px 15px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #e8f0fe;
-                border: 1px solid #1a73e8;
-            }
-        """)
         self.addToolBar(toolbar)
 
         # Botón Productos
@@ -504,7 +486,10 @@ def main():
         session.close()
 
     app = QApplication(sys.argv)
-    app.setStyle('Fusion')
+
+    # Aplicar el tema (claro/oscuro) detectado
+    stylesheet = get_theme_stylesheet()
+    app.setStyleSheet(stylesheet)
 
     main_window = None
     login_window = LoginWindow()
