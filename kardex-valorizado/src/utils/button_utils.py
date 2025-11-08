@@ -19,9 +19,11 @@ COLORS = {
     'edit': '#28a745',      # Verde
     'delete': '#dc3545',    # Rojo
     'view': '#007bff',      # Azul
+    'add': '#007bff',       # Azul también para 'add'
     'edit_hover': '#218838',
     'delete_hover': '#c82333',
-    'view_hover': '#0069d9'
+    'view_hover': '#0069d9',
+    'add_hover': '#0069d9'
 }
 
 # Definición de rutas a los íconos
@@ -29,7 +31,8 @@ BASE_PATH = Path(__file__).resolve().parent.parent
 ICON_PATHS = {
     'edit': str(BASE_PATH / 'resources/edit.png'),
     'delete': str(BASE_PATH / 'resources/delete.png'),
-    'view': str(BASE_PATH / 'resources/view.png')
+    'view': str(BASE_PATH / 'resources/view.png'),
+    'add': str(BASE_PATH / 'resources/add.png')
 }
 
 def style_button(button: QPushButton, button_type: str, text: str = ""):
@@ -38,7 +41,7 @@ def style_button(button: QPushButton, button_type: str, text: str = ""):
 
     Args:
         button: El botón (QPushButton) al que se aplicará el estilo.
-        button_type: El tipo de botón ('edit', 'delete', 'view').
+        button_type: El tipo de botón ('edit', 'delete', 'view', 'add').
         text: El texto a mostrar en el botón. Si está vacío, solo se mostrará el ícono.
     """
     if button_type not in COLORS or button_type not in ICON_PATHS:
@@ -54,7 +57,7 @@ def style_button(button: QPushButton, button_type: str, text: str = ""):
     else:
         print(f"ADVERTENCIA: No se encontró el ícono en la ruta: {icon_path}")
         # Si no hay ícono, usar un caracter de respaldo
-        fallback_chars = {'edit': 'E', 'delete': 'X', 'view': 'V'}
+        fallback_chars = {'edit': 'E', 'delete': 'X', 'view': 'V', 'add': '+'}
         button.setText(fallback_chars.get(button_type, '?'))
 
     # --- Configuración del Texto y ToolTip ---
@@ -66,7 +69,8 @@ def style_button(button: QPushButton, button_type: str, text: str = ""):
         tooltips = {
             'edit': 'Editar registro',
             'delete': 'Eliminar registro',
-            'view': 'Ver detalle'
+            'view': 'Ver detalle',
+            'add': 'Añadir nuevo registro'
         }
         button.setToolTip(tooltips.get(button_type, 'Acción'))
 

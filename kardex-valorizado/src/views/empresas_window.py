@@ -447,19 +447,8 @@ class EmpresasWindow(QWidget):
         titulo.setFont(QFont("Arial", 18, QFont.Weight.Bold))
         titulo.setStyleSheet("color: #1a73e8;")
 
-        btn_nueva = QPushButton("+ Nueva Empresa")
-        btn_nueva.setStyleSheet("""
-            QPushButton {
-                background-color: #1a73e8;
-                color: white;
-                padding: 10px 20px;
-                border-radius: 5px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #1557b0;
-            }
-        """)
+        btn_nueva = QPushButton("Nueva Empresa")
+        style_button(btn_nueva, 'add', "Nueva Empresa")
         btn_nueva.clicked.connect(self.nueva_empresa)
 
         header_layout.addWidget(titulo)
@@ -532,15 +521,8 @@ class EmpresasWindow(QWidget):
         self.cmb_empresa_almacenes.setStyleSheet("padding: 8px;")
         self.cmb_empresa_almacenes.currentIndexChanged.connect(self.cargar_almacenes)
 
-        btn_nuevo_almacen = QPushButton("+ Nuevo Almacén")
-        btn_nuevo_almacen.setStyleSheet("""
-            QPushButton {
-                background-color: #34a853;
-                color: white;
-                padding: 8px 15px;
-                border-radius: 5px;
-            }
-        """)
+        btn_nuevo_almacen = QPushButton("Nuevo Almacén")
+        style_button(btn_nuevo_almacen, 'add', "Nuevo Almacén")
         btn_nuevo_almacen.clicked.connect(self.nuevo_almacen)
 
         selector_layout.addWidget(lbl_empresa)
