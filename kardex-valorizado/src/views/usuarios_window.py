@@ -399,19 +399,8 @@ class UsuariosWindow(QWidget):
         titulo.setFont(QFont("Arial", 18, QFont.Weight.Bold))
         titulo.setStyleSheet("color: #1a73e8;")
         
-        btn_nuevo = QPushButton("+ Nuevo Usuario")
-        btn_nuevo.setStyleSheet("""
-            QPushButton {
-                background-color: #1a73e8;
-                color: white;
-                padding: 10px 20px;
-                border-radius: 5px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #1557b0;
-            }
-        """)
+        btn_nuevo = QPushButton("Nuevo Usuario")
+        style_button(btn_nuevo, 'add', "Nuevo Usuario")
         btn_nuevo.clicked.connect(self.nuevo_usuario)
         
         header_layout.addWidget(titulo)

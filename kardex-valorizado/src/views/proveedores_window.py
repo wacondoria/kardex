@@ -335,20 +335,8 @@ class ProveedoresWindow(QWidget):
         titulo.setFont(QFont("Arial", 18, QFont.Weight.Bold))
         titulo.setStyleSheet("color: #1a73e8;")
 
-        btn_nuevo = QPushButton("+ Nuevo Proveedor")
-        btn_nuevo.setStyleSheet("""
-            QPushButton {
-                background-color: #1a73e8;
-                color: white;
-                padding: 10px 20px;
-                border: none;
-                border-radius: 5px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #1557b0;
-            }
-        """)
+        btn_nuevo = QPushButton("Nuevo Proveedor")
+        style_button(btn_nuevo, 'add', "Nuevo Proveedor")
         btn_nuevo.clicked.connect(self.nuevo_proveedor)
 
         header_layout.addWidget(titulo)

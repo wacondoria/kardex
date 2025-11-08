@@ -19,6 +19,7 @@ from openpyxl import Workbook
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models.database_model import obtener_session, TipoCambio
+from utils.button_utils import style_button
 
 
 class TipoCambioDialog(QDialog):
@@ -225,8 +226,8 @@ class TipoCambioWindow(QWidget):
         titulo.setFont(QFont("Arial", 18, QFont.Weight.Bold))
         titulo.setStyleSheet("color: #1a73e8;")
 
-        btn_nuevo = QPushButton("+ Nuevo")
-        btn_nuevo.setStyleSheet("QPushButton { background-color: #1a73e8; color: white; padding: 10px 20px; border: none; border-radius: 5px; font-weight: bold; } QPushButton:hover { background-color: #1557b0; }")
+        btn_nuevo = QPushButton("Nuevo")
+        style_button(btn_nuevo, 'add', "Nuevo")
         btn_nuevo.clicked.connect(self.nuevo_tipo_cambio)
 
         header_layout.addWidget(titulo)
@@ -334,11 +335,11 @@ class TipoCambioWindow(QWidget):
             btn_layout.setContentsMargins(5, 5, 5, 5)
 
             btn_editar = QPushButton("Editar")
-            btn_editar.setStyleSheet("QPushButton { background-color: #34a853; color: white; padding: 5px 10px; border: none; border-radius: 3px; }")
+            style_button(btn_editar, 'edit', "Editar")
             btn_editar.clicked.connect(lambda checked, t=tc: self.editar_tipo_cambio(t))
 
             btn_eliminar = QPushButton("Eliminar")
-            btn_eliminar.setStyleSheet("QPushButton { background-color: #ea4335; color: white; padding: 5px 10px; border: none; border-radius: 3px; }")
+            style_button(btn_eliminar, 'delete', "Eliminar")
             btn_eliminar.clicked.connect(lambda checked, t=tc: self.eliminar_tipo_cambio(t))
 
             btn_layout.addWidget(btn_editar)

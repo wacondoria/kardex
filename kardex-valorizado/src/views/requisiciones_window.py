@@ -115,15 +115,8 @@ class RequisicionDialog(QDialog):
         self.cmb_destino = SearchableComboBox()
         self.cmb_destino.setMinimumWidth(300)
         
-        btn_nuevo_destino = QPushButton("+ Nuevo")
-        btn_nuevo_destino.setStyleSheet("""
-            QPushButton {
-                background-color: #34a853;
-                color: white;
-                padding: 5px 15px;
-                border-radius: 3px;
-            }
-        """)
+        btn_nuevo_destino = QPushButton("Nuevo")
+        style_button(btn_nuevo_destino, 'add', "Nuevo")
         btn_nuevo_destino.clicked.connect(self.nuevo_destino)
         
         destino_layout.addWidget(self.cmb_destino)
@@ -165,16 +158,8 @@ class RequisicionDialog(QDialog):
         self.spn_cantidad.setDecimals(2)
         self.spn_cantidad.setValue(1.00)
         
-        btn_agregar = QPushButton("+ Agregar")
-        btn_agregar.setStyleSheet("""
-            QPushButton {
-                background-color: #34a853;
-                color: white;
-                padding: 8px 20px;
-                border-radius: 5px;
-                font-weight: bold;
-            }
-        """)
+        btn_agregar = QPushButton("Agregar")
+        style_button(btn_agregar, 'add', "Agregar")
         btn_agregar.clicked.connect(self.agregar_producto)
         
         selector_layout.addWidget(QLabel("Producto:"))
@@ -803,16 +788,8 @@ class RequisicionesWindow(QWidget):
         titulo.setFont(QFont("Arial", 18, QFont.Weight.Bold))
         titulo.setStyleSheet("color: #1a73e8;")
         
-        btn_nueva = QPushButton("+ Nueva Requisición")
-        btn_nueva.setStyleSheet("""
-            QPushButton {
-                background-color: #1a73e8;
-                color: white;
-                padding: 10px 20px;
-                border-radius: 5px;
-                font-weight: bold;
-            }
-        """)
+        btn_nueva = QPushButton("Nueva Requisición")
+        style_button(btn_nueva, 'add', "Nueva Requisición")
         btn_nueva.clicked.connect(self.nueva_requisicion)
         
         if self.user_info and self.user_info.get('licencia_vencida'):
