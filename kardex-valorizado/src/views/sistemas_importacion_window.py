@@ -13,6 +13,8 @@ from PyQt6.QtGui import QFont
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from utils.import_export_manager import ImportExportManager
+from utils.kardex_manager import KardexManager
+from utils.app_context import app_context
 
 class SistemasImportacionWindow(QWidget):
     """
@@ -84,6 +86,26 @@ class SistemasImportacionWindow(QWidget):
         actions_group.setLayout(actions_layout)
         main_layout.addWidget(actions_group)
 
+        # Grupo de Mantenimiento
+        maintenance_group = QGroupBox("Acciones de Mantenimiento")
+        maintenance_layout = QHBoxLayout()
+
+        self.btn_recalcular_saldos = QPushButton("🔄 Actualizar Saldos de Inventario")
+        self.btn_recalcular_saldos.setFont(QFont("Arial", 10, QFont.Weight.Bold))
+        self.btn_recalcular_saldos.setStyleSheet("""
+            QPushButton {
+                background-color: #d93025; color: white; padding: 12px 25px;
+                border: none; border-radius: 5px;
+            }
+            QPushButton:hover { background-color: #a52714; }
+        """)
+        self.btn_recalcular_saldos.clicked.connect(self.recalcular_saldos)
+
+        maintenance_layout.addWidget(self.btn_recalcular_saldos)
+        maintenance_layout.addStretch()
+        maintenance_group.setLayout(maintenance_layout)
+        main_layout.addWidget(maintenance_group)
+
         main_layout.addStretch()
         self.setLayout(main_layout)
 
@@ -102,6 +124,38 @@ class SistemasImportacionWindow(QWidget):
             return
 
         self.manager.importar_datos(modulo_seleccionado)
+
+    def recalcular_saldos(self):
+        """
+        Inicia el proceso de recálculo global de saldos de inventario.
+        """
+        reply = QMessageBox.warning(
+            self,
+            "Confirmación Requerida",
+            "Este proceso recalculará todos los saldos de inventario desde el inicio.\n"
+            "Puede tardar varios minutos y no se puede deshacer.\n\n"
+            "¿Está seguro de que desea continuar?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+
+        if reply == QMessageBox.StandardButton.No:
+            return
+
+        try:
+            session = app_context.get_session()
+            empresa = app_context.get_empresa()
+            if not session or not empresa:
+                QMessageBox.critical(self, "Error", "No se ha podido obtener la sesión o la empresa del contexto.")
+                return
+
+            kardex_manager = KardexManager(session)
+            kardex_manager.recalcular_saldos_globales(empresa.id)
+
+            QMessageBox.information(self, "Proceso Completado", "Los saldos de inventario se han recalculado exitosamente.")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error en el Proceso", f"Ocurrió un error al recalcular los saldos:\n{str(e)}")
 
 # Para pruebas locales
 if __name__ == '__main__':
