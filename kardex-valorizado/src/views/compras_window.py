@@ -566,11 +566,12 @@ class CompraDialog(QDialog):
         self.actualizar_tabla_productos()
         self.recalcular_totales()
 
-        # Limpiar
+        # Limpiar y preparar para el siguiente producto
         self.spn_cantidad.setValue(1.00)
         self.spn_precio.setValue(0.00)
         self.cmb_producto.setCurrentIndex(-1)
         self.cmb_producto.lineEdit().clear()
+        self.cmb_producto.setFocus()
 
     def actualizar_tabla_productos(self):
         """Actualiza la tabla de productos y hace editables Cantidad/Precio."""
@@ -1267,24 +1268,30 @@ class CompraDialog(QDialog):
 
     def crear_nuevo_producto(self):
         """
-        Abre el diálogo para crear un nuevo producto y
-        recarga el ComboBox de productos.
+        Abre el diálogo para crear un nuevo producto, recarga el ComboBox
+        y selecciona automáticamente el producto recién creado.
         """
         dialog = ProductoDialog(self)
 
         if dialog.exec() == QDialog.DialogCode.Accepted:
-            print("DEBUG: ProductoDialog aceptado. Recargando productos.")
-            texto_actual = self.cmb_producto.lineEdit().text()
+            print("DEBUG: ProductoDialog aceptado. Recargando y seleccionando producto.")
 
-            # Solo recargar productos
+            # 1. Guardar el ID del nuevo producto (si se creó)
+            nuevo_id = dialog.nuevo_producto_id
+
+            # 2. Recargar la lista de productos
             self.cmb_producto.clear()
-            productos = self.session.query(Producto).filter_by(activo=True).order_by(Producto.nombre).all()
-            for prod in productos:
+            self.lista_completa_productos = self.session.query(Producto).filter_by(activo=True).order_by(Producto.nombre).all()
+            for prod in self.lista_completa_productos:
                 self.cmb_producto.addItem(f"{prod.codigo} - {prod.nombre}", prod.id)
 
-            self.cmb_producto.lineEdit().setText(texto_actual)
-
-            # (El código para seleccionar el nuevo producto se omite por simplicidad)
+            # 3. Seleccionar el nuevo producto si se creó uno
+            if nuevo_id:
+                index = self.cmb_producto.findData(nuevo_id)
+                if index != -1:
+                    self.cmb_producto.setCurrentIndex(index)
+                    # Opcional: Mover el foco al siguiente campo relevante
+                    self.cmb_almacen.setFocus()
 
     def keyPressEvent(self, event):
         """Captura la pulsación de teclas en el diálogo."""
