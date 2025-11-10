@@ -20,7 +20,7 @@ import xlsxwriter
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models.database_model import (obtener_session, Producto, Empresa, Almacen,
-                                   MovimientoStock, Moneda, MetodoValuacion)
+                                   MovimientoStock, Moneda, MetodoValuacion, AnioContable)
 from utils.widgets import SearchableComboBox
 
 
@@ -232,15 +232,19 @@ class KardexWindow(QWidget):
         # Cargar productos
         self.cmb_producto.clear()
 
-        anio_seleccionado = app_context.get_selected_year()
-        if not anio_seleccionado:
+        anio_numero = app_context.get_selected_year()
+        if not anio_numero:
             QMessageBox.warning(self, "Error", "No se ha seleccionado un año contable.")
+            return
+
+        anio_seleccionado = self.session.query(AnioContable).filter_by(anio=anio_numero).first()
+        if not anio_seleccionado:
+            QMessageBox.critical(self, "Error Fatal", f"No se encontró la configuración para el año {anio_numero} en la base de datos.")
             return
 
         # Subconsulta para obtener IDs de productos con movimiento en el año
         subquery = self.session.query(MovimientoStock.producto_id).filter(
-            MovimientoStock.fecha_documento >= anio_seleccionado.fecha_inicio,
-            MovimientoStock.fecha_documento <= anio_seleccionado.fecha_fin
+            extract('year', MovimientoStock.fecha_documento) == anio_seleccionado.anio
         ).distinct()
 
         productos = self.session.query(Producto).filter(
