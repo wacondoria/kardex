@@ -130,37 +130,41 @@ DARK_THEME_STYLESHEET = """
         min-width: 20px;
     }}
 
-    QSpinBox::up-button, QDoubleSpinBox::up-button {{
+    /* Estilos para QSpinBox, QDoubleSpinBox y QDateEdit para reservar espacio para los botones */
+    QSpinBox, QDoubleSpinBox, QDateEdit {{
+        padding-right: 20px;
+    }}
+
+    QSpinBox::up-button, QDoubleSpinBox::up-button, QDateEdit::up-button {{
         subcontrol-origin: border;
         subcontrol-position: top right;
-        width: 16px;
+        width: 20px;
         border-left: 1px solid #666;
-        border-bottom: 1px solid #666;
         background-color: #3d3d3d;
     }}
-    QSpinBox::up-button:hover, QDoubleSpinBox::up-button:hover {{
+    QSpinBox::up-button:hover, QDoubleSpinBox::up-button:hover, QDateEdit::up-button:hover {{
         background-color: #555;
     }}
-    QSpinBox::down-button, QDoubleSpinBox::down-button {{
+    QSpinBox::down-button, QDoubleSpinBox::down-button, QDateEdit::down-button {{
         subcontrol-origin: border;
         subcontrol-position: bottom right;
-        width: 16px;
+        width: 20px;
         border-left: 1px solid #666;
         border-top: 1px solid #666;
         background-color: #3d3d3d;
     }}
-    QSpinBox::down-button:hover, QDoubleSpinBox::down-button:hover {{
+    QSpinBox::down-button:hover, QDoubleSpinBox::down-button:hover, QDateEdit::down-button:hover {{
         background-color: #555;
     }}
-    QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {{
+    QSpinBox::up-arrow, QDoubleSpinBox::up-arrow, QDateEdit::up-arrow {{
         width: 10px;
         height: 10px;
-        image: url({base_path}/kardex-valorizado/src/resources/icons/white/cil-arrow-top.svg);
+        image: url({base_path}/src/resources/icons/white/cil-arrow-top.svg);
     }}
-    QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {{
+    QSpinBox::down-arrow, QDoubleSpinBox::down-arrow, QDateEdit::down-arrow {{
         width: 10px;
         height: 10px;
-        image: url({base_path}/kardex-valorizado/src/resources/icons/white/cil-arrow-bottom.svg);
+        image: url({base_path}/src/resources/icons/white/cil-arrow-bottom.svg);
     }}
 """
 
@@ -286,37 +290,41 @@ LIGHT_THEME_STYLESHEET = """
         min-width: 20px;
     }}
 
-    QSpinBox::up-button, QDoubleSpinBox::up-button {{
+    /* Estilos para QSpinBox, QDoubleSpinBox y QDateEdit para reservar espacio para los botones */
+    QSpinBox, QDoubleSpinBox, QDateEdit {{
+        padding-right: 20px;
+    }}
+
+    QSpinBox::up-button, QDoubleSpinBox::up-button, QDateEdit::up-button {{
         subcontrol-origin: border;
         subcontrol-position: top right;
-        width: 16px;
+        width: 20px;
         border-left: 1px solid #ced4da;
-        border-bottom: 1px solid #ced4da;
         background-color: #f8f9fa;
     }}
-    QSpinBox::up-button:hover, QDoubleSpinBox::up-button:hover {{
+    QSpinBox::up-button:hover, QDoubleSpinBox::up-button:hover, QDateEdit::up-button:hover {{
         background-color: #e9ecef;
     }}
-    QSpinBox::down-button, QDoubleSpinBox::down-button {{
+    QSpinBox::down-button, QDoubleSpinBox::down-button, QDateEdit::down-button {{
         subcontrol-origin: border;
         subcontrol-position: bottom right;
-        width: 16px;
+        width: 20px;
         border-left: 1px solid #ced4da;
         border-top: 1px solid #ced4da;
         background-color: #f8f9fa;
     }}
-    QSpinBox::down-button:hover, QDoubleSpinBox::down-button:hover {{
+    QSpinBox::down-button:hover, QDoubleSpinBox::down-button:hover, QDateEdit::down-button:hover {{
         background-color: #e9ecef;
     }}
-    QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {{
+    QSpinBox::up-arrow, QDoubleSpinBox::up-arrow, QDateEdit::up-arrow {{
         width: 10px;
         height: 10px;
-        image: url({base_path}/kardex-valorizado/src/resources/icons/black/cil-arrow-top.svg);
+        image: url({base_path}/src/resources/icons/black/cil-arrow-top.svg);
     }}
-    QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {{
+    QSpinBox::down-arrow, QDoubleSpinBox::down-arrow, QDateEdit::down-arrow {{
         width: 10px;
         height: 10px;
-        image: url({base_path}/kardex-valorizado/src/resources/icons/black/cil-arrow-bottom.svg);
+        image: url({base_path}/src/resources/icons/black/cil-arrow-bottom.svg);
     }}
 """
 

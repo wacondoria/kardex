@@ -523,7 +523,7 @@ def main():
         base_path = Path(__file__).parent
 
     # Aplicar el tema (claro/oscuro) detectado
-    stylesheet = get_theme_stylesheet(base_path=str(base_path))
+    stylesheet = get_theme_stylesheet(base_path=base_path.as_posix())
     app.setStyleSheet(stylesheet)
 
     main_window = None
