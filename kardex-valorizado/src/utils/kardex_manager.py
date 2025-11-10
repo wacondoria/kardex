@@ -5,7 +5,7 @@ Archivo: src/utils/kardex_manager.py
 
 from decimal import Decimal, ROUND_HALF_UP
 from sqlalchemy.orm.session import Session
-from models.database_model import MovimientoStock, TipoMovimiento, Empresa
+from models.database_model import MovimientoStock, TipoMovimiento, Empresa, Producto, MetodoValuacion
 
 class KardexManager:
     """
@@ -15,6 +15,130 @@ class KardexManager:
 
     def __init__(self, session: Session):
         self.session = session
+
+    def recalcular_saldos_globales(self, empresa_id):
+        """
+        Recalcula los saldos de todos los productos para una empresa.
+        Este es un proceso intensivo y debe ser usado con precaución.
+        """
+        empresa = self.session.query(Empresa).get(empresa_id)
+        if not empresa:
+            raise ValueError("Empresa no encontrada")
+
+        productos = self.session.query(Producto).all() # Simplificado: obtener todos los productos
+
+        for producto in productos:
+            movimientos = self.session.query(MovimientoStock).filter_by(
+                producto_id=producto.id
+            ).order_by(MovimientoStock.fecha_documento, MovimientoStock.id).all()
+
+            if not movimientos:
+                continue
+
+            if empresa.metodo_valuacion == MetodoValuacion.PROMEDIO_PONDERADO:
+                self._calcular_promedio_ponderado(movimientos)
+            elif empresa.metodo_valuacion == MetodoValuacion.PEPS:
+                self._calcular_peps(movimientos)
+            elif empresa.metodo_valuacion == MetodoValuacion.UEPS:
+                self._calcular_ueps(movimientos)
+
+        self.session.commit()
+
+    def _calcular_promedio_ponderado(self, movimientos):
+        saldo_cantidad = Decimal('0')
+        saldo_valor = Decimal('0')
+
+        for mov in movimientos:
+            if mov.cantidad_entrada > 0:
+                saldo_cantidad += Decimal(str(mov.cantidad_entrada))
+                saldo_valor += Decimal(str(mov.costo_total))
+            else:
+                if saldo_cantidad > 0:
+                    costo_promedio = saldo_valor / saldo_cantidad
+                else:
+                    costo_promedio = Decimal('0')
+
+                cantidad_salida = Decimal(str(mov.cantidad_salida))
+                valor_salida = cantidad_salida * costo_promedio
+
+                # Actualizar el costo del movimiento de salida
+                mov.costo_unitario = float(costo_promedio)
+                mov.costo_total = float(valor_salida)
+
+                saldo_cantidad -= cantidad_salida
+                saldo_valor -= valor_salida
+
+            # Asegurar que los saldos no sean negativos
+            if saldo_cantidad < 0:
+                saldo_cantidad = Decimal('0')
+                saldo_valor = Decimal('0')
+
+            mov.saldo_cantidad = float(saldo_cantidad)
+            mov.saldo_costo_total = float(saldo_valor)
+
+    def _calcular_peps(self, movimientos):
+        lotes = []
+        for mov in movimientos:
+            if mov.cantidad_entrada > 0:
+                lotes.append({
+                    'cantidad': Decimal(str(mov.cantidad_entrada)),
+                    'costo_unitario': Decimal(str(mov.costo_unitario))
+                })
+            else:
+                cantidad_pendiente = Decimal(str(mov.cantidad_salida))
+                costo_total_salida = Decimal('0')
+
+                while cantidad_pendiente > 0 and lotes:
+                    lote = lotes[0]
+                    cantidad_a_tomar = min(cantidad_pendiente, lote['cantidad'])
+
+                    costo_total_salida += cantidad_a_tomar * lote['costo_unitario']
+                    lote['cantidad'] -= cantidad_a_tomar
+                    cantidad_pendiente -= cantidad_a_tomar
+
+                    if lote['cantidad'] == 0:
+                        lotes.pop(0)
+
+                if mov.cantidad_salida > 0:
+                    mov.costo_unitario = float(costo_total_salida / Decimal(str(mov.cantidad_salida)))
+                    mov.costo_total = float(costo_total_salida)
+
+            saldo_cantidad = sum(l['cantidad'] for l in lotes)
+            saldo_valor = sum(l['cantidad'] * l['costo_unitario'] for l in lotes)
+            mov.saldo_cantidad = float(saldo_cantidad)
+            mov.saldo_costo_total = float(saldo_valor)
+
+    def _calcular_ueps(self, movimientos):
+        lotes = []
+        for mov in movimientos:
+            if mov.cantidad_entrada > 0:
+                lotes.append({
+                    'cantidad': Decimal(str(mov.cantidad_entrada)),
+                    'costo_unitario': Decimal(str(mov.costo_unitario))
+                })
+            else:
+                cantidad_pendiente = Decimal(str(mov.cantidad_salida))
+                costo_total_salida = Decimal('0')
+
+                while cantidad_pendiente > 0 and lotes:
+                    lote = lotes[-1]
+                    cantidad_a_tomar = min(cantidad_pendiente, lote['cantidad'])
+
+                    costo_total_salida += cantidad_a_tomar * lote['costo_unitario']
+                    lote['cantidad'] -= cantidad_a_tomar
+                    cantidad_pendiente -= cantidad_a_tomar
+
+                    if lote['cantidad'] == 0:
+                        lotes.pop()
+
+                if mov.cantidad_salida > 0:
+                    mov.costo_unitario = float(costo_total_salida / Decimal(str(mov.cantidad_salida)))
+                    mov.costo_total = float(costo_total_salida)
+
+            saldo_cantidad = sum(l['cantidad'] for l in lotes)
+            saldo_valor = sum(l['cantidad'] * l['costo_unitario'] for l in lotes)
+            mov.saldo_cantidad = float(saldo_cantidad)
+            mov.saldo_costo_total = float(saldo_valor)
 
     def recalcular_kardex_posterior(self, producto_almacen_afectados: set, fecha_referencia):
         """
