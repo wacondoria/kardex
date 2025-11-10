@@ -110,42 +110,74 @@ class CompraDialog(QDialog):
         titulo.setFont(QFont("Arial", 16, QFont.Weight.Bold))
         titulo.setStyleSheet("color: #1a73e8; padding: 10px;")
         layout.addWidget(titulo)
+        
+        # --- (INICIO) SOLUCIÓN 1: Estilo unificado para botones '+' ---
+        # Estilo común para los botones '+'
+        style_cuadrado_verde = """
+            QPushButton {
+                background-color: #34a853; 
+                color: white; 
+                font-weight: bold; 
+                font-size: 16px;
+                border-radius: 5px; /* <-- Esta es la clave: 5px (no 15px) */
+                padding: 0px;
+            }
+            QPushButton:hover {
+                background-color: #2e8b4e;
+            }
+        """
+        # --- (FIN) SOLUCIÓN 1 ---
 
         # === DATOS DE LA COMPRA ===
         grupo_compra = QGroupBox("Datos de la Compra")
         form_compra = QFormLayout()
         form_compra.setSpacing(10)
-
-        # Proveedor (CON BOTÓN +)
-        proveedor_layout = QHBoxLayout()
+        
+        # --- (INICIO) SOLUCIÓN 2: Layout de Proveedor y Nro. Proceso ---
+        # --- Fila Proveedor y Nro. Proceso ---
+        layout_fila1_completa = QVBoxLayout()
+        layout_fila1_completa.setSpacing(3) # Espacio entre la fila de widgets y la info
+        
+        fila_proveedor_proceso = QHBoxLayout()
+        
+        # 1. Label Proveedor
+        fila_proveedor_proceso.addWidget(QLabel("Proveedor:*"))
+        
+        # 2. Combo Proveedor
         self.cmb_proveedor = SearchableComboBox()
-        self.cmb_proveedor.setMinimumWidth(400)
         self.cmb_proveedor.currentIndexChanged.connect(self.proveedor_seleccionado)
-
+        fila_proveedor_proceso.addWidget(self.cmb_proveedor, 2) # stretch 2
+        
+        # 3. Botón Nuevo Proveedor (con estilo corregido)
         self.btn_nuevo_proveedor = QPushButton("+")
         self.btn_nuevo_proveedor.setToolTip("Crear nuevo proveedor")
-        self.btn_nuevo_proveedor.setFixedSize(30, 30)
-        self.btn_nuevo_proveedor.setStyleSheet("background-color: #34a853; color: white; font-weight: bold; border-radius: 15px;")
+        self.btn_nuevo_proveedor.setFixedSize(30, 30) # Tamaño cuadrado
+        self.btn_nuevo_proveedor.setStyleSheet(style_cuadrado_verde) # Aplicar estilo
         self.btn_nuevo_proveedor.clicked.connect(self.crear_nuevo_proveedor)
+        fila_proveedor_proceso.addWidget(self.btn_nuevo_proveedor)
 
+        fila_proveedor_proceso.addSpacing(15) # Espaciador
+
+        # 4. Label Nro. Proceso
+        fila_proveedor_proceso.addWidget(QLabel("Nro. Proceso:*"))
+        
+        # 5. Campo Nro. Proceso
+        self.txt_numero_proceso = SelectAllLineEdit()
+        self.txt_numero_proceso.setPlaceholderText("Ej: 1 (se autocompletará)")
+        self.txt_numero_proceso.setToolTip("Ingrese el correlativo. El formato completo se generará automáticamente.")
+        fila_proveedor_proceso.addWidget(self.txt_numero_proceso, 1) # stretch 1
+        
+        # Añadir layout horizontal al layout vertical
+        layout_fila1_completa.addLayout(fila_proveedor_proceso)
+        
+        # 6. Info del Proveedor (debajo de la fila)
         self.lbl_proveedor_info = QLabel()
         self.lbl_proveedor_info.setStyleSheet("color: #666; font-size: 10px;")
+        layout_fila1_completa.addWidget(self.lbl_proveedor_info)
 
-        proveedor_layout.addWidget(self.cmb_proveedor)
-        proveedor_layout.addWidget(self.btn_nuevo_proveedor)
-        proveedor_layout.addWidget(self.lbl_proveedor_info)
-        proveedor_layout.addStretch()
-
-        form_compra.addRow("Proveedor:*", proveedor_layout)
-
-        # Número de Proceso
-        proceso_layout = QHBoxLayout()
-        self.txt_numero_proceso = SelectAllLineEdit()
-        self.txt_numero_proceso.setPlaceholderText("Ej: 1 (se autocompletará a 06MM000001)")
-        self.txt_numero_proceso.setToolTip("Ingrese el correlativo. El formato completo se generará automáticamente.")
-        proceso_layout.addWidget(self.txt_numero_proceso)
-        proceso_layout.addStretch()
-        form_compra.addRow("Número de Proceso:*", proceso_layout)
+        # Añadir este grupo vertical completo al formulario (ocupará ambas columnas)
+        form_compra.addRow(layout_fila1_completa)
+        # --- (FIN) SOLUCIÓN 2 ---
 
         # Fecha, Tipo Doc, Número
         fila1 = QHBoxLayout()
@@ -204,6 +236,7 @@ class CompraDialog(QDialog):
         self.spn_tipo_cambio.setDecimals(3)
         self.spn_tipo_cambio.setValue(1.000)
         self.spn_tipo_cambio.setEnabled(False)
+        self.spn_tipo_cambio.setMinimumWidth(120) # <-- SOLUCIÓN 4: Ancho del SpinBox
 
         self.lbl_tc_info = QLabel("Tipo cambio VENTA")
         self.lbl_tc_info.setStyleSheet("color: #666; font-size: 10px;")
@@ -219,7 +252,38 @@ class CompraDialog(QDialog):
 
         # IGV
         self.chk_incluye_igv = QCheckBox("Los precios INCLUYEN IGV (18%)")
-        self.chk_incluye_igv.setStyleSheet("font-weight: bold; color: #ea4335;")
+        self.chk_incluye_igv.setStyleSheet("""
+            QCheckBox {
+                font-weight: bold; 
+                color: #ea4335;
+                spacing: 5px; /* Espacio entre la caja y el texto */
+            }
+            
+            /* --- ESTO ARREGLA EL PROBLEMA --- */
+
+            /* Define la caja (el indicador) */
+            QCheckBox::indicator {
+                width: 16px;
+                height: 16px;
+                border: 1px solid #aaa;
+                border-radius: 3px;
+                background-color: white;
+            }
+
+            /* Define cómo se ve la caja cuando está MARCADA */
+            QCheckBox::indicator:checked {
+                background-color: #34a853; /* Fondo verde (como tus botones) */
+                border: 1px solid #2e8b4e;
+                
+                /* Carga la imagen del 'check' de los recursos internos de Qt */
+                image: url(:/qt-project.org/styles/commonstyle/images/check-16.png);
+            }
+
+            /* (Opcional) Estilo para cuando el ratón está encima */
+            QCheckBox::indicator:hover {
+                border: 1px solid #1a73e8;
+            }
+        """)
         self.chk_incluye_igv.toggled.connect(self.recalcular_totales)
         form_compra.addRow("", self.chk_incluye_igv)
 
@@ -237,11 +301,13 @@ class CompraDialog(QDialog):
         self.cmb_producto.setMinimumWidth(300)
         self.cmb_producto.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
 
+        # --- (INICIO) SOLUCIÓN 1: Botón '+' de Producto corregido ---
         self.btn_nuevo_producto = QPushButton("+")
         self.btn_nuevo_producto.setToolTip("Crear nuevo producto")
-        self.btn_nuevo_producto.setFixedSize(30, 30)
-        self.btn_nuevo_producto.setStyleSheet("background-color: #34a853; color: white; font-weight: bold; border-radius: 15px;")
+        self.btn_nuevo_producto.setFixedSize(30, 30) # Tamaño cuadrado
+        self.btn_nuevo_producto.setStyleSheet(style_cuadrado_verde) # Aplicar estilo
         self.btn_nuevo_producto.clicked.connect(self.crear_nuevo_producto)
+        # --- (FIN) SOLUCIÓN 1 ---
 
         self.cmb_almacen = SearchableComboBox()
 
@@ -427,6 +493,8 @@ class CompraDialog(QDialog):
                 if prov.email:
                     info += f" | ✉️ {prov.email}"
                 self.lbl_proveedor_info.setText(info)
+        else:
+            self.lbl_proveedor_info.setText("")
 
     def fecha_cambiada(self):
         """Cuando cambia la fecha, busca tipo de cambio"""
@@ -492,7 +560,7 @@ class CompraDialog(QDialog):
             'almacen_nombre': almacen.nombre,
             'cantidad': cantidad,
             'precio_unitario': precio,
-            'subtotal': float(subtotal_sin_igv)
+            'subtotal': float(subtotal_sin_igv) # <-- El subtotal ya está sin IGV
         }
 
         self.detalles_compra.append(detalle)
@@ -585,7 +653,7 @@ class CompraDialog(QDialog):
             else:
                 subtotal_sin_igv = (cantidad * precio_unitario).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
 
-            det['subtotal'] = float(subtotal_sin_igv)
+            det['subtotal'] = float(subtotal_sin_igv) # Actualizar el 'subtotal' (ya sin IGV)
 
             subtotal_item = self.tabla_productos.item(row, 4)
             if not subtotal_item:
@@ -609,6 +677,28 @@ class CompraDialog(QDialog):
         self.lbl_subtotal.setText(f"{moneda_simbolo} {subtotal_general_sin_igv:.2f}")
         self.lbl_igv.setText(f"{moneda_simbolo} {igv:.2f}")
         self.lbl_total.setText(f"{moneda_simbolo} {total:.2f}")
+        
+    # --- (INICIO) SOLUCIÓN 3: Función de cálculo de IGV FALTANTE ---
+    def _calcular_montos_decimal(self):
+        """
+        Calcula los montos finales (Subtotal sin IGV, IGV, Total) 
+        basado en los 'subtotal' (ya sin IGV) de self.detalles_compra.
+        Retorna: (subtotal_general_sin_igv, igv, total, subtotal_productos, costo_adicional)
+        """
+        DOS_DECIMALES = Decimal('0.01')
+        IGV_PORCENTAJE = Decimal('0.18')
+
+        # Asumimos que self.detalles_compra[...]['subtotal'] YA ESTÁ SIN IGV
+        # (Gracias a _actualizar_calculos_igv, agregar_producto y detalle_editado)
+        subtotal_productos = sum(Decimal(str(det['subtotal'])) for det in self.detalles_compra)
+        costo_adicional = Decimal(str(self.spn_costo_adicional.value()))
+
+        subtotal_general_sin_igv = (subtotal_productos + costo_adicional).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
+        igv = (subtotal_general_sin_igv * IGV_PORCENTAJE).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
+        total = (subtotal_general_sin_igv + igv).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
+        
+        return subtotal_general_sin_igv, igv, total, subtotal_productos, costo_adicional
+    # --- (FIN) SOLUCIÓN 3 ---
 
     def guardar_compra(self):
         """Guarda una compra nueva o actualiza una existente, ajustando el Kardex."""
@@ -640,6 +730,7 @@ class CompraDialog(QDialog):
 
             es_edicion = self.compra_original is not None
 
+            # Esta función ahora existe y calculará correctamente los totales
             subtotal, igv, total, subtotal_productos_ui, costo_adicional = self._calcular_montos_decimal()
 
             if es_edicion:
