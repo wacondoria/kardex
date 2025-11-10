@@ -135,9 +135,9 @@ class RequisicionDialog(QDialog):
         self.lbl_costo_stock_disponible.setStyleSheet("font-weight: bold; color: #1a73e8;")
         
         self.spn_cantidad = QDoubleSpinBox()
-        self.spn_cantidad.setRange(0.000001, 999999.999999)
-        self.spn_cantidad.setDecimals(6)
-        self.spn_cantidad.setValue(1.000000)
+        self.spn_cantidad.setRange(0.01, 999999)
+        self.spn_cantidad.setDecimals(2)
+        self.spn_cantidad.setValue(1.00)
         
         btn_agregar = QPushButton()
         style_button(btn_agregar, 'add', "Agregar")
@@ -390,12 +390,12 @@ class RequisicionDialog(QDialog):
             stock = ultimo_mov.saldo_cantidad
             costo_stock = ultimo_mov.saldo_costo_total
             color = "#34a853" if stock > 0 else "#ea4335"
-            self.lbl_stock_disponible.setText(f"Stock: {stock:.6f}")
+            self.lbl_stock_disponible.setText(f"Stock: {stock:.2f}")
             self.lbl_costo_stock_disponible.setText(f"Costo Stock: S/ {costo_stock:.2f}")
             self.lbl_stock_disponible.setStyleSheet(f"font-weight: bold; color: {color};")
             self.lbl_costo_stock_disponible.setStyleSheet(f"font-weight: bold; color: {color};")
         else:
-            self.lbl_stock_disponible.setText("Stock: 0.000000")
+            self.lbl_stock_disponible.setText("Stock: 0.00")
             self.lbl_costo_stock_disponible.setText("Costo Stock: S/ 0.00")
             self.lbl_stock_disponible.setStyleSheet("font-weight: bold; color: #ea4335;")
             self.lbl_costo_stock_disponible.setStyleSheet("font-weight: bold; color: #ea4335;")
@@ -472,7 +472,7 @@ class RequisicionDialog(QDialog):
             QMessageBox.warning(
                 self,
                 "Stock Insuficiente",
-                f"Stock disponible: {stock_disponible:.6f}\nCantidad solicitada: {cantidad:.6f}\n\n"
+                f"Stock disponible: {stock_disponible:.2f}\nCantidad solicitada: {cantidad:.2f}\n\n"
                 "No hay suficiente stock para esta salida."
             )
             return
@@ -510,8 +510,8 @@ class RequisicionDialog(QDialog):
         for row, det in enumerate(self.detalles_requisicion):
             self.tabla_productos.setItem(row, 0, QTableWidgetItem(det['producto_nombre']))
             self.tabla_productos.setItem(row, 1, QTableWidgetItem(det['almacen_nombre']))
-            self.tabla_productos.setItem(row, 2, QTableWidgetItem(f"{det['stock_disponible']:.6f}"))
-            self.tabla_productos.setItem(row, 3, QTableWidgetItem(f"{det['cantidad']:.6f}"))
+            self.tabla_productos.setItem(row, 2, QTableWidgetItem(f"{det['stock_disponible']:.2f}"))
+            self.tabla_productos.setItem(row, 3, QTableWidgetItem(f"{det['cantidad']:.2f}"))
             self.tabla_productos.setItem(row, 4, QTableWidgetItem(f"S/ {det['costo_unitario']:.2f}"))
             self.tabla_productos.setItem(row, 5, QTableWidgetItem(f"S/ {det['costo_total']:.2f}"))
             costo_total_requisicion += det['costo_total']
