@@ -99,7 +99,7 @@ class CompraDialog(QDialog):
 
     def init_ui(self):
         self.setWindowTitle("Registrar Compra")
-        self.setMinimumSize(1500, 750)
+        self.setMinimumSize(1500, 800)
 
         layout = QVBoxLayout()
         layout.setContentsMargins(20, 20, 20, 20)
