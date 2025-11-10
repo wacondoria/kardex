@@ -473,6 +473,18 @@ class CompraDialog(QDialog):
         producto = self.session.query(Producto).get(prod_id)
         almacen = self.session.query(Almacen).get(alm_id)
 
+        IGV_FACTOR = Decimal('1.18')
+        DOS_DECIMALES = Decimal('0.01')
+
+        cantidad_dec = Decimal(str(cantidad))
+        precio_dec = Decimal(str(precio))
+
+        subtotal_sin_igv = Decimal('0')
+        if self.chk_incluye_igv.isChecked():
+            subtotal_sin_igv = (cantidad_dec * (precio_dec / IGV_FACTOR)).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
+        else:
+            subtotal_sin_igv = (cantidad_dec * precio_dec).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
+
         detalle = {
             'producto_id': prod_id,
             'producto_nombre': f"{producto.codigo} - {producto.nombre}",
@@ -480,7 +492,7 @@ class CompraDialog(QDialog):
             'almacen_nombre': almacen.nombre,
             'cantidad': cantidad,
             'precio_unitario': precio,
-            'subtotal': cantidad * precio
+            'subtotal': float(subtotal_sin_igv)
         }
 
         self.detalles_compra.append(detalle)
@@ -548,35 +560,47 @@ class CompraDialog(QDialog):
             self.actualizar_tabla_productos()
             self.recalcular_totales()
 
-    def _calcular_montos_decimal(self):
+    def recalcular_totales(self):
         """
-        Función interna que calcula los totales usando Decimal.
-        Retorna (subtotal_sin_igv, igv, total, subtotal_productos, costo_adicional)
+        Recalcula los subtotales de cada producto en la tabla según el estado
+        del checkbox de IGV y luego actualiza los totales generales.
         """
-        subtotal_productos = sum(Decimal(str(det['subtotal'])) for det in self.detalles_compra)
-        costo_adicional = Decimal(str(self.spn_costo_adicional.value()))
-
+        self.tabla_productos.blockSignals(True)
         IGV_FACTOR = Decimal('1.18')
-        IGV_PORCENTAJE = Decimal('0.18')
         DOS_DECIMALES = Decimal('0.01')
 
-        if self.chk_incluye_igv.isChecked():
-            total_con_igv = subtotal_productos + costo_adicional
-            subtotal_sin_igv = (total_con_igv / IGV_FACTOR).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
-            igv = (total_con_igv - subtotal_sin_igv).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
-            total = total_con_igv.quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
-        else:
-            subtotal_sin_igv = (subtotal_productos + costo_adicional).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
-            igv = (subtotal_sin_igv * IGV_PORCENTAJE).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
-            total = (subtotal_sin_igv + igv).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
+        for row, det in enumerate(self.detalles_compra):
+            cantidad = Decimal(str(det['cantidad']))
+            precio_unitario = Decimal(str(det['precio_unitario']))
+            subtotal_sin_igv = Decimal('0')
 
-        return subtotal_sin_igv, igv, total, subtotal_productos, costo_adicional
+            if self.chk_incluye_igv.isChecked():
+                subtotal_sin_igv = (cantidad * (precio_unitario / IGV_FACTOR)).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
+            else:
+                subtotal_sin_igv = (cantidad * precio_unitario).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
 
-    def recalcular_totales(self):
-        """Recalcula los totales para mostrarlos en la UI."""
-        subtotal_sin_igv, igv, total, _, _ = self._calcular_montos_decimal()
+            det['subtotal'] = float(subtotal_sin_igv)
+
+            subtotal_item = self.tabla_productos.item(row, 4)
+            if not subtotal_item:
+                subtotal_item = QTableWidgetItem()
+                subtotal_item.setFlags(subtotal_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                self.tabla_productos.setItem(row, 4, subtotal_item)
+            subtotal_item.setText(f"{subtotal_sin_igv:.2f}")
+
+        self.tabla_productos.blockSignals(False)
+
+        # Ahora, calcular los totales generales
+        subtotal_productos = sum(Decimal(str(det['subtotal'])) for det in self.detalles_compra)
+        costo_adicional = Decimal(str(self.spn_costo_adicional.value()))
+        IGV_PORCENTAJE = Decimal('0.18')
+
+        subtotal_general_sin_igv = subtotal_productos + costo_adicional
+        igv = (subtotal_general_sin_igv * IGV_PORCENTAJE).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
+        total = (subtotal_general_sin_igv + igv).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
+
         moneda_simbolo = "S/" if self.cmb_moneda.currentData() == Moneda.SOLES.value else "$"
-        self.lbl_subtotal.setText(f"{moneda_simbolo} {subtotal_sin_igv:.2f}")
+        self.lbl_subtotal.setText(f"{moneda_simbolo} {subtotal_general_sin_igv:.2f}")
         self.lbl_igv.setText(f"{moneda_simbolo} {igv:.2f}")
         self.lbl_total.setText(f"{moneda_simbolo} {total:.2f}")
 
@@ -1049,9 +1073,19 @@ class CompraDialog(QDialog):
         else:
             detalle_actualizado['precio_unitario'] = nuevo_valor
 
-        cantidad_actual = detalle_actualizado['cantidad']
-        precio_actual = detalle_actualizado['precio_unitario']
-        detalle_actualizado['subtotal'] = cantidad_actual * precio_actual
+        cantidad_actual = Decimal(str(detalle_actualizado['cantidad']))
+        precio_actual = Decimal(str(detalle_actualizado['precio_unitario']))
+
+        IGV_FACTOR = Decimal('1.18')
+        DOS_DECIMALES = Decimal('0.01')
+        subtotal_sin_igv = Decimal('0')
+
+        if self.chk_incluye_igv.isChecked():
+            subtotal_sin_igv = (cantidad_actual * (precio_actual / IGV_FACTOR)).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
+        else:
+            subtotal_sin_igv = (cantidad_actual * precio_actual).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
+
+        detalle_actualizado['subtotal'] = float(subtotal_sin_igv)
 
         self.tabla_productos.blockSignals(True)
         subtotal_item = self.tabla_productos.item(row, 4)
