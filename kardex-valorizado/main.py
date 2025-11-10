@@ -354,16 +354,6 @@ class KardexMainWindow(QMainWindow):
         toolbar.setMovable(False)
         self.addToolBar(toolbar)
 
-        # Botón Productos
-        btn_productos = QPushButton("📦 Productos")
-        btn_productos.clicked.connect(self.abrir_productos)
-        toolbar.addWidget(btn_productos)
-
-        # Botones deshabilitados por ahora
-        btn_proveedores = QPushButton("🏪 Proveedores")
-        btn_proveedores.clicked.connect(self.abrir_proveedores)
-        toolbar.addWidget(btn_proveedores)
-
         btn_compras = QPushButton("🛒 Compras")
         btn_compras.clicked.connect(self.abrir_compras)
         toolbar.addWidget(btn_compras)
@@ -390,11 +380,6 @@ class KardexMainWindow(QMainWindow):
         toolbar.addWidget(btn_valorizacion)
 
         toolbar.addSeparator()
-
-        btn_usuarios = QPushButton("👥 Usuarios")
-        btn_usuarios.clicked.connect(self.abrir_usuarios)
-        btn_usuarios.setEnabled(self.user_info['rol'] == 'ADMINISTRADOR')
-        toolbar.addWidget(btn_usuarios)
 
     def abrir_productos(self):
         """Abre la ventana de gestión de productos en una nueva pestaña"""
