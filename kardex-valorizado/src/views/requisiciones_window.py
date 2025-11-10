@@ -245,7 +245,7 @@ class RequisicionDialog(QDialog):
 
             # Para la edición, calculamos el costo basado en la cantidad original
             costo_unitario, costo_total = self.kardex_manager.calcular_costo_salida(
-                empresa, det_obj.producto_id, det_obj.almacen_id, float(det_obj.cantidad)
+                empresa.id, det_obj.producto_id, det_obj.almacen_id, float(det_obj.cantidad)
             )
 
             detalle_dict = {
@@ -468,7 +468,7 @@ class RequisicionDialog(QDialog):
         
         empresa = self.session.query(Empresa).get(almacen.empresa_id)
         costo_unitario, costo_total = self.kardex_manager.calcular_costo_salida(
-            empresa, prod_id, alm_id, cantidad
+            empresa.id, prod_id, alm_id, cantidad
         )
 
         # Agregar a lista
@@ -595,7 +595,7 @@ class RequisicionDialog(QDialog):
                 if diferencia != 0:
                     almacen = self.session.get(Almacen, detalle_obj.almacen_id)
                     costo_unitario, costo_total_dif = self.kardex_manager.calcular_costo_salida(
-                        self.session.get(Empresa, almacen.empresa_id),
+                        almacen.empresa_id,
                         detalle_obj.producto_id,
                         detalle_obj.almacen_id,
                         float(abs(diferencia))
@@ -645,7 +645,7 @@ class RequisicionDialog(QDialog):
         almacen = self.session.query(Almacen).get(det_dict['almacen_id'])
         empresa = self.session.query(Empresa).get(almacen.empresa_id)
         costo_unitario, costo_total = self.kardex_manager.calcular_costo_salida(
-            empresa, det_dict['producto_id'], det_dict['almacen_id'], det_dict['cantidad']
+            empresa.id, det_dict['producto_id'], det_dict['almacen_id'], det_dict['cantidad']
         )
 
         self.kardex_manager.registrar_movimiento(
@@ -865,7 +865,7 @@ class RequisicionesWindow(QWidget):
                 empresa = self.session.get(Empresa, almacen.empresa_id)
 
                 costo_unitario, costo_total = self.kardex_manager.calcular_costo_salida(
-                    empresa, detalle.producto_id, detalle.almacen_id, float(detalle.cantidad)
+                    empresa.id, detalle.producto_id, detalle.almacen_id, float(detalle.cantidad)
                 )
 
                 self.kardex_manager.registrar_movimiento(
