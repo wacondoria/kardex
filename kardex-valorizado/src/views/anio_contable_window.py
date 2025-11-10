@@ -59,7 +59,7 @@ class AnioContableWindow(QWidget):
         # Botones de acción
         btn_layout = QHBoxLayout()
 
-        self.btn_crear = QPushButton("Crear Nuevo Año")
+        self.btn_crear = QPushButton()
         style_button(self.btn_crear, 'add', "Crear Nuevo Año")
         self.btn_crear.clicked.connect(self.crear_nuevo_anio)
 

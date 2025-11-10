@@ -447,7 +447,7 @@ class EmpresasWindow(QWidget):
         titulo.setFont(QFont("Arial", 18, QFont.Weight.Bold))
         titulo.setStyleSheet("color: #1a73e8;")
 
-        btn_nueva = QPushButton("Nueva Empresa")
+        btn_nueva = QPushButton()
         style_button(btn_nueva, 'add', "Nueva Empresa")
         btn_nueva.clicked.connect(self.nueva_empresa)
 
@@ -521,7 +521,7 @@ class EmpresasWindow(QWidget):
         self.cmb_empresa_almacenes.setStyleSheet("padding: 8px;")
         self.cmb_empresa_almacenes.currentIndexChanged.connect(self.cargar_almacenes)
 
-        btn_nuevo_almacen = QPushButton("Nuevo Almacén")
+        btn_nuevo_almacen = QPushButton()
         style_button(btn_nuevo_almacen, 'add', "Nuevo Almacén")
         btn_nuevo_almacen.clicked.connect(self.nuevo_almacen)
 
