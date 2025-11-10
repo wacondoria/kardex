@@ -70,7 +70,16 @@ DARK_THEME_STYLESHEET = """
         border: 1px solid #0078d7;
     }}
     QComboBox::drop-down {{
+        subcontrol-origin: padding;
+        subcontrol-position: top right;
+        width: 20px;
         border-left: 1px solid #666;
+    }}
+
+    QComboBox::down-arrow {{
+        image: url({base_path}/src/resources/icons/white/cil-arrow-bottom.svg);
+        width: 10px;
+        height: 10px;
     }}
     QComboBox QAbstractItemView {{
         background-color: #3d3d3d;
@@ -130,8 +139,8 @@ DARK_THEME_STYLESHEET = """
         min-width: 20px;
     }}
 
-    /* Estilos para QSpinBox, QDoubleSpinBox y QDateEdit para reservar espacio para los botones */
-    QSpinBox, QDoubleSpinBox, QDateEdit {{
+    /* Estilos para QSpinBox, QDoubleSpinBox, QDateEdit y QComboBox para reservar espacio para los botones */
+    QSpinBox, QDoubleSpinBox, QDateEdit, QComboBox {{
         padding-right: 20px;
     }}
 
@@ -230,7 +239,16 @@ LIGHT_THEME_STYLESHEET = """
         border: 1px solid #0078d7;
     }}
     QComboBox::drop-down {{
+        subcontrol-origin: padding;
+        subcontrol-position: top right;
+        width: 20px;
         border-left: 1px solid #ced4da;
+    }}
+
+    QComboBox::down-arrow {{
+        image: url({base_path}/src/resources/icons/black/cil-arrow-bottom.svg);
+        width: 10px;
+        height: 10px;
     }}
     QComboBox QAbstractItemView {{
         background-color: #ffffff;
@@ -290,8 +308,8 @@ LIGHT_THEME_STYLESHEET = """
         min-width: 20px;
     }}
 
-    /* Estilos para QSpinBox, QDoubleSpinBox y QDateEdit para reservar espacio para los botones */
-    QSpinBox, QDoubleSpinBox, QDateEdit {{
+    /* Estilos para QSpinBox, QDoubleSpinBox, QDateEdit y QComboBox para reservar espacio para los botones */
+    QSpinBox, QDoubleSpinBox, QDateEdit, QComboBox {{
         padding-right: 20px;
     }}
 
