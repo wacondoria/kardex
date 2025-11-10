@@ -99,7 +99,7 @@ class CompraDialog(QDialog):
 
     def init_ui(self):
         self.setWindowTitle("Registrar Compra")
-        self.setMinimumSize(1000, 700)
+        self.setMinimumSize(1800, 980)
 
         layout = QVBoxLayout()
         layout.setContentsMargins(20, 20, 20, 20)
@@ -236,8 +236,7 @@ class CompraDialog(QDialog):
         self.spn_tipo_cambio.setDecimals(3)
         self.spn_tipo_cambio.setValue(1.000)
         self.spn_tipo_cambio.setEnabled(False)
-        self.spn_tipo_cambio.setMinimumWidth(120) # <-- SOLUCIÓN 4: Ancho del SpinBox
-
+       
         self.lbl_tc_info = QLabel("Tipo cambio VENTA")
         self.lbl_tc_info.setStyleSheet("color: #666; font-size: 10px;")
 
@@ -332,10 +331,10 @@ class CompraDialog(QDialog):
         self.btn_agregar.installEventFilter(self)
 
         selector_layout.addWidget(QLabel("Producto:"))
-        selector_layout.addWidget(self.cmb_producto, 2)
+        selector_layout.addWidget(self.cmb_producto, 3)
         selector_layout.addWidget(self.btn_nuevo_producto) # <-- Botón añadido
         selector_layout.addWidget(QLabel("Almacén:"))
-        selector_layout.addWidget(self.cmb_almacen, 1)
+        selector_layout.addWidget(self.cmb_almacen, 2)
         selector_layout.addWidget(QLabel("Cant:"))
         selector_layout.addWidget(self.spn_cantidad)
         selector_layout.addWidget(QLabel("Precio:"))
