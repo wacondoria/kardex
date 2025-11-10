@@ -527,7 +527,7 @@ class ProductosWindow(QWidget):
         titulo.setFont(QFont("Arial", 18, QFont.Weight.Bold))
         titulo.setStyleSheet("color: #1a73e8;")
 
-        btn_nuevo = QPushButton("Nuevo Producto")
+        btn_nuevo = QPushButton()
         style_button(btn_nuevo, 'add', "Nuevo Producto")
         btn_nuevo.clicked.connect(self.nuevo_producto)
 
