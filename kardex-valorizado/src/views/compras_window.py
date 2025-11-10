@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                              QTextEdit, QCheckBox, QMessageBox, QDialog,
                              QFormLayout, QHeaderView, QGroupBox, QSpinBox,
                              QSizePolicy, QFileDialog)
-from PyQt6.QtCore import Qt, QDate, pyqtSignal, QEvent
+from PyQt6.QtCore import Qt, QDate, pyqtSignal, QEvent, QTimer
 from PyQt6.QtGui import QFont, QKeyEvent
 import sys
 import calendar
@@ -561,6 +561,12 @@ class CompraDialog(QDialog):
             self.recalcular_totales()
 
     def recalcular_totales(self):
+        """
+        Dispara el recálculo de forma asíncrona para no bloquear la UI del checkbox.
+        """
+        QTimer.singleShot(0, self._actualizar_calculos_igv)
+
+    def _actualizar_calculos_igv(self):
         """
         Recalcula los subtotales de cada producto en la tabla según el estado
         del checkbox de IGV y luego actualiza los totales generales.
