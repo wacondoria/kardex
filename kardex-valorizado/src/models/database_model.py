@@ -91,7 +91,6 @@ class Empresa(Base):
     metodo_valuacion = Column(Enum(MetodoValuacion), default=MetodoValuacion.PROMEDIO_PONDERADO)
     
     # Estado
-    es_principal = Column(Boolean, default=False)
     activo = Column(Boolean, default=True)
     fecha_registro = Column(DateTime, default=datetime.now)
     
@@ -117,6 +116,7 @@ class Almacen(Base):
     ubicacion = Column(String(200))
     
     # Estado
+    es_principal = Column(Boolean, default=False)
     activo = Column(Boolean, default=True)
     fecha_registro = Column(DateTime, default=datetime.now)
     
