@@ -260,6 +260,16 @@ class KardexMainWindow(QMainWindow):
         # Menú Maestros
         menu_maestros = menubar.addMenu("📋 Maestros")
 
+        accion_productos = QAction("📦 Productos", self)
+        accion_productos.setShortcut("Ctrl+P")
+        accion_productos.triggered.connect(self.abrir_productos)
+        menu_maestros.addAction(accion_productos)
+
+        accion_proveedores = QAction("🏪 Proveedores", self)
+        accion_proveedores.setShortcut("Ctrl+R")
+        accion_proveedores.triggered.connect(self.abrir_proveedores)
+        menu_maestros.addAction(accion_proveedores)
+
         accion_empresas = QAction("🏢 Empresas y Almacenes", self)
         accion_empresas.setShortcut("Ctrl+E")
         accion_empresas.triggered.connect(self.abrir_empresas)
@@ -310,6 +320,11 @@ class KardexMainWindow(QMainWindow):
         # Menú Sistema
         menu_sistema = menubar.addMenu("⚙️ Sistema")
 
+        accion_usuarios = QAction("👥 Usuarios", self)
+        accion_usuarios.setEnabled(self.user_info['rol'] == 'ADMINISTRADOR')
+        accion_usuarios.triggered.connect(self.abrir_usuarios)
+        menu_sistema.addAction(accion_usuarios)
+
         accion_admin_anios = QAction("🗓️ Administración de Años", self)
         accion_admin_anios.setEnabled(self.user_info['rol'] == 'ADMINISTRADOR')
         accion_admin_anios.triggered.connect(self.abrir_admin_anios)
@@ -339,6 +354,16 @@ class KardexMainWindow(QMainWindow):
         toolbar.setMovable(False)
         self.addToolBar(toolbar)
 
+        # Botón Productos
+        btn_productos = QPushButton("📦 Productos")
+        btn_productos.clicked.connect(self.abrir_productos)
+        toolbar.addWidget(btn_productos)
+
+        # Botones deshabilitados por ahora
+        btn_proveedores = QPushButton("🏪 Proveedores")
+        btn_proveedores.clicked.connect(self.abrir_proveedores)
+        toolbar.addWidget(btn_proveedores)
+
         btn_compras = QPushButton("🛒 Compras")
         btn_compras.clicked.connect(self.abrir_compras)
         toolbar.addWidget(btn_compras)
@@ -365,6 +390,11 @@ class KardexMainWindow(QMainWindow):
         toolbar.addWidget(btn_valorizacion)
 
         toolbar.addSeparator()
+
+        btn_usuarios = QPushButton("👥 Usuarios")
+        btn_usuarios.clicked.connect(self.abrir_usuarios)
+        btn_usuarios.setEnabled(self.user_info['rol'] == 'ADMINISTRADOR')
+        toolbar.addWidget(btn_usuarios)
 
     def abrir_productos(self):
         """Abre la ventana de gestión de productos en una nueva pestaña"""
