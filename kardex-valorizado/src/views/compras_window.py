@@ -1556,7 +1556,7 @@ class ComprasWindow(QWidget):
         self.tabla.setColumnWidth(0, 100) # Nro. Proceso
         self.tabla.setColumnWidth(1, 90) # F. Contable
         self.tabla.setColumnWidth(2, 90) # F. Emisión
-        self.tabla.setColumnWidth(9, 160) # Acciones
+        self.tabla.setColumnWidth(9, 250) # Acciones
 
         self.tabla.setAlternatingRowColors(True)
         self.tabla.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
