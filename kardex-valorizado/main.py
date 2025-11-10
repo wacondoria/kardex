@@ -103,17 +103,32 @@ def verificar_y_actualizar_db(db_url='sqlite:///kardex.db'):
 
                 session.commit()
 
-    # 4. Verificar columna 'es_principal' en 'almacenes'
+    # 4. Verificar columna 'es_principal' en 'almacenes' y eliminarla de 'empresas'
     try:
-        columns = [col['name'] for col in inspector.get_columns('almacenes')]
-        if 'es_principal' not in columns:
+        # Añadir a 'almacenes' si no existe
+        columns_almacenes = [col['name'] for col in inspector.get_columns('almacenes')]
+        if 'es_principal' not in columns_almacenes:
             print("⚠️  Detectado modelo de 'almacenes' antiguo. Actualizando BD...")
             with engine.connect() as connection:
                 connection.execute(text("ALTER TABLE almacenes ADD COLUMN es_principal BOOLEAN DEFAULT 0 NOT NULL"))
                 connection.commit()
             print("✓  Columna 'es_principal' añadida a 'almacenes' exitosamente.")
+
+        # Eliminar de 'empresas' si existe (para corregir errores pasados)
+        columns_empresas = [col['name'] for col in inspector.get_columns('empresas')]
+        if 'es_principal' in columns_empresas:
+            print("⚠️  Detectada columna 'es_principal' obsoleta en 'empresas'. Eliminándola...")
+            with engine.connect() as connection:
+                # SQLite no soporta DROP COLUMN directamente en todas las versiones
+                # de forma segura. Se utiliza un método de recreación de tabla.
+                connection.execute(text("CREATE TABLE empresas_new AS SELECT id, ruc, razon_social, direccion, telefono, email, metodo_valuacion, activo, fecha_registro FROM empresas"))
+                connection.execute(text("DROP TABLE empresas"))
+                connection.execute(text("ALTER TABLE empresas_new RENAME TO empresas"))
+                connection.commit()
+            print("✓  Columna 'es_principal' eliminada de 'empresas' exitosamente.")
+
     except Exception as e:
-        print(f"🔷 Info: Tabla 'almacenes' probablemente no existe aún. Se creará más tarde. ({e})")
+        print(f"🔷 Info: Tabla 'almacenes' o 'empresas' probablemente no existe aún. Se creará más tarde. ({e})")
 
     # 5. Verificar columna 'numero_proceso' en 'compras'
     try:
