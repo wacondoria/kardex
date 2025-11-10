@@ -7,7 +7,7 @@ Archivo: main.py
 import sys
 from pathlib import Path
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QLabel, QVBoxLayout,
-                             QWidget, QMenuBar, QMenu, QToolBar, QPushButton)
+                             QWidget, QMenuBar, QMenu, QToolBar, QPushButton, QTabWidget, QTabBar)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont, QAction
 
@@ -195,7 +195,7 @@ class KardexMainWindow(QMainWindow):
 
     def init_ui(self):
         self.setWindowTitle(f"Sistema Kardex Valorizado - {self.user_info['nombre_completo']} | Año: {self.selected_year}")
-        self.setGeometry(100, 100, 1200, 800)
+        self.showMaximized()
 
         # Crear menú
         self.crear_menu()
@@ -203,12 +203,20 @@ class KardexMainWindow(QMainWindow):
         # Crear toolbar
         self.crear_toolbar()
 
-        # Widget central temporal
-        central_widget = QWidget()
+        self.tab_widget = QTabWidget()
+        self.tab_widget.setTabsClosable(True)
+        self.tab_widget.tabCloseRequested.connect(self.cerrar_pestana)
+        self.setCentralWidget(self.tab_widget)
+
+        # Crear pestaña de bienvenida
+        self.crear_pestana_bienvenida()
+
+    def crear_pestana_bienvenida(self):
+        """Crea la pestaña de bienvenida inicial"""
+        bienvenida_widget = QWidget()
         layout = QVBoxLayout()
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        # Mensaje de bienvenida
         bienvenida = QLabel(f"🎉 ¡Bienvenido al Sistema!\n\n")
         bienvenida.setFont(QFont("Arial", 20, QFont.Weight.Bold))
         bienvenida.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -223,9 +231,7 @@ class KardexMainWindow(QMainWindow):
         info.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         instrucciones = QLabel(
-            "\n\n📋 Para comenzar:\n\n"
-            "• Menú: Maestros → Productos\n"
-            "• O usa el botón de la barra de herramientas"
+            "\n\n📋 Para comenzar, selecciona una opción del menú o la barra de herramientas."
         )
         instrucciones.setFont(QFont("Arial", 11))
         instrucciones.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -235,8 +241,17 @@ class KardexMainWindow(QMainWindow):
         layout.addWidget(info)
         layout.addWidget(instrucciones)
 
-        central_widget.setLayout(layout)
-        self.setCentralWidget(central_widget)
+        bienvenida_widget.setLayout(layout)
+
+        index = self.tab_widget.addTab(bienvenida_widget, "🏠 Inicio")
+        self.tab_widget.tabBar().setTabButton(index, QTabBar.ButtonPosition.RightSide, None)
+
+    def cerrar_pestana(self, index):
+        """Cierra una pestaña del tab widget"""
+        widget = self.tab_widget.widget(index)
+        if widget is not None:
+            widget.deleteLater()
+        self.tab_widget.removeTab(index)
 
     def crear_menu(self):
         """Crea el menú principal"""
@@ -382,31 +397,40 @@ class KardexMainWindow(QMainWindow):
         toolbar.addWidget(btn_usuarios)
 
     def abrir_productos(self):
-        """Abre la ventana de gestión de productos"""
-        if self.ventana_productos is None:
-            self.ventana_productos = ProductosWindow()
+        """Abre la ventana de gestión de productos en una nueva pestaña"""
+        nombre_pestana = "Productos"
+        for i in range(self.tab_widget.count()):
+            if self.tab_widget.tabText(i) == nombre_pestana:
+                self.tab_widget.setCurrentIndex(i)
+                return
 
-        self.ventana_productos.show()
-        self.ventana_productos.raise_()
-        self.ventana_productos.activateWindow()
+        productos_widget = ProductosWindow()
+        self.tab_widget.addTab(productos_widget, nombre_pestana)
+        self.tab_widget.setCurrentWidget(productos_widget)
 
     def abrir_kardex(self):
-        """Abre la ventana de Kardex Valorizado"""
-        if self.ventana_kardex is None:
-            self.ventana_kardex = KardexWindow()
+        """Abre la ventana de Kardex Valorizado en una nueva pestaña"""
+        nombre_pestana = "Kardex"
+        for i in range(self.tab_widget.count()):
+            if self.tab_widget.tabText(i) == nombre_pestana:
+                self.tab_widget.setCurrentIndex(i)
+                return
 
-        self.ventana_kardex.show()
-        self.ventana_kardex.raise_()
-        self.ventana_kardex.activateWindow()
+        kardex_widget = KardexWindow()
+        self.tab_widget.addTab(kardex_widget, nombre_pestana)
+        self.tab_widget.setCurrentWidget(kardex_widget)
 
     def abrir_compras(self):
-        """Abre la ventana de gestión de compras"""
-        if self.ventana_compras is None:
-            self.ventana_compras = ComprasWindow(self.user_info)
+        """Abre la ventana de gestión de compras en una nueva pestaña"""
+        nombre_pestana = "Compras"
+        for i in range(self.tab_widget.count()):
+            if self.tab_widget.tabText(i) == nombre_pestana:
+                self.tab_widget.setCurrentIndex(i)
+                return
 
-        self.ventana_compras.show()
-        self.ventana_compras.raise_()
-        self.ventana_compras.activateWindow()
+        compras_widget = ComprasWindow(self.user_info)
+        self.tab_widget.addTab(compras_widget, nombre_pestana)
+        self.tab_widget.setCurrentWidget(compras_widget)
 
     def abrir_tipo_cambio(self):
         """Abre la ventana de gestión de tipo de cambio"""
@@ -445,22 +469,28 @@ class KardexMainWindow(QMainWindow):
         self.ventana_backup.activateWindow()
 
     def abrir_requisiciones(self):
-        """Abre la ventana de gestión de requisiciones"""
-        if self.ventana_requisiciones is None:
-            self.ventana_requisiciones = RequisicionesWindow(user_info=self.user_info)
+        """Abre la ventana de gestión de requisiciones en una nueva pestaña"""
+        nombre_pestana = "Requisiciones"
+        for i in range(self.tab_widget.count()):
+            if self.tab_widget.tabText(i) == nombre_pestana:
+                self.tab_widget.setCurrentIndex(i)
+                return
 
-        self.ventana_requisiciones.show()
-        self.ventana_requisiciones.raise_()
-        self.ventana_requisiciones.activateWindow()
+        requisiciones_widget = RequisicionesWindow(user_info=self.user_info)
+        self.tab_widget.addTab(requisiciones_widget, nombre_pestana)
+        self.tab_widget.setCurrentWidget(requisiciones_widget)
 
     def abrir_ordenes_compra(self):
-        """Abre la ventana de gestión de órdenes de compra"""
-        if self.ventana_ordenes_compra is None:
-            self.ventana_ordenes_compra = OrdenesCompraWindow(self.user_info)
+        """Abre la ventana de gestión de órdenes de compra en una nueva pestaña"""
+        nombre_pestana = "Órdenes de Compra"
+        for i in range(self.tab_widget.count()):
+            if self.tab_widget.tabText(i) == nombre_pestana:
+                self.tab_widget.setCurrentIndex(i)
+                return
 
-        self.ventana_ordenes_compra.show()
-        self.ventana_ordenes_compra.raise_()
-        self.ventana_ordenes_compra.activateWindow()
+        ordenes_compra_widget = OrdenesCompraWindow(self.user_info)
+        self.tab_widget.addTab(ordenes_compra_widget, nombre_pestana)
+        self.tab_widget.setCurrentWidget(ordenes_compra_widget)
 
     def abrir_usuarios(self):
         """Abre la ventana de gestión de usuarios"""
@@ -472,13 +502,16 @@ class KardexMainWindow(QMainWindow):
         self.ventana_usuarios.activateWindow()
 
     def abrir_valorizacion(self):
-        """Abre la ventana de valorización de inventario"""
-        if self.ventana_valorizacion is None:
-            self.ventana_valorizacion = ValorizacionWindow()
+        """Abre la ventana de valorización de inventario en una nueva pestaña"""
+        nombre_pestana = "Valorización"
+        for i in range(self.tab_widget.count()):
+            if self.tab_widget.tabText(i) == nombre_pestana:
+                self.tab_widget.setCurrentIndex(i)
+                return
 
-        self.ventana_valorizacion.show()
-        self.ventana_valorizacion.raise_()
-        self.ventana_valorizacion.activateWindow()
+        valorizacion_widget = ValorizacionWindow()
+        self.tab_widget.addTab(valorizacion_widget, nombre_pestana)
+        self.tab_widget.setCurrentWidget(valorizacion_widget)
 
     def abrir_admin_anios(self):
         """Abre la ventana de administración de años contables."""
