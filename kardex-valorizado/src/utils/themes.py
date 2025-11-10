@@ -129,6 +129,31 @@ DARK_THEME_STYLESHEET = """
         background: #555;
         min-width: 20px;
     }
+
+    QSpinBox::up-button, QDoubleSpinBox::up-button {
+        subcontrol-origin: border;
+        subcontrol-position: top right;
+        width: 16px;
+        border-left: 1px solid #666;
+        border-bottom: 1px solid #666;
+    }
+    QSpinBox::down-button, QDoubleSpinBox::down-button {
+        subcontrol-origin: border;
+        subcontrol-position: bottom right;
+        width: 16px;
+        border-left: 1px solid #666;
+        border-top: 1px solid #666;
+    }
+    QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {
+        width: 10px;
+        height: 10px;
+        image: url(kardex-valorizado/src/resources/icons/white/cil-arrow-top.svg);
+    }
+    QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {
+        width: 10px;
+        height: 10px;
+        image: url(kardex-valorizado/src/resources/icons/white/cil-arrow-bottom.svg);
+    }
 """
 
 LIGHT_THEME_STYLESHEET = """
@@ -251,6 +276,31 @@ LIGHT_THEME_STYLESHEET = """
     QScrollBar::handle:horizontal {
         background: #ced4da;
         min-width: 20px;
+    }
+
+    QSpinBox::up-button, QDoubleSpinBox::up-button {
+        subcontrol-origin: border;
+        subcontrol-position: top right;
+        width: 16px;
+        border-left: 1px solid #ced4da;
+        border-bottom: 1px solid #ced4da;
+    }
+    QSpinBox::down-button, QDoubleSpinBox::down-button {
+        subcontrol-origin: border;
+        subcontrol-position: bottom right;
+        width: 16px;
+        border-left: 1px solid #ced4da;
+        border-top: 1px solid #ced4da;
+    }
+    QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {
+        width: 10px;
+        height: 10px;
+        image: url(kardex-valorizado/src/resources/icons/black/cil-arrow-top.svg);
+    }
+    QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {
+        width: 10px;
+        height: 10px;
+        image: url(kardex-valorizado/src/resources/icons/black/cil-arrow-bottom.svg);
     }
 """
 
