@@ -388,20 +388,34 @@ class CompraDialog(QDialog):
         self.actualizar_tipo_cambio()
 
     def cargar_almacenes(self):
-        """Carga almacenes de todas las empresas activas"""
+        """Carga almacenes y selecciona el principal por defecto si es aplicable."""
         self.cmb_almacen.clear()
-        empresas = self.session.query(Empresa).filter_by(activo=True).all()
-        for empresa in empresas:
-            almacenes = self.session.query(Almacen).filter_by(
-                empresa_id=empresa.id,
-                activo=True
-            ).all()
-            for alm in almacenes:
-                self.cmb_almacen.addItem(
-                    f"{empresa.razon_social} - {alm.nombre}",
-                    alm.id
-                )
-        self.cmb_almacen.setCurrentIndex(-1)
+
+        todos_los_almacenes = self.session.query(Almacen).join(Empresa).filter(
+            Almacen.activo == True,
+            Empresa.activo == True
+        ).all()
+
+        if not todos_los_almacenes:
+            return
+
+        almacen_principal = None
+        for alm in todos_los_almacenes:
+            self.cmb_almacen.addItem(
+                f"{alm.empresa.razon_social} - {alm.nombre}",
+                alm.id
+            )
+            if alm.es_principal:
+                almacen_principal = alm
+
+        if len(todos_los_almacenes) == 1:
+            self.cmb_almacen.setCurrentIndex(0)
+        elif almacen_principal:
+            index = self.cmb_almacen.findData(almacen_principal.id)
+            if index != -1:
+                self.cmb_almacen.setCurrentIndex(index)
+        else:
+            self.cmb_almacen.setCurrentIndex(-1)
 
     def proveedor_seleccionado(self):
         """Muestra info del proveedor seleccionado"""

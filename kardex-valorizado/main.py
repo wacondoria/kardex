@@ -103,7 +103,19 @@ def verificar_y_actualizar_db(db_url='sqlite:///kardex.db'):
 
                 session.commit()
 
-    # 4. Verificar columna 'numero_proceso' en 'compras'
+    # 4. Verificar columna 'es_principal' en 'almacenes'
+    try:
+        columns = [col['name'] for col in inspector.get_columns('almacenes')]
+        if 'es_principal' not in columns:
+            print("⚠️  Detectado modelo de 'almacenes' antiguo. Actualizando BD...")
+            with engine.connect() as connection:
+                connection.execute(text("ALTER TABLE almacenes ADD COLUMN es_principal BOOLEAN DEFAULT 0 NOT NULL"))
+                connection.commit()
+            print("✓  Columna 'es_principal' añadida a 'almacenes' exitosamente.")
+    except Exception as e:
+        print(f"🔷 Info: Tabla 'almacenes' probablemente no existe aún. Se creará más tarde. ({e})")
+
+    # 5. Verificar columna 'numero_proceso' en 'compras'
     try:
         columns = [col['name'] for col in inspector.get_columns('compras')]
         if 'numero_proceso' not in columns:
