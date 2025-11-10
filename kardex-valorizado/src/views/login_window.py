@@ -263,7 +263,8 @@ class LoginWindow(QWidget):
 
     def closeEvent(self, event):
         """Al cerrar la ventana."""
-        self.session.close()
+        # No cerrar la sesión aquí, ya que se utiliza en el resto de la aplicación.
+        # La sesión se cerrará cuando la aplicación principal termine.
         event.accept()
 
 
