@@ -231,7 +231,21 @@ class KardexWindow(QWidget):
         
         # Cargar productos
         self.cmb_producto.clear()
-        productos = self.session.query(Producto).filter_by(activo=True).order_by(Producto.nombre).all()
+
+        anio_seleccionado = app_context.get_selected_year()
+        if not anio_seleccionado:
+            QMessageBox.warning(self, "Error", "No se ha seleccionado un año contable.")
+            return
+
+        # Subconsulta para obtener IDs de productos con movimiento en el año
+        subquery = self.session.query(MovimientoStock.producto_id).filter(
+            MovimientoStock.fecha_documento >= anio_seleccionado.fecha_inicio,
+            MovimientoStock.fecha_documento <= anio_seleccionado.fecha_fin
+        ).distinct()
+
+        productos = self.session.query(Producto).filter(
+            Producto.id.in_(subquery)
+        ).filter_by(activo=True).order_by(Producto.nombre).all()
         
         for prod in productos:
             self.cmb_producto.addItem(f"{prod.codigo} - {prod.nombre}", prod.id)
