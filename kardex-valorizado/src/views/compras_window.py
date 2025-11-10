@@ -48,6 +48,7 @@ from utils.widgets import UppercaseValidator, SearchableComboBox
 from utils.app_context import app_context
 from utils.validation import verificar_estado_anio, AnioCerradoError
 from utils.button_utils import style_button
+from utils.kardex_manager import KardexManager
 
 # ============================================
 # CLASES AUXILIARES (para seleccionar texto)
@@ -88,6 +89,7 @@ class CompraDialog(QDialog):
         self.detalles_originales_obj = detalles_originales
         self.detalles_compra = []
         self.lista_completa_productos = []
+        self.kardex_manager = KardexManager(self.session)
 
         self.init_ui()
         self.cargar_datos_iniciales()
@@ -252,16 +254,8 @@ class CompraDialog(QDialog):
         self.spn_precio.setRange(0.00, 999999.99)
         self.spn_precio.setDecimals(2)
 
-        self.btn_agregar = QPushButton("+ Agregar")
-        self.btn_agregar.setStyleSheet("""
-            QPushButton {
-                background-color: #34a853;
-                color: white;
-                padding: 8px 20px;
-                border-radius: 5px;
-                font-weight: bold;
-            }
-        """)
+        self.btn_agregar = QPushButton()
+        style_button(self.btn_agregar, 'add', "Agregar")
         self.btn_agregar.clicked.connect(self.agregar_producto)
 
         # Instalar filtros de eventos
@@ -355,25 +349,10 @@ class CompraDialog(QDialog):
         btn_layout.addStretch()
 
         btn_cancelar = QPushButton("Cancelar")
-        btn_cancelar.setStyleSheet("""
-            QPushButton {
-                background-color: #f1f3f4;
-                padding: 10px 30px;
-                border-radius: 5px;
-            }
-        """)
         btn_cancelar.clicked.connect(self.reject)
 
         self.btn_guardar = QPushButton("Guardar Compra")
-        self.btn_guardar.setStyleSheet("""
-            QPushButton {
-                background-color: #1a73e8;
-                color: white;
-                padding: 10px 30px;
-                border-radius: 5px;
-                font-weight: bold;
-            }
-        """)
+        style_button(self.btn_guardar, 'add', "Guardar Compra")
         self.btn_guardar.clicked.connect(self.guardar_compra)
 
         btn_layout.addWidget(btn_cancelar)
@@ -381,75 +360,6 @@ class CompraDialog(QDialog):
 
         layout.addLayout(btn_layout)
         self.setLayout(layout)
-
-    def recalcular_kardex_posterior(self, producto_almacen_afectados, fecha_referencia):
-        """
-        Recalcula los saldos y costos del Kardex para productos/almacenes específicos
-        a partir de una fecha dada. ASUME COSTO PROMEDIO PONDERADO.
-        """
-        print(f"DEBUG: Iniciando recálculo de Kardex para {len(producto_almacen_afectados)} pares desde {fecha_referencia}")
-        DOS_DECIMALES = Decimal('0.01')
-        SEIS_DECIMALES = Decimal('0.000001')
-
-        for prod_id, alm_id in producto_almacen_afectados:
-            print(f"DEBUG: Recalculando para Producto ID: {prod_id}, Almacén ID: {alm_id}")
-
-            mov_anterior = self.session.query(MovimientoStock).filter(
-                MovimientoStock.producto_id == prod_id,
-                MovimientoStock.almacen_id == alm_id,
-                MovimientoStock.fecha_documento < fecha_referencia
-            ).order_by(MovimientoStock.fecha_documento.desc(), MovimientoStock.id.desc()).first()
-
-            saldo_cant_actual = Decimal(str(mov_anterior.saldo_cantidad)) if mov_anterior else Decimal('0')
-            saldo_costo_actual = Decimal(str(mov_anterior.saldo_costo_total)) if mov_anterior else Decimal('0')
-            print(f"DEBUG: Saldos iniciales - Cant: {saldo_cant_actual}, Costo Total: {saldo_costo_actual}")
-
-            movimientos_a_recalcular = self.session.query(MovimientoStock).filter(
-                MovimientoStock.producto_id == prod_id,
-                MovimientoStock.almacen_id == alm_id,
-                MovimientoStock.fecha_documento >= fecha_referencia
-            ).order_by(MovimientoStock.fecha_documento.asc(), MovimientoStock.id.asc()).all()
-
-            if not movimientos_a_recalcular:
-                print(f"DEBUG: No hay movimientos posteriores para recalcular.")
-                continue
-
-            for mov in movimientos_a_recalcular:
-                cant_entrada = Decimal(str(mov.cantidad_entrada))
-                cant_salida = Decimal(str(mov.cantidad_salida))
-                costo_total_movimiento = Decimal(str(mov.costo_total))
-
-                costo_promedio_anterior = Decimal('0')
-                if saldo_cant_actual > 0:
-                    costo_promedio_anterior = (saldo_costo_actual / saldo_cant_actual).quantize(SEIS_DECIMALES, rounding=ROUND_HALF_UP)
-
-                if cant_salida > 0:
-                    costo_unitario_salida = costo_promedio_anterior
-                    costo_total_salida = (cant_salida * costo_unitario_salida).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
-
-                    mov.costo_unitario = float(costo_unitario_salida)
-                    mov.costo_total = float(costo_total_salida)
-                    costo_total_movimiento = -costo_total_salida
-
-                elif cant_entrada > 0:
-                    costo_total_movimiento = Decimal(str(mov.costo_total))
-
-                else:
-                    costo_total_movimiento = Decimal('0')
-
-                saldo_cant_actual += cant_entrada - cant_salida
-                saldo_costo_actual += costo_total_movimiento
-
-                if saldo_cant_actual <= 0:
-                    saldo_costo_actual = Decimal('0')
-                    saldo_cant_actual = Decimal('0')
-
-                mov.saldo_cantidad = float(saldo_cant_actual.quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP))
-                mov.saldo_costo_total = float(saldo_costo_actual.quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP))
-
-            print(f"DEBUG: Recálculo completado para Producto ID: {prod_id}, Almacén ID: {alm_id}")
-
-        print(f"DEBUG: Recálculo de Kardex finalizado.")
 
     def cargar_datos_iniciales(self):
         """Carga proveedores, productos y almacenes"""
@@ -935,7 +845,7 @@ class CompraDialog(QDialog):
             if producto_almacen_afectados:
                  print(f"DEBUG: Productos/Almacenes afectados: {producto_almacen_afectados}")
                  self.session.flush()
-                 self.recalcular_kardex_posterior(producto_almacen_afectados, compra.fecha)
+                 self.kardex_manager.recalcular_kardex_posterior(producto_almacen_afectados, compra.fecha)
             else:
                  print("DEBUG: No hubo movimientos de kardex que requieran recálculo.")
 
@@ -1385,6 +1295,7 @@ class ComprasWindow(QWidget):
         self.session = obtener_session()
         self.user_info = user_info
         self.compras_mostradas = []
+        self.kardex_manager = KardexManager(self.session)
         self.init_ui()
         self.cargar_compras()
 
@@ -1414,14 +1325,8 @@ class ComprasWindow(QWidget):
         titulo.setFont(QFont("Arial", 18, QFont.Weight.Bold))
         titulo.setStyleSheet("color: #1a73e8;")
 
-        btn_nueva = QPushButton("+ Nueva Compra")
-        btn_nueva.setStyleSheet("""
-            QPushButton {
-                background-color: #1a73e8; color: white;
-                padding: 10px 20px; border-radius: 5px; font-weight: bold;
-            }
-            QPushButton:hover { background-color: #1557b0; }
-        """)
+        btn_nueva = QPushButton()
+        style_button(btn_nueva, 'add', "Nueva Compra")
         btn_nueva.clicked.connect(self.nueva_compra)
 
         # --- LÓGICA DE LICENCIA (AGRUPADA) ---
@@ -1511,69 +1416,6 @@ class ComprasWindow(QWidget):
         layout.addWidget(self.tabla)
 
         self.setLayout(layout)
-
-    def recalcular_kardex_posterior(self, producto_almacen_afectados, fecha_referencia):
-        """
-        Recalcula los saldos y costos del Kardex (copiado de CompraDialog).
-        """
-        print(f"DEBUG: Iniciando recálculo de Kardex para {len(producto_almacen_afectados)} pares desde {fecha_referencia}")
-        DOS_DECIMALES = Decimal('0.01')
-        SEIS_DECIMALES = Decimal('0.000001')
-
-        for prod_id, alm_id in producto_almacen_afectados:
-            print(f"DEBUG: Recalculando para Producto ID: {prod_id}, Almacén ID: {alm_id}")
-
-            mov_anterior = self.session.query(MovimientoStock).filter(
-                MovimientoStock.producto_id == prod_id,
-                MovimientoStock.almacen_id == alm_id,
-                MovimientoStock.fecha_documento < fecha_referencia
-            ).order_by(MovimientoStock.fecha_documento.desc(), MovimientoStock.id.desc()).first()
-
-            saldo_cant_actual = Decimal(str(mov_anterior.saldo_cantidad)) if mov_anterior else Decimal('0')
-            saldo_costo_actual = Decimal(str(mov_anterior.saldo_costo_total)) if mov_anterior else Decimal('0')
-
-            movimientos_a_recalcular = self.session.query(MovimientoStock).filter(
-                MovimientoStock.producto_id == prod_id,
-                MovimientoStock.almacen_id == alm_id,
-                MovimientoStock.fecha_documento >= fecha_referencia
-            ).order_by(MovimientoStock.fecha_documento.asc(), MovimientoStock.id.asc()).all()
-
-            if not movimientos_a_recalcular:
-                continue
-
-            for mov in movimientos_a_recalcular:
-                cant_entrada = Decimal(str(mov.cantidad_entrada))
-                cant_salida = Decimal(str(mov.cantidad_salida))
-                costo_total_movimiento = Decimal(str(mov.costo_total))
-
-                costo_promedio_anterior = Decimal('0')
-                if saldo_cant_actual > 0:
-                    costo_promedio_anterior = (saldo_costo_actual / saldo_cant_actual).quantize(SEIS_DECIMALES, rounding=ROUND_HALF_UP)
-
-                if cant_salida > 0:
-                    costo_unitario_salida = costo_promedio_anterior
-                    costo_total_salida = (cant_salida * costo_unitario_salida).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
-                    mov.costo_unitario = float(costo_unitario_salida)
-                    mov.costo_total = float(costo_total_salida)
-                    costo_total_movimiento = -costo_total_salida
-                elif cant_entrada > 0:
-                    costo_total_movimiento = Decimal(str(mov.costo_total))
-                else:
-                    costo_total_movimiento = Decimal('0')
-
-                saldo_cant_actual += cant_entrada - cant_salida
-                saldo_costo_actual += costo_total_movimiento
-
-                if saldo_cant_actual <= 0:
-                    saldo_costo_actual = Decimal('0')
-                    saldo_cant_actual = Decimal('0')
-
-                mov.saldo_cantidad = float(saldo_cant_actual.quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP))
-                mov.saldo_costo_total = float(saldo_costo_actual.quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP))
-
-            print(f"DEBUG: Recálculo completado para Producto ID: {prod_id}, Almacén ID: {alm_id}")
-
-        print(f"DEBUG: Recálculo de Kardex finalizado.")
 
     def cargar_compras(self):
         """Carga las compras usando una nueva sesión y filtros de periodo contable."""
@@ -1824,7 +1666,7 @@ class ComprasWindow(QWidget):
 
             if producto_almacen_afectados:
                 print(f"DEBUG (Eliminar): Recalculando Kardex para {producto_almacen_afectados} desde {fecha_compra}")
-                self.recalcular_kardex_posterior(producto_almacen_afectados, fecha_compra)
+                self.kardex_manager.recalcular_kardex_posterior(producto_almacen_afectados, fecha_compra)
 
             self.session.commit()
 
