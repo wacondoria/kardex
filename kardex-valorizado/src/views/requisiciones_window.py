@@ -465,6 +465,13 @@ class RequisicionDialog(QDialog):
             QMessageBox.warning(self, "Error", "La cantidad debe ser mayor a cero")
             return
         
+        # Verificar si el producto ya está en la lista
+        for detalle_existente in self.detalles_requisicion:
+            if detalle_existente['producto_id'] == prod_id:
+                QMessageBox.warning(self, "Producto Duplicado",
+                                    "Este producto ya ha sido añadido a la requisición.")
+                return
+
         # Verificar stock
         almacen = self.session.query(Almacen).get(alm_id)
         ultimo_mov = self.session.query(MovimientoStock).filter_by(
