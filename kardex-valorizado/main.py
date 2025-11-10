@@ -514,8 +514,16 @@ def main():
 
     app = QApplication(sys.argv)
 
+    # --- CORREGIDO: Uso de ruta absoluta para los recursos ---
+    # Determinar la ruta base del proyecto. Si está congelado (PyInstaller),
+    # usa el directorio del ejecutable. Si no, usa el directorio padre de `main.py`.
+    if getattr(sys, 'frozen', False):
+        base_path = Path(sys.executable).parent
+    else:
+        base_path = Path(__file__).parent
+
     # Aplicar el tema (claro/oscuro) detectado
-    stylesheet = get_theme_stylesheet()
+    stylesheet = get_theme_stylesheet(base_path=str(base_path / "kardex-valorizado"))
     app.setStyleSheet(stylesheet)
 
     main_window = None

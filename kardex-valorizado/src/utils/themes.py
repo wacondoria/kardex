@@ -136,6 +136,10 @@ DARK_THEME_STYLESHEET = """
         width: 16px;
         border-left: 1px solid #666;
         border-bottom: 1px solid #666;
+        background-color: #3d3d3d;
+    }
+    QSpinBox::up-button:hover, QDoubleSpinBox::up-button:hover {
+        background-color: #555;
     }
     QSpinBox::down-button, QDoubleSpinBox::down-button {
         subcontrol-origin: border;
@@ -143,16 +147,20 @@ DARK_THEME_STYLESHEET = """
         width: 16px;
         border-left: 1px solid #666;
         border-top: 1px solid #666;
+        background-color: #3d3d3d;
+    }
+    QSpinBox::down-button:hover, QDoubleSpinBox::down-button:hover {
+        background-color: #555;
     }
     QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {
         width: 10px;
         height: 10px;
-        image: url(kardex-valorizado/src/resources/icons/white/cil-arrow-top.svg);
+        image: url({base_path}/src/resources/icons/white/cil-arrow-top.svg);
     }
     QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {
         width: 10px;
         height: 10px;
-        image: url(kardex-valorizado/src/resources/icons/white/cil-arrow-bottom.svg);
+        image: url({base_path}/src/resources/icons/white/cil-arrow-bottom.svg);
     }
 """
 
@@ -284,6 +292,10 @@ LIGHT_THEME_STYLESHEET = """
         width: 16px;
         border-left: 1px solid #ced4da;
         border-bottom: 1px solid #ced4da;
+        background-color: #f8f9fa;
+    }
+    QSpinBox::up-button:hover, QDoubleSpinBox::up-button:hover {
+        background-color: #e9ecef;
     }
     QSpinBox::down-button, QDoubleSpinBox::down-button {
         subcontrol-origin: border;
@@ -291,38 +303,39 @@ LIGHT_THEME_STYLESHEET = """
         width: 16px;
         border-left: 1px solid #ced4da;
         border-top: 1px solid #ced4da;
+        background-color: #f8f9fa;
+    }
+    QSpinBox::down-button:hover, QDoubleSpinBox::down-button:hover {
+        background-color: #e9ecef;
     }
     QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {
         width: 10px;
         height: 10px;
-        image: url(kardex-valorizado/src/resources/icons/black/cil-arrow-top.svg);
+        image: url({base_path}/src/resources/icons/black/cil-arrow-top.svg);
     }
     QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {
         width: 10px;
         height: 10px;
-        image: url(kardex-valorizado/src/resources/icons/black/cil-arrow-bottom.svg);
+        image: url({base_path}/src/resources/icons/black/cil-arrow-bottom.svg);
     }
 """
 
-def get_theme_stylesheet():
+def get_theme_stylesheet(base_path):
     """
     Detecta el tema del sistema (claro u oscuro) y devuelve la hoja de estilo
-    correspondiente.
+    correspondiente, formateada con la ruta base a los recursos.
     """
     app = QApplication.instance()
-    if not app:
-        # Esto es un fallback, la app ya debería existir al llamar a esta función
-        return LIGHT_THEME_STYLESHEET
 
-    # Un método común para detectar el modo oscuro es comprobar la luminosidad
-    # del color de fondo de la ventana de la paleta del sistema.
-    window_color = app.palette().color(QPalette.ColorRole.Window)
+    # Determinar qué hoja de estilo usar
+    stylesheet_template = LIGHT_THEME_STYLESHEET
+    if app:
+        window_color = app.palette().color(QPalette.ColorRole.Window)
+        if window_color.lightness() < 128:
+            print("💡 Tema oscuro detectado. Aplicando estilos oscuros.")
+            stylesheet_template = DARK_THEME_STYLESHEET
+        else:
+            print("💡 Tema claro detectado. Aplicando estilos claros.")
 
-    # Si la luminosidad es menor que 128 (en una escala de 0-255),
-    # es probable que sea un tema oscuro.
-    if window_color.lightness() < 128:
-        print("💡 Tema oscuro detectado. Aplicando estilos oscuros.")
-        return DARK_THEME_STYLESHEET
-    else:
-        print("💡 Tema claro detectado. Aplicando estilos claros.")
-        return LIGHT_THEME_STYLESHEET
+    # Formatear la hoja de estilo con la ruta base
+    return stylesheet_template.format(base_path=base_path)
