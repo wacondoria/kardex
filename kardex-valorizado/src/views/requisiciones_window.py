@@ -778,6 +778,7 @@ class RequisicionesWindow(QWidget):
     
     def cargar_requisiciones(self):
         """Carga las requisiciones"""
+        self.session.expire_all()
         fecha_desde = self.date_desde.date().toPyDate()
         fecha_hasta = self.date_hasta.date().toPyDate()
         
