@@ -47,8 +47,6 @@ class KardexManager:
     def _calcular_promedio_ponderado(self, movimientos):
         saldo_cantidad = Decimal('0')
         saldo_valor = Decimal('0')
-        CANTIDAD_PRECISION = Decimal('0.000001')
-        COSTO_PRECISION = Decimal('0.01')
 
         for mov in movimientos:
             if mov.cantidad_entrada > 0:
@@ -61,26 +59,25 @@ class KardexManager:
                     costo_promedio = Decimal('0')
 
                 cantidad_salida = Decimal(str(mov.cantidad_salida))
-                valor_salida = (cantidad_salida * costo_promedio).quantize(COSTO_PRECISION, rounding=ROUND_HALF_UP)
+                valor_salida = cantidad_salida * costo_promedio
 
+                # Actualizar el costo del movimiento de salida
                 mov.costo_unitario = float(costo_promedio)
                 mov.costo_total = float(valor_salida)
 
                 saldo_cantidad -= cantidad_salida
                 saldo_valor -= valor_salida
 
-            if saldo_cantidad <= 0:
+            # Asegurar que los saldos no sean negativos
+            if saldo_cantidad < 0:
                 saldo_cantidad = Decimal('0')
                 saldo_valor = Decimal('0')
 
-            mov.saldo_cantidad = float(saldo_cantidad.quantize(CANTIDAD_PRECISION, rounding=ROUND_HALF_UP))
-            mov.saldo_costo_total = float(saldo_valor.quantize(COSTO_PRECISION, rounding=ROUND_HALF_UP))
+            mov.saldo_cantidad = float(saldo_cantidad)
+            mov.saldo_costo_total = float(saldo_valor)
 
     def _calcular_peps(self, movimientos):
         lotes = []
-        CANTIDAD_PRECISION = Decimal('0.000001')
-        COSTO_PRECISION = Decimal('0.01')
-
         for mov in movimientos:
             if mov.cantidad_entrada > 0:
                 lotes.append({
@@ -103,20 +100,16 @@ class KardexManager:
                         lotes.pop(0)
 
                 if mov.cantidad_salida > 0:
-                    costo_unitario_salida = costo_total_salida / Decimal(str(mov.cantidad_salida))
-                    mov.costo_unitario = float(costo_unitario_salida)
-                    mov.costo_total = float(costo_total_salida.quantize(COSTO_PRECISION, rounding=ROUND_HALF_UP))
+                    mov.costo_unitario = float(costo_total_salida / Decimal(str(mov.cantidad_salida)))
+                    mov.costo_total = float(costo_total_salida)
 
             saldo_cantidad = sum(l['cantidad'] for l in lotes)
             saldo_valor = sum(l['cantidad'] * l['costo_unitario'] for l in lotes)
-            mov.saldo_cantidad = float(saldo_cantidad.quantize(CANTIDAD_PRECISION, rounding=ROUND_HALF_UP))
-            mov.saldo_costo_total = float(saldo_valor.quantize(COSTO_PRECISION, rounding=ROUND_HALF_UP))
+            mov.saldo_cantidad = float(saldo_cantidad)
+            mov.saldo_costo_total = float(saldo_valor)
 
     def _calcular_ueps(self, movimientos):
         lotes = []
-        CANTIDAD_PRECISION = Decimal('0.000001')
-        COSTO_PRECISION = Decimal('0.01')
-
         for mov in movimientos:
             if mov.cantidad_entrada > 0:
                 lotes.append({
@@ -139,14 +132,13 @@ class KardexManager:
                         lotes.pop()
 
                 if mov.cantidad_salida > 0:
-                    costo_unitario_salida = costo_total_salida / Decimal(str(mov.cantidad_salida))
-                    mov.costo_unitario = float(costo_unitario_salida)
-                    mov.costo_total = float(costo_total_salida.quantize(COSTO_PRECISION, rounding=ROUND_HALF_UP))
+                    mov.costo_unitario = float(costo_total_salida / Decimal(str(mov.cantidad_salida)))
+                    mov.costo_total = float(costo_total_salida)
 
             saldo_cantidad = sum(l['cantidad'] for l in lotes)
             saldo_valor = sum(l['cantidad'] * l['costo_unitario'] for l in lotes)
-            mov.saldo_cantidad = float(saldo_cantidad.quantize(CANTIDAD_PRECISION, rounding=ROUND_HALF_UP))
-            mov.saldo_costo_total = float(saldo_valor.quantize(COSTO_PRECISION, rounding=ROUND_HALF_UP))
+            mov.saldo_cantidad = float(saldo_cantidad)
+            mov.saldo_costo_total = float(saldo_valor)
 
     def recalcular_kardex_posterior(self, producto_almacen_afectados: set, fecha_referencia):
         """

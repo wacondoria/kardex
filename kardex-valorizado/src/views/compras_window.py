@@ -311,9 +311,9 @@ class CompraDialog(QDialog):
         self.cmb_almacen = SearchableComboBox()
 
         self.spn_cantidad = SelectAllSpinBox()
-        self.spn_cantidad.setRange(0.000000, 999999.999999)
-        self.spn_cantidad.setDecimals(6)
-        self.spn_cantidad.setValue(1.000000)
+        self.spn_cantidad.setRange(0.00, 999999)
+        self.spn_cantidad.setDecimals(2)
+        self.spn_cantidad.setValue(1.00)
 
         self.spn_precio = SelectAllSpinBox()
         self.spn_precio.setRange(0.00, 999999.99)
@@ -600,7 +600,7 @@ class CompraDialog(QDialog):
             self.tabla_productos.setItem(row, 1, item_alm)
 
 
-            item_cant = QTableWidgetItem(f"{det['cantidad']:.6f}")
+            item_cant = QTableWidgetItem(f"{det['cantidad']:.2f}")
             item_precio = QTableWidgetItem(f"{det['precio_unitario']:.2f}")
             self.tabla_productos.setItem(row, 2, item_cant)
             self.tabla_productos.setItem(row, 3, item_precio)
@@ -1158,7 +1158,7 @@ class CompraDialog(QDialog):
             QMessageBox.warning(self, "Valor inválido", f"Ingrese un número válido.")
             self.tabla_productos.blockSignals(True)
             if column == 2:
-                 item.setText(f"{self.detalles_compra[row]['cantidad']:.6f}")
+                 item.setText(f"{self.detalles_compra[row]['cantidad']:.2f}")
             else:
                  item.setText(f"{self.detalles_compra[row]['precio_unitario']:.2f}")
             self.tabla_productos.blockSignals(False)
