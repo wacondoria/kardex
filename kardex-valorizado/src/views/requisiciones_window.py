@@ -25,6 +25,7 @@ from models.database_model import (obtener_session, Requisicion, RequisicionDeta
 from utils.widgets import UpperLineEdit, SearchableComboBox
 from utils.app_context import app_context
 from utils.button_utils import style_button
+from utils.kardex_manager import KardexManager
 
 
 class RequisicionDialog(QDialog):
@@ -38,6 +39,7 @@ class RequisicionDialog(QDialog):
         self.detalles_requisicion = [] # Lista de diccionarios para la UI
         self.detalles_originales_obj = [] # Lista de objetos SQLAlchemy originales
         self.selected_year = app_context.get_selected_year()
+        self.kardex_manager = KardexManager(self.session)
 
         self.init_ui()
         self.cargar_datos_iniciales()
@@ -48,27 +50,6 @@ class RequisicionDialog(QDialog):
     def init_ui(self):
         self.setWindowTitle("Nueva Requisición" if not self.requisicion_original else "Editar Requisición")
         self.setMinimumSize(1000, 650)
-        self.setStyleSheet("""
-            QDialog {
-                background-color: #f5f5f5;
-            }
-            QLabel {
-                color: #333;
-            }
-            QLineEdit, QDateEdit, QComboBox, QDoubleSpinBox, QTextEdit {
-                padding: 8px;
-                border: 2px solid #ddd;
-                border-radius: 4px;
-                background-color: white;
-                color: black;
-            }
-            QComboBox QAbstractItemView {
-                background-color: white;
-                color: black;
-                selection-background-color: #1a73e8;
-                selection-color: white;
-            }
-        """)
         
         layout = QVBoxLayout()
         layout.setContentsMargins(20, 20, 20, 20)
@@ -225,15 +206,7 @@ class RequisicionDialog(QDialog):
         btn_cancelar.clicked.connect(self.reject)
         
         self.btn_guardar = QPushButton("Guardar Requisición")
-        self.btn_guardar.setStyleSheet("""
-            QPushButton {
-                background-color: #1a73e8;
-                color: white;
-                padding: 10px 30px;
-                border-radius: 5px;
-                font-weight: bold;
-            }
-        """)
+        style_button(self.btn_guardar, 'add', "Guardar Requisición")
         self.btn_guardar.clicked.connect(self.guardar_requisicion)
         
         btn_layout.addWidget(btn_cancelar)
@@ -271,7 +244,7 @@ class RequisicionDialog(QDialog):
             empresa = self.session.query(Empresa).get(almacen.empresa_id)
 
             # Para la edición, calculamos el costo basado en la cantidad original
-            costo_unitario, costo_total = self.calcular_costo_salida(
+            costo_unitario, costo_total = self.kardex_manager.calcular_costo_salida(
                 empresa, det_obj.producto_id, det_obj.almacen_id, float(det_obj.cantidad)
             )
 
@@ -494,7 +467,7 @@ class RequisicionDialog(QDialog):
         producto = self.session.query(Producto).get(prod_id)
         
         empresa = self.session.query(Empresa).get(almacen.empresa_id)
-        costo_unitario, costo_total = self.calcular_costo_salida(
+        costo_unitario, costo_total = self.kardex_manager.calcular_costo_salida(
             empresa, prod_id, alm_id, cantidad
         )
 
@@ -587,13 +560,13 @@ class RequisicionDialog(QDialog):
                 detalle_obj = self.session.get(RequisicionDetalle, detalle_id)
                 if detalle_obj:
                     almacen = self.session.get(Almacen, detalle_obj.almacen_id)
-                    costo_unitario, costo_total = self.calcular_costo_salida(
+                    costo_unitario, costo_total = self.kardex_manager.calcular_costo_salida(
                         self.session.get(Empresa, almacen.empresa_id),
                         detalle_obj.producto_id,
                         detalle_obj.almacen_id,
                         float(detalle_obj.cantidad)
                     )
-                    self._registrar_movimiento(
+                    self.kardex_manager.registrar_movimiento(
                         empresa_id=almacen.empresa_id,
                         producto_id=detalle_obj.producto_id,
                         almacen_id=detalle_obj.almacen_id,
@@ -621,13 +594,13 @@ class RequisicionDialog(QDialog):
 
                 if diferencia != 0:
                     almacen = self.session.get(Almacen, detalle_obj.almacen_id)
-                    costo_unitario, costo_total_dif = self.calcular_costo_salida(
+                    costo_unitario, costo_total_dif = self.kardex_manager.calcular_costo_salida(
                         self.session.get(Empresa, almacen.empresa_id),
                         detalle_obj.producto_id,
                         detalle_obj.almacen_id,
                         float(abs(diferencia))
                     )
-                    self._registrar_movimiento(
+                    self.kardex_manager.registrar_movimiento(
                         empresa_id=almacen.empresa_id,
                         producto_id=detalle_obj.producto_id,
                         almacen_id=detalle_obj.almacen_id,
@@ -671,11 +644,11 @@ class RequisicionDialog(QDialog):
 
         almacen = self.session.query(Almacen).get(det_dict['almacen_id'])
         empresa = self.session.query(Empresa).get(almacen.empresa_id)
-        costo_unitario, costo_total = self.calcular_costo_salida(
+        costo_unitario, costo_total = self.kardex_manager.calcular_costo_salida(
             empresa, det_dict['producto_id'], det_dict['almacen_id'], det_dict['cantidad']
         )
 
-        self._registrar_movimiento(
+        self.kardex_manager.registrar_movimiento(
             empresa_id=almacen.empresa_id,
             producto_id=det_dict['producto_id'],
             almacen_id=det_dict['almacen_id'],
@@ -690,74 +663,6 @@ class RequisicionDialog(QDialog):
             observaciones=observacion
         )
 
-    def _registrar_movimiento(self, *, empresa_id, producto_id, almacen_id, tipo,
-                              cantidad_entrada, cantidad_salida, costo_unitario,
-                              costo_total, numero_documento, fecha_documento,
-                              destino_id=None, observaciones=""):
-        """
-        Busca el último saldo, calcula el nuevo y registra un movimiento de stock.
-        """
-        ultimo_mov = self.session.query(MovimientoStock).filter_by(
-            empresa_id=empresa_id,
-            producto_id=producto_id,
-            almacen_id=almacen_id
-        ).order_by(MovimientoStock.id.desc()).first()
-
-        saldo_anterior_cant = Decimal(str(ultimo_mov.saldo_cantidad)) if ultimo_mov else Decimal('0')
-        saldo_anterior_costo = Decimal(str(ultimo_mov.saldo_costo_total)) if ultimo_mov else Decimal('0')
-
-        # Calcular nuevo saldo de cantidad
-        nuevo_saldo_cant = saldo_anterior_cant + Decimal(str(cantidad_entrada)) - Decimal(str(cantidad_salida))
-
-        # Calcular nuevo saldo de costo
-        nuevo_saldo_costo = saldo_anterior_costo
-        if cantidad_entrada > 0:
-            nuevo_saldo_costo += Decimal(str(costo_total))
-        elif cantidad_salida > 0:
-            nuevo_saldo_costo -= Decimal(str(costo_total))
-
-        # Crear la instancia del movimiento
-        movimiento = MovimientoStock(
-            empresa_id=empresa_id,
-            producto_id=producto_id,
-            almacen_id=almacen_id,
-            tipo=tipo,
-            numero_documento=numero_documento,
-            fecha_documento=fecha_documento,
-            destino_id=destino_id,
-            cantidad_entrada=float(cantidad_entrada),
-            cantidad_salida=float(cantidad_salida),
-            costo_unitario=float(costo_unitario),
-            costo_total=float(costo_total),
-            saldo_cantidad=float(nuevo_saldo_cant),
-            saldo_costo_total=float(nuevo_saldo_costo),
-            observaciones=observaciones
-        )
-        self.session.add(movimiento)
-
-    def calcular_costo_salida(self, empresa, producto_id, almacen_id, cantidad):
-        """
-        Calcula el costo de salida según el método de valuación
-        Retorna (costo_unitario, costo_total)
-        """
-        # Para simplificar, usamos promedio ponderado
-        # En producción, deberías implementar los 3 métodos
-        ultimo_mov = self.session.query(MovimientoStock).filter_by(
-            empresa_id=empresa.id,
-            producto_id=producto_id,
-            almacen_id=almacen_id
-        ).order_by(MovimientoStock.id.desc()).first()
-        
-        if ultimo_mov and ultimo_mov.saldo_cantidad > 0:
-            costo_unitario = Decimal(str(ultimo_mov.saldo_costo_total)) / Decimal(str(ultimo_mov.saldo_cantidad))
-        else:
-            costo_unitario = Decimal('0')
-        
-        costo_total = costo_unitario * Decimal(str(cantidad))
-        
-        return float(costo_unitario), float(costo_total)
-
-
 class RequisicionesWindow(QWidget):
     """Ventana principal de requisiciones"""
     
@@ -766,6 +671,7 @@ class RequisicionesWindow(QWidget):
         self.session = obtener_session()
         self.user_info = user_info
         self.requisiciones_mostradas = []
+        self.kardex_manager = KardexManager(self.session)
         self.init_ui()
         self.cargar_requisiciones()
 
@@ -958,12 +864,11 @@ class RequisicionesWindow(QWidget):
                 almacen = self.session.get(Almacen, detalle.almacen_id)
                 empresa = self.session.get(Empresa, almacen.empresa_id)
 
-                costo_unitario, costo_total = RequisicionDialog.calcular_costo_salida(
-                    self, empresa, detalle.producto_id, detalle.almacen_id, float(detalle.cantidad)
+                costo_unitario, costo_total = self.kardex_manager.calcular_costo_salida(
+                    empresa, detalle.producto_id, detalle.almacen_id, float(detalle.cantidad)
                 )
 
-                RequisicionDialog._registrar_movimiento(
-                    self,
+                self.kardex_manager.registrar_movimiento(
                     empresa_id=almacen.empresa_id,
                     producto_id=detalle.producto_id,
                     almacen_id=detalle.almacen_id,
