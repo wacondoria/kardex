@@ -22,6 +22,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from models.database_model import (obtener_session, Producto, Empresa, Almacen,
                                    MovimientoStock, Moneda, MetodoValuacion, AnioContable)
 from utils.widgets import SearchableComboBox
+from utils.report_utils import BaseReport
+from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
+from reportlab.lib.units import cm
 
 
 class KardexWindow(QWidget):
@@ -139,9 +144,22 @@ class KardexWindow(QWidget):
             }
         """)
         btn_exportar.clicked.connect(self.exportar_excel)
+
+        btn_exportar_pdf = QPushButton("📄 Exportar PDF")
+        btn_exportar_pdf.setStyleSheet("""
+            QPushButton {
+                background-color: #d93025;
+                color: white;
+                padding: 10px 30px;
+                border-radius: 5px;
+                font-weight: bold;
+            }
+        """)
+        btn_exportar_pdf.clicked.connect(self.exportar_pdf)
         
         btn_layout.addWidget(btn_generar)
         btn_layout.addWidget(btn_exportar)
+        btn_layout.addWidget(btn_exportar_pdf)
         btn_layout.addStretch()
         
         filtros_layout.addLayout(btn_layout)
@@ -596,6 +614,80 @@ class KardexWindow(QWidget):
             
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error al exportar:\n{str(e)}")
+
+    def exportar_pdf(self):
+        """Exporta el kardex a PDF"""
+        if not self.movimientos:
+            QMessageBox.warning(self, "Error", "Genere primero el kardex")
+            return
+
+        archivo, _ = QFileDialog.getSaveFileName(
+            self,
+            "Guardar Kardex en PDF",
+            f"kardex_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+            "PDF (*.pdf)"
+        )
+
+        if not archivo:
+            return
+
+        try:
+            # Info para el reporte
+            fecha_desde = self.date_desde.date().toString("dd/MM/yyyy")
+            fecha_hasta = self.date_hasta.date().toString("dd/MM/yyyy")
+            periodo = f"Del {fecha_desde} al {fecha_hasta}"
+
+            producto_texto = self.cmb_producto.currentText()
+            almacen_texto = self.cmb_almacen.currentText()
+            moneda_texto = self.cmb_moneda_vista.currentText()
+
+            filtros = {
+                "Producto": producto_texto,
+                "Almacén": almacen_texto,
+                "Moneda": moneda_texto
+            }
+
+            report = BaseReport(archivo, "KARDEX FÍSICO VALORIZADO", periodo, filtros)
+
+            # === Contenido del reporte ===
+            styles = getSampleStyleSheet()
+
+            # Tabla de datos
+            data = [
+                ["Fecha", "Documento", "Detalle", "Entrada", "Salida", "Saldo"]
+            ]
+
+            for mov in self.movimientos:
+                fecha = mov.fecha_documento.strftime('%d/%m/%Y')
+                doc = f"{mov.tipo_documento.value if mov.tipo_documento else ''} {mov.numero_documento or ''}"
+                detalle = mov.tipo.value
+
+                entrada = f"{mov.cantidad_entrada:.2f}" if mov.cantidad_entrada > 0 else ""
+                salida = f"{mov.cantidad_salida:.2f}" if mov.cantidad_salida > 0 else ""
+                saldo = f"{getattr(mov, 'saldo_cantidad_calculado', mov.saldo_cantidad):.2f}"
+
+                data.append([fecha, doc, detalle, entrada, salida, saldo])
+
+            table = Table(data, colWidths=[2*cm, 3.5*cm, 4*cm, 2*cm, 2*cm, 2*cm])
+
+            style = TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1a73e8')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ])
+            table.setStyle(style)
+
+            report.elements.append(table)
+            report.generate_report()
+
+            QMessageBox.information(self, "Éxito", f"Kardex exportado a PDF:\n{archivo}")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error al exportar a PDF:\n{str(e)}")
 
 
 # PRUEBA STANDALONE

@@ -12,6 +12,8 @@ class _AppContext:
         self.user_info = None
         self.selected_year = None
         self.main_window = None
+        self.session = None
+        self.empresa = None
 
     def set_user_info(self, user_info):
         """Guarda la información del usuario logueado."""
@@ -37,6 +39,22 @@ class _AppContext:
     def get_main_window(self):
         """Devuelve la referencia a la ventana principal."""
         return self.main_window
+
+    def set_session(self, session):
+        """Guarda la sesión de SQLAlchemy."""
+        self.session = session
+
+    def get_session(self):
+        """Devuelve la sesión de SQLAlchemy."""
+        return self.session
+
+    def set_empresa(self, empresa):
+        """Guarda la empresa seleccionada."""
+        self.empresa = empresa
+
+    def get_empresa(self):
+        """Devuelve la empresa seleccionada."""
+        return self.empresa
 
 # Instancia única (Singleton) que será importada por otras partes de la app.
 # Ejemplo de uso: from utils.app_context import app_context

@@ -151,6 +151,18 @@ class LoginWindow(QWidget):
                 self.txt_password.clear()
                 return
 
+            # --- MODIFICACIÓN: Guardar sesión y empresa en AppContext ---
+            app_context.set_session(self.session)
+
+            # Obtener la primera empresa asignada al usuario
+            empresa_asignada = user.empresas_asignadas[0].empresa if user.empresas_asignadas else None
+            if not empresa_asignada:
+                QMessageBox.critical(self, "Error de Configuración",
+                                     "El usuario no tiene una empresa asignada. Contacte al administrador.")
+                return
+            app_context.set_empresa(empresa_asignada)
+            # --- FIN MODIFICACIÓN ---
+
             user.ultimo_acceso = datetime.now()
             self.session.commit()
 
