@@ -42,7 +42,7 @@ from utils.themes import get_theme_stylesheet
 
 # --- MODIFICADO: Añadida función de migración de BD ---
 from sqlalchemy import create_engine, inspect, text
-from models.database_model import AnioContable, EstadoAnio, Compra
+from models.database_model import AnioContable, EstadoAnio, Compra, Rol, Permiso, Usuario, rol_permisos
 from datetime import datetime
 from collections import defaultdict
 
@@ -227,6 +227,53 @@ def verificar_y_actualizar_db(db_url='sqlite:///kardex.db'):
             print("✓  Columna 'motivo_ajuste_id' añadida a 'movimientos_stock' exitosamente.")
     except Exception as e:
         print(f"🔷 Info: Tabla 'movimientos_stock' probablemente no existe aún. Se creará más tarde. ({e})")
+
+    # 10. Verificar y crear tablas de Roles y Permisos
+    try:
+        if not inspector.has_table('roles'):
+            print("⚠️  Detectado sistema de roles antiguo. Creando tablas de Roles y Permisos...")
+            Rol.__table__.create(engine)
+            Permiso.__table__.create(engine)
+            rol_permisos.create(engine)
+            print("✓  Tablas 'roles', 'permisos' y 'rol_permisos' creadas exitosamente.")
+
+            # Poblar datos iniciales de roles y permisos
+            with sessionmaker(bind=engine)() as session:
+                from werkzeug.security import generate_password_hash
+                print("ℹ️  Poblando roles y permisos por defecto...")
+
+                permisos = {
+                    'acceso_total': Permiso(clave='acceso_total', descripcion='Acceso sin restricciones a todas las funcionalidades.'),
+                    'ver_dashboard': Permiso(clave='ver_dashboard', descripcion='Ver el panel principal.'),
+                    'gestionar_compras': Permiso(clave='gestionar_compras', descripcion='Crear, ver y editar compras.'),
+                    'gestionar_ventas': Permiso(clave='gestionar_ventas', descripcion='Crear, ver y editar ventas.'),
+                    'gestionar_requisiciones': Permiso(clave='gestionar_requisiciones', descripcion='Crear, ver y editar requisiciones.'),
+                    'gestionar_inventario': Permiso(clave='gestionar_inventario', descripcion='Gestionar productos, categorías y ajustes.'),
+                    'ver_reportes': Permiso(clave='ver_reportes', descripcion='Acceder y generar reportes.'),
+                    'gestionar_usuarios': Permiso(clave='gestionar_usuarios', descripcion='Crear, editar y eliminar usuarios y roles.'),
+                    'configuracion_sistema': Permiso(clave='configuracion_sistema', descripcion='Acceder a la configuración del sistema.')
+                }
+                for permiso in permisos.values():
+                    session.add(permiso)
+
+                rol_admin = Rol(nombre='Administrador', descripcion='Acceso total al sistema.', permisos=list(permisos.values()))
+                rol_supervisor = Rol(nombre='Supervisor', descripcion='Acceso a módulos de gestión y reportes.', permisos=[permisos['ver_dashboard'], permisos['gestionar_compras'], permisos['gestionar_ventas'], permisos['gestionar_requisiciones'], permisos['ver_reportes']])
+                rol_operador = Rol(nombre='Operador', descripcion='Acceso limitado a operaciones diarias.', permisos=[permisos['ver_dashboard'], permisos['gestionar_compras'], permisos['gestionar_ventas'], permisos['gestionar_requisiciones']])
+
+                session.add_all([rol_admin, rol_supervisor, rol_operador])
+                session.flush()
+
+                # Asignar rol de Administrador al usuario 'admin' si existe
+                admin_user = session.query(Usuario).filter_by(username='admin').first()
+                if admin_user:
+                    admin_user.rol_id = rol_admin.id
+                    print("✓  Rol 'Administrador' asignado al usuario 'admin'.")
+
+                session.commit()
+                print("✓  Datos de roles y permisos poblados exitosamente.")
+
+    except Exception as e:
+        print(f"❌ Error al crear o poblar las tablas de roles y permisos: {e}")
 
 
 class KardexMainWindow(QMainWindow):
