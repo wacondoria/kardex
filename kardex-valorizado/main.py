@@ -261,38 +261,21 @@ def verificar_y_actualizar_db(db_url='sqlite:///kardex.db'):
     except Exception as e:
         print(f"🔷 Info: Tabla 'usuarios' probablemente no existe aún. Se creará más tarde. ({e})")
 
-    # 12. Verificar tabla de asociación 'usuario_empresa'
+    # 12. Lógica de Siembra y Migración de Datos
     try:
         from models.database_model import usuario_empresa, Usuario, Empresa
+
+        # Asegurar que la tabla de asociación 'usuario_empresa' exista
         if not inspector.has_table('usuario_empresa'):
-            print("⚠️  Tabla de asociación 'usuario_empresa' no encontrada. Creándola...")
+            print("⚠️  Tabla 'usuario_empresa' no encontrada. Creándola...")
             usuario_empresa.create(engine)
-            print("✓  Tabla 'usuario_empresa' creada exitosamente.")
+            print("✓  Tabla 'usuario_empresa' creada.")
 
-            # --- Lógica de migración de datos ---
-            print("ℹ️  Verificando asignación de empresa para el usuario 'admin'...")
-            with sessionmaker(bind=engine)() as session:
-                admin_user = session.query(Usuario).filter_by(username='admin').first()
-                if admin_user and not admin_user.empresas:
-                    print("⚠️  Usuario 'admin' no tiene empresa asignada. Asignando la primera disponible...")
-                    primera_empresa = session.query(Empresa).first()
-                    if primera_empresa:
-                        admin_user.empresas.append(primera_empresa)
-                        session.commit()
-                        print(f"✓  Usuario 'admin' asignado a la empresa '{primera_empresa.razon_social}'.")
-                    else:
-                        print("❌ No se encontraron empresas para asignar al usuario 'admin'.")
-                else:
-                    print("👍 El usuario 'admin' ya tiene empresas asignadas.")
-
-    except Exception as e:
-        print(f"❌ Error al crear o migrar la tabla 'usuario_empresa': {e}")
-
-    # 13. Asegurar que exista al menos una empresa para instalaciones nuevas
-    try:
+        # Realizar siembra y migración en una sesión para garantizar consistencia
         with sessionmaker(bind=engine)() as session:
+            # Paso 1: Asegurar que exista al menos una empresa (para instalaciones nuevas)
             if session.query(Empresa).count() == 0:
-                print("⚠️  No se encontraron empresas. Creando una empresa por defecto...")
+                print("⚠️  No hay empresas en la BD. Creando una por defecto...")
                 empresa_default = Empresa(
                     ruc="12345678901",
                     razon_social="MI EMPRESA (EDITAR DATOS)",
@@ -301,9 +284,25 @@ def verificar_y_actualizar_db(db_url='sqlite:///kardex.db'):
                 )
                 session.add(empresa_default)
                 session.commit()
-                print("✓  Empresa por defecto creada exitosamente.")
+                print("✓  Empresa por defecto creada.")
+
+            # Paso 2: Asegurar que el usuario admin esté vinculado a una empresa
+            admin_user = session.query(Usuario).filter_by(username='admin').first()
+            if admin_user and not admin_user.empresas:
+                print("⚠️  Usuario 'admin' no tiene empresa. Asignando la primera disponible...")
+                primera_empresa = session.query(Empresa).first()
+                if primera_empresa:
+                    admin_user.empresas.append(primera_empresa)
+                    session.commit()
+                    print(f"✓  Usuario 'admin' asignado a '{primera_empresa.razon_social}'.")
+                else:
+                    # Este caso no debería ocurrir gracias al Paso 1, pero se incluye por seguridad
+                    print("❌ Error Crítico: No hay empresas para asignar al admin.")
+            elif admin_user:
+                print("👍  Usuario 'admin' ya tiene empresa asignada.")
+
     except Exception as e:
-        print(f"❌ Error al crear la empresa por defecto: {e}")
+        print(f"❌ Error durante la siembra y migración de datos: {e}")
 
 
 class KardexMainWindow(QMainWindow):
