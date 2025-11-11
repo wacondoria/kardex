@@ -288,6 +288,23 @@ def verificar_y_actualizar_db(db_url='sqlite:///kardex.db'):
     except Exception as e:
         print(f"❌ Error al crear o migrar la tabla 'usuario_empresa': {e}")
 
+    # 13. Asegurar que exista al menos una empresa para instalaciones nuevas
+    try:
+        with sessionmaker(bind=engine)() as session:
+            if session.query(Empresa).count() == 0:
+                print("⚠️  No se encontraron empresas. Creando una empresa por defecto...")
+                empresa_default = Empresa(
+                    ruc="12345678901",
+                    razon_social="MI EMPRESA (EDITAR DATOS)",
+                    direccion="DIRECCION DE MI EMPRESA",
+                    activo=True
+                )
+                session.add(empresa_default)
+                session.commit()
+                print("✓  Empresa por defecto creada exitosamente.")
+    except Exception as e:
+        print(f"❌ Error al crear la empresa por defecto: {e}")
+
 
 class KardexMainWindow(QMainWindow):
     """Ventana principal del sistema"""
