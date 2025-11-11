@@ -228,6 +228,27 @@ def verificar_y_actualizar_db(db_url='sqlite:///kardex.db'):
     except Exception as e:
         print(f"🔷 Info: Tabla 'movimientos_stock' probablemente no existe aún. Se creará más tarde. ({e})")
 
+    # 10. Verificar nuevas tablas del sistema de Roles y Permisos
+    try:
+        from models.database_model import Rol, Permiso, rol_permisos
+        tablas_roles = {
+            'roles': Rol,
+            'permisos': Permiso
+        }
+        for nombre_tabla, modelo_tabla in tablas_roles.items():
+            if not inspector.has_table(nombre_tabla):
+                print(f"⚠️  Tabla '{nombre_tabla}' del sistema de roles no encontrada. Creándola...")
+                modelo_tabla.__table__.create(engine)
+                print(f"✓  Tabla '{nombre_tabla}' creada exitosamente.")
+
+        if not inspector.has_table('rol_permisos'):
+            print(f"⚠️  Tabla de asociación 'rol_permisos' no encontrada. Creándola...")
+            rol_permisos.create(engine)
+            print(f"✓  Tabla 'rol_permisos' creada exitosamente.")
+
+    except Exception as e:
+        print(f"❌ Error al crear las tablas del sistema de roles: {e}")
+
 
 class KardexMainWindow(QMainWindow):
     """Ventana principal del sistema"""
