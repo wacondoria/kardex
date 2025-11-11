@@ -144,31 +144,37 @@ class LoginWindow(QWidget):
             return
 
         try:
-            user = self.session.query(Usuario).filter_by(username=usuario, activo=True).first()
+            user = self.session.query(Usuario).options(joinedload(Usuario.rol).joinedload(Rol.permisos)).filter_by(username=usuario, activo=True).first()
 
             if not user or not check_password_hash(user.password_hash, password):
                 QMessageBox.critical(self, "Error de autenticación", "Usuario o contraseña incorrecta.")
                 self.txt_password.clear()
                 return
 
-            # --- MODIFICACIÓN: Guardar sesión y empresa en AppContext ---
+            # Cargar permisos en el app_context
+            if user.rol and user.rol.permisos:
+                permission_keys = [p.clave for p in user.rol.permisos]
+                app_context.set_user_permissions(permission_keys)
+            else:
+                app_context.set_user_permissions([]) # Sin permisos si no tiene rol
+
+            # Guardar sesión y empresa en AppContext
             app_context.set_session(self.session)
 
             # Obtener la primera empresa asignada al usuario
-            empresa_asignada = user.empresas_asignadas[0].empresa if user.empresas_asignadas else None
-            if not empresa_asignada:
+            if not user.empresas:
                 QMessageBox.critical(self, "Error de Configuración",
                                      "El usuario no tiene una empresa asignada. Contacte al administrador.")
                 return
+            empresa_asignada = user.empresas[0]
             app_context.set_empresa(empresa_asignada)
-            # --- FIN MODIFICACIÓN ---
 
             user.ultimo_acceso = datetime.now()
             self.session.commit()
 
             self.user_info = {
                 'id': user.id, 'username': user.username, 'nombre_completo': user.nombre_completo,
-                'rol': user.rol.value, 'email': user.email,
+                'rol': user.rol.nombre if user.rol else 'Sin Rol', 'email': user.email,
                 'licencia_vencida': self.verificar_licencia_activa()
             }
 
