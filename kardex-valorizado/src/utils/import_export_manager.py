@@ -13,7 +13,8 @@ from openpyxl.styles import Font, Alignment, PatternFill
 from openpyxl.worksheet.datavalidation import DataValidation
 
 from models.database_model import (obtener_session, Proveedor, Producto, Compra,
-                                   Categoria, TipoCambio, TipoDocumento, Moneda)
+                                   Venta, Cliente, Categoria, TipoCambio,
+                                   TipoDocumento, Moneda)
 
 # Definición de unidades SUNAT
 UNIDADES_SUNAT = [
@@ -36,6 +37,8 @@ class ImportExportManager:
             self._generar_plantilla_productos()
         elif modulo == "Compras":
             self._generar_plantilla_compras()
+        elif modulo == "Ventas":
+            self._generar_plantilla_ventas()
         elif modulo == "Tipo de Cambio":
             self._generar_plantilla_tipo_cambio()
         else:
@@ -49,6 +52,8 @@ class ImportExportManager:
             self._importar_datos_productos()
         elif modulo == "Compras":
             self._importar_datos_compras()
+        elif modulo == "Ventas":
+            self._importar_datos_ventas()
         elif modulo == "Tipo de Cambio":
             self._importar_datos_tipo_cambio()
         else:
@@ -352,6 +357,118 @@ class ImportExportManager:
         except Exception as e:
             self.session.rollback()
             QMessageBox.critical(self.parent, "Error Crítico", f"Ocurrió un error inesperado:\n{str(e)}")
+        finally:
+            self.session.close()
+
+    def _generar_plantilla_ventas(self):
+        """Genera una plantilla Excel para la importación masiva de cabeceras de venta."""
+        path, _ = QFileDialog.getSaveFileName(
+            self.parent, "Guardar Plantilla de Ventas",
+            "plantilla_ventas.xlsx", "Archivos de Excel (*.xlsx)"
+        )
+        if not path: return
+
+        try:
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Ventas"
+            headers = ["NUMERO_PROCESO_CORRELATIVO", "RUC_CLIENTE", "FECHA_EMISION (dd/mm/aaaa)", "FECHA_CONTABLE (dd/mm/aaaa)", "TIPO_DOC", "SERIE", "NUMERO"]
+            ws.append(headers)
+
+            header_font = Font(bold=True, color="FFFFFF")
+            header_fill = PatternFill(start_color="FF1D6F42", end_color="FF1D6F42", fill_type="solid")
+            for cell in ws[1]:
+                cell.font, cell.fill = header_font, header_fill
+
+            clientes = self.session.query(Cliente).filter_by(activo=True).all()
+            if clientes and len(clientes) < 200:
+                rucs = [c.ruc_o_dni for c in clientes]
+                dv_ruc = DataValidation(type="list", formula1=f'"{",".join(rucs)}"', allow_blank=False)
+                ws.add_data_validation(dv_ruc)
+                dv_ruc.add('B2:B1000')
+
+            tipos_doc_venta = ["FACTURA", "BOLETA", "NOTA_VENTA"]
+            dv_tipo = DataValidation(type="list", formula1=f'"{",".join(tipos_doc_venta)}"', allow_blank=False)
+            ws.add_data_validation(dv_tipo)
+            dv_tipo.add('E2:E1000')
+
+            ws_inst = wb.create_sheet(title="Instrucciones")
+            ws_inst.append(["Columna", "Descripción", "Obligatorio"])
+            ws_inst.append(["NUMERO_PROCESO_CORRELATIVO", "Correlativo numérico. El sistema generará el formato completo 05MMNNNNNN.", "Sí"])
+            ws_inst.append(["RUC_CLIENTE", "RUC o DNI del cliente. Debe existir en la base de datos.", "Sí"])
+            ws_inst.append(["FECHA_EMISION (dd/mm/aaaa)", "Fecha de la venta.", "Sí"])
+            ws_inst.append(["FECHA_CONTABLE (dd/mm/aaaa)", "Fecha del periodo contable.", "Sí"])
+            ws_inst.append(["TIPO_DOC", "Tipo de documento (FACTURA, BOLETA, NOTA_VENTA).", "Sí"])
+            ws_inst.append(["SERIE", "Serie del documento (Ej: F001, B001, NV01).", "Sí"])
+            ws_inst.append(["NUMERO", "Número del documento (Ej: 1234).", "Sí"])
+
+            wb.save(path)
+            QMessageBox.information(self.parent, "Éxito", f"Plantilla guardada en:\n{path}")
+        except Exception as e:
+            QMessageBox.critical(self.parent, "Error", f"No se pudo generar la plantilla:\n{str(e)}")
+
+    def _importar_datos_ventas(self):
+        """Importa cabeceras de venta desde un archivo Excel."""
+        path, _ = QFileDialog.getOpenFileName(
+            self.parent, "Abrir Plantilla de Ventas", "", "Archivos de Excel (*.xlsx *.xls)"
+        )
+        if not path: return
+
+        try:
+            wb = load_workbook(path, data_only=True)
+            if "Ventas" not in wb.sheetnames:
+                raise ValueError("No se encontró la hoja 'Ventas'.")
+
+            ws = wb["Ventas"]
+            expected_headers = ["NUMERO_PROCESO_CORRELATIVO", "RUC_CLIENTE", "FECHA_EMISION (DD/MM/AAAA)", "FECHA_CONTABLE (DD/MM/AAAA)", "TIPO_DOC", "SERIE", "NUMERO"]
+            actual_headers = [str(cell.value).upper().strip() for cell in ws[1] if cell.value is not None]
+            if not all(eh.split(' (')[0] in [ah.split(' (')[0] for ah in actual_headers] for eh in expected_headers):
+                 raise ValueError("Los encabezados del Excel no son correctos.")
+
+            ventas_a_crear, errores = [], []
+            clientes_db = {c.ruc_o_dni: c.id for c in self.session.query(Cliente).filter_by(activo=True).all()}
+            documentos_db = {(v.cliente_id, v.serie_documento, v.correlativo_documento) for v in self.session.query(Venta.cliente_id, Venta.serie_documento, Venta.correlativo_documento).all()}
+
+            for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+                if all(c is None for c in row): continue
+                try:
+                    correlativo, ruc, fecha_emision, fecha_contable, tipo_doc, serie, numero = row[:7]
+                    if not all([correlativo, ruc, fecha_emision, fecha_contable, tipo_doc, serie, numero]):
+                        raise ValueError("Faltan datos obligatorios.")
+
+                    cliente_id = clientes_db.get(str(ruc).strip())
+                    if not cliente_id: raise ValueError(f"Cliente con RUC/DNI '{ruc}' no encontrado.")
+
+                    fecha_e = (fecha_emision if isinstance(fecha_emision, datetime) else datetime.strptime(str(fecha_emision).split(" ")[0], "%d/%m/%Y")).date()
+                    fecha_c = (fecha_contable if isinstance(fecha_contable, datetime) else datetime.strptime(str(fecha_contable).split(" ")[0], "%d/%m/%Y")).date()
+
+                    n_proceso = f"05{fecha_c.month:02d}{int(correlativo):06d}"
+                    serie_doc, num_doc = str(serie).strip().upper(), str(numero).strip().zfill(8)
+
+                    if (cliente_id, serie_doc, num_doc) in documentos_db:
+                        raise ValueError(f"Documento {serie_doc}-{num_doc} para este cliente ya existe.")
+
+                    ventas_a_crear.append(Venta(
+                        numero_proceso=n_proceso, cliente_id=cliente_id, fecha=fecha_e, fecha_registro_contable=fecha_c,
+                        tipo_documento=TipoDocumento[tipo_doc.strip().upper()], serie_documento=serie_doc, correlativo_documento=num_doc,
+                        moneda=Moneda.SOLES, tipo_cambio=Decimal('1.0'), incluye_igv=False,
+                        igv_porcentaje=Decimal('18.0'), subtotal=Decimal('0.0'), igv=Decimal('0.0'), total=Decimal('0.0')
+                    ))
+                except Exception as e:
+                    errores.append(f"Fila {row_idx}: {str(e)}")
+
+            if errores:
+                self._mostrar_reporte_importacion(0, 0, errores)
+            elif ventas_a_crear:
+                self.session.add_all(ventas_a_crear)
+                self.session.commit()
+                self._mostrar_reporte_importacion(len(ventas_a_crear), 0, [])
+            else:
+                QMessageBox.warning(self.parent, "Archivo Vacío", "No se encontraron datos válidos.")
+
+        except Exception as e:
+            self.session.rollback()
+            QMessageBox.critical(self.parent, "Error Crítico", f"Ocurrió un error:\n{str(e)}")
         finally:
             self.session.close()
 

@@ -18,9 +18,11 @@ from views.login_window import LoginWindow
 from utils.app_context import app_context
 from views.productos_window import ProductosWindow
 from views.proveedores_window import ProveedoresWindow
+from views.clientes_window import ClientesWindow
 from views.empresas_window import EmpresasWindow
 from views.tipo_cambio_window import TipoCambioWindow
 from views.compras_window import ComprasWindow
+from views.ventas_window import VentasWindow
 from views.kardex_window import KardexWindow
 from views.backup_window import BackupWindow
 from views.requisiciones_window import RequisicionesWindow
@@ -166,6 +168,36 @@ def verificar_y_actualizar_db(db_url='sqlite:///kardex.db'):
     except Exception as e:
         print(f"🔷 Info: Tabla 'compras' probablemente no existe aún. Se creará más tarde. ({e})")
 
+    # 6. Verificar nuevas tablas del módulo de Ventas
+    try:
+        from models.database_model import Cliente, Venta, VentaDetalle, SerieCorrelativo
+        tablas_ventas = {
+            'clientes': Cliente,
+            'ventas': Venta,
+            'venta_detalles': VentaDetalle,
+            'serie_correlativos': SerieCorrelativo
+        }
+        for nombre_tabla, modelo_tabla in tablas_ventas.items():
+            if not inspector.has_table(nombre_tabla):
+                print(f"⚠️  Tabla '{nombre_tabla}' del módulo de ventas no encontrada. Creándola...")
+                modelo_tabla.__table__.create(engine)
+                print(f"✓  Tabla '{nombre_tabla}' creada exitosamente.")
+    except Exception as e:
+        print(f"❌ Error al crear las tablas del módulo de ventas: {e}")
+
+    # 7. Verificar columna 'cliente_id' en 'movimientos_stock'
+    try:
+        columns = [col['name'] for col in inspector.get_columns('movimientos_stock')]
+        if 'cliente_id' not in columns:
+            print("⚠️  Detectado modelo de 'movimientos_stock' antiguo. Actualizando BD...")
+            with engine.connect() as connection:
+                connection.execute(text("ALTER TABLE movimientos_stock ADD COLUMN cliente_id INTEGER REFERENCES clientes(id)"))
+                connection.commit()
+            print("✓  Columna 'cliente_id' añadida a 'movimientos_stock' exitosamente.")
+    except Exception as e:
+        print(f"🔷 Info: Tabla 'movimientos_stock' probablemente no existe aún. Se creará más tarde. ({e})")
+
+
 class KardexMainWindow(QMainWindow):
     """Ventana principal del sistema"""
 
@@ -180,9 +212,11 @@ class KardexMainWindow(QMainWindow):
 
         self.ventana_productos = None
         self.ventana_proveedores = None
+        self.ventana_clientes = None
         self.ventana_empresas = None
         self.ventana_tipo_cambio = None
         self.ventana_compras = None
+        self.ventana_ventas = None
         self.ventana_kardex = None
         self.ventana_backup = None
         self.ventana_usuarios = None
@@ -270,6 +304,10 @@ class KardexMainWindow(QMainWindow):
         accion_proveedores.triggered.connect(self.abrir_proveedores)
         menu_maestros.addAction(accion_proveedores)
 
+        accion_clientes = QAction("👤 Clientes", self)
+        accion_clientes.triggered.connect(self.abrir_clientes)
+        menu_maestros.addAction(accion_clientes)
+
         accion_empresas = QAction("🏢 Empresas y Almacenes", self)
         accion_empresas.setShortcut("Ctrl+E")
         accion_empresas.triggered.connect(self.abrir_empresas)
@@ -290,6 +328,10 @@ class KardexMainWindow(QMainWindow):
         accion_compras.setShortcut("Ctrl+C")
         accion_compras.triggered.connect(self.abrir_compras)
         menu_operaciones.addAction(accion_compras)
+
+        accion_ventas = QAction("📦 Ventas", self)
+        accion_ventas.triggered.connect(self.abrir_ventas)
+        menu_operaciones.addAction(accion_ventas)
 
         accion_ordenes_compra = QAction("📄 Órdenes de Compra", self)
         accion_ordenes_compra.setShortcut("Ctrl+O")
@@ -358,6 +400,10 @@ class KardexMainWindow(QMainWindow):
         btn_compras.clicked.connect(self.abrir_compras)
         toolbar.addWidget(btn_compras)
 
+        btn_ventas = QPushButton("📦 Ventas")
+        btn_ventas.clicked.connect(self.abrir_ventas)
+        toolbar.addWidget(btn_ventas)
+
         btn_ordenes_compra = QPushButton("📄 Órdenes de Compra")
         btn_ordenes_compra.clicked.connect(self.abrir_ordenes_compra)
         toolbar.addWidget(btn_ordenes_compra)
@@ -417,6 +463,18 @@ class KardexMainWindow(QMainWindow):
         self.tab_widget.addTab(compras_widget, nombre_pestana)
         self.tab_widget.setCurrentWidget(compras_widget)
 
+    def abrir_ventas(self):
+        """Abre la ventana de gestión de ventas en una nueva pestaña"""
+        nombre_pestana = "Ventas"
+        for i in range(self.tab_widget.count()):
+            if self.tab_widget.tabText(i) == nombre_pestana:
+                self.tab_widget.setCurrentIndex(i)
+                return
+
+        ventas_widget = VentasWindow(self.user_info)
+        self.tab_widget.addTab(ventas_widget, nombre_pestana)
+        self.tab_widget.setCurrentWidget(ventas_widget)
+
     def abrir_tipo_cambio(self):
         """Abre la ventana de gestión de tipo de cambio"""
         if self.ventana_tipo_cambio is None:
@@ -443,6 +501,15 @@ class KardexMainWindow(QMainWindow):
         self.ventana_proveedores.show()
         self.ventana_proveedores.raise_()
         self.ventana_proveedores.activateWindow()
+
+    def abrir_clientes(self):
+        """Abre la ventana de gestión de clientes"""
+        if self.ventana_clientes is None:
+            self.ventana_clientes = ClientesWindow()
+
+        self.ventana_clientes.show()
+        self.ventana_clientes.raise_()
+        self.ventana_clientes.activateWindow()
 
     def abrir_backup(self):
         """Abre la ventana de backup"""
