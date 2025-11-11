@@ -326,6 +326,8 @@ class KardexMainWindow(QMainWindow):
         self.ventana_kardex = None
         self.ventana_backup = None
         self.ventana_seguridad = None
+        self.ventana_usuarios = None
+        self.ventana_admin_roles = None
         self.ventana_valorizacion = None
         self.ventana_requisiciones = None
         self.ventana_ordenes_compra = None
