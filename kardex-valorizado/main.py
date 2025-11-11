@@ -29,11 +29,10 @@ from views.motivos_ajuste_window import MotivosAjusteWindow
 from views.ajustes_inventario_window import AjustesInventarioWindow
 from views.requisiciones_window import RequisicionesWindow
 from views.ordenes_compra_window import OrdenesCompraWindow
-from views.usuarios_window import UsuariosWindow
+from views.seguridad_window import SeguridadWindow
 from views.valorizacion_window import ValorizacionWindow
 from views.anio_contable_window import AnioContableWindow
 from views.sistemas_importacion_window import SistemasImportacionWindow
-from views.admin_roles_window import AdminRolesWindow
 
 # --- Integración para actualización automática ---
 from utils.actualizador_tc import actualizar_tc_desde_excel
@@ -326,7 +325,7 @@ class KardexMainWindow(QMainWindow):
         self.ventana_ventas = None
         self.ventana_kardex = None
         self.ventana_backup = None
-        self.ventana_usuarios = None
+        self.ventana_seguridad = None
         self.ventana_valorizacion = None
         self.ventana_requisiciones = None
         self.ventana_ordenes_compra = None
@@ -334,7 +333,6 @@ class KardexMainWindow(QMainWindow):
         self.ventana_importacion = None
         self.ventana_motivos_ajuste = None
         self.ventana_ajustes_inventario = None
-        self.ventana_admin_roles = None
         self.init_ui()
 
     def init_ui(self):
@@ -480,15 +478,10 @@ class KardexMainWindow(QMainWindow):
         # Menú Sistema
         menu_sistema = menubar.addMenu("⚙️ Sistema")
 
-        accion_usuarios = QAction("👥 Usuarios", self)
-        accion_usuarios.setEnabled(app_context.has_permission('gestionar_usuarios'))
-        accion_usuarios.triggered.connect(self.abrir_usuarios)
-        menu_sistema.addAction(accion_usuarios)
-
-        accion_admin_roles = QAction("🔑 Roles y Permisos", self)
-        accion_admin_roles.setEnabled(app_context.has_permission('gestionar_usuarios'))
-        accion_admin_roles.triggered.connect(self.abrir_admin_roles)
-        menu_sistema.addAction(accion_admin_roles)
+        accion_seguridad = QAction("🔐 Seguridad (Usuarios y Roles)", self)
+        accion_seguridad.setEnabled(app_context.has_permission('gestionar_usuarios'))
+        accion_seguridad.triggered.connect(self.abrir_seguridad)
+        menu_sistema.addAction(accion_seguridad)
 
         accion_admin_anios = QAction("🗓️ Administración de Años", self)
         accion_admin_anios.setEnabled(app_context.has_permission('configuracion_sistema'))
@@ -680,18 +673,18 @@ class KardexMainWindow(QMainWindow):
         self.tab_widget.addTab(ordenes_compra_widget, nombre_pestana)
         self.tab_widget.setCurrentWidget(ordenes_compra_widget)
 
-    def abrir_usuarios(self):
-        """Abre la ventana de gestión de usuarios"""
+    def abrir_seguridad(self):
+        """Abre la ventana de gestión de seguridad (usuarios y roles)"""
         if not app_context.has_permission('gestionar_usuarios'):
-            QMessageBox.warning(self, "Acceso Denegado", "No tienes permiso para gestionar usuarios.")
+            QMessageBox.warning(self, "Acceso Denegado", "No tienes permiso para gestionar la seguridad.")
             return
 
-        if self.ventana_usuarios is None:
-            self.ventana_usuarios = UsuariosWindow()
+        if self.ventana_seguridad is None:
+            self.ventana_seguridad = SeguridadWindow()
 
-        self.ventana_usuarios.show()
-        self.ventana_usuarios.raise_()
-        self.ventana_usuarios.activateWindow()
+        self.ventana_seguridad.show()
+        self.ventana_seguridad.raise_()
+        self.ventana_seguridad.activateWindow()
 
     def abrir_valorizacion(self):
         """Abre la ventana de valorización de inventario en una nueva pestaña"""
@@ -751,15 +744,6 @@ class KardexMainWindow(QMainWindow):
         ajustes_widget = AjustesInventarioWindow(self.user_info)
         self.tab_widget.addTab(ajustes_widget, nombre_pestana)
         self.tab_widget.setCurrentWidget(ajustes_widget)
-
-    def abrir_admin_roles(self):
-        """Abre la ventana de administración de roles y permisos."""
-        if self.ventana_admin_roles is None:
-            self.ventana_admin_roles = AdminRolesWindow()
-
-        self.ventana_admin_roles.show()
-        self.ventana_admin_roles.raise_()
-        self.ventana_admin_roles.activateWindow()
 
 
 def main():
