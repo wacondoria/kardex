@@ -263,13 +263,30 @@ def verificar_y_actualizar_db(db_url='sqlite:///kardex.db'):
 
     # 12. Verificar tabla de asociación 'usuario_empresa'
     try:
-        from models.database_model import usuario_empresa
+        from models.database_model import usuario_empresa, Usuario, Empresa
         if not inspector.has_table('usuario_empresa'):
             print("⚠️  Tabla de asociación 'usuario_empresa' no encontrada. Creándola...")
             usuario_empresa.create(engine)
             print("✓  Tabla 'usuario_empresa' creada exitosamente.")
+
+            # --- Lógica de migración de datos ---
+            print("ℹ️  Verificando asignación de empresa para el usuario 'admin'...")
+            with sessionmaker(bind=engine)() as session:
+                admin_user = session.query(Usuario).filter_by(username='admin').first()
+                if admin_user and not admin_user.empresas:
+                    print("⚠️  Usuario 'admin' no tiene empresa asignada. Asignando la primera disponible...")
+                    primera_empresa = session.query(Empresa).first()
+                    if primera_empresa:
+                        admin_user.empresas.append(primera_empresa)
+                        session.commit()
+                        print(f"✓  Usuario 'admin' asignado a la empresa '{primera_empresa.razon_social}'.")
+                    else:
+                        print("❌ No se encontraron empresas para asignar al usuario 'admin'.")
+                else:
+                    print("👍 El usuario 'admin' ya tiene empresas asignadas.")
+
     except Exception as e:
-        print(f"❌ Error al crear la tabla 'usuario_empresa': {e}")
+        print(f"❌ Error al crear o migrar la tabla 'usuario_empresa': {e}")
 
 
 class KardexMainWindow(QMainWindow):
