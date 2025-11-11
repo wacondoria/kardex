@@ -100,7 +100,7 @@ class Empresa(Base):
     almacenes = relationship("Almacen", back_populates="empresa")
     movimientos = relationship("MovimientoStock", back_populates="empresa")
     ordenes_compra = relationship("OrdenCompra", back_populates="empresa")
-    usuarios = relationship("Usuario", secondary="usuario_empresa")
+    usuarios = relationship("Usuario", secondary="usuario_empresa", back_populates="empresas")
 
 # ============================================
 # TABLA: ALMACENES
@@ -711,7 +711,7 @@ class Usuario(Base):
     
     # Relaciones
     acciones_auditoria = relationship("Auditoria", back_populates="usuario")
-    empresas = relationship("Empresa", secondary="usuario_empresa")
+    empresas = relationship("Empresa", secondary="usuario_empresa", back_populates="usuarios")
 
 # ============================================
 # TABLA DE ASOCIACIÓN: USUARIO - EMPRESA
