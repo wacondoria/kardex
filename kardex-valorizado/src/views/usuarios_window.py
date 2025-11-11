@@ -17,8 +17,8 @@ from datetime import datetime
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from models.database_model import (obtener_session, Usuario, RolUsuario, 
-                                   Empresa, UsuarioEmpresa)
+from models.database_model import (obtener_session, Usuario, Rol,
+                                   Empresa)
 from utils.widgets import UpperLineEdit
 from utils.button_utils import style_button
 
@@ -122,9 +122,9 @@ class UsuarioDialog(QDialog):
         
         # Rol
         self.cmb_rol = QComboBox()
-        self.cmb_rol.addItem("👤 Operador - Solo registros básicos", RolUsuario.OPERADOR.value)
-        self.cmb_rol.addItem("👔 Supervisor - Registros y reportes", RolUsuario.SUPERVISOR.value)
-        self.cmb_rol.addItem("👑 Administrador - Acceso total", RolUsuario.ADMINISTRADOR.value)
+        roles = self.session.query(Rol).order_by(Rol.nombre).all()
+        for rol in roles:
+            self.cmb_rol.addItem(rol.nombre, rol.id)
         form_layout.addRow("Rol:*", self.cmb_rol)
         
         datos_layout.addLayout(form_layout)
@@ -133,7 +133,7 @@ class UsuarioDialog(QDialog):
         tab_datos.setLayout(datos_layout)
         tabs.addTab(tab_datos, "📋 Datos Básicos")
         
-        # === TAB 2: EMPRESAS Y PERMISOS ===
+        # === TAB 2: EMPRESAS ASIGNADAS ===
         tab_empresas = QWidget()
         empresas_layout = QVBoxLayout()
         
@@ -142,65 +142,18 @@ class UsuarioDialog(QDialog):
         empresas_layout.addWidget(info_label)
         
         # Lista de empresas con checkboxes
-        self.lista_empresas = []
+        self.lista_empresas_chks = []
         empresas = self.session.query(Empresa).filter_by(activo=True).all()
         
         for emp in empresas:
-            grupo_empresa = QGroupBox(f"🏢 {emp.razon_social}")
-            grupo_layout = QVBoxLayout()
-            
-            chk_acceso = QCheckBox("✓ Tiene acceso a esta empresa")
-            chk_acceso.setStyleSheet("font-weight: bold; color: #1a73e8;")
-            
-            # Permisos específicos
-            permisos_layout = QHBoxLayout()
-            
-            chk_registrar = QCheckBox("Puede registrar")
-            chk_registrar.setChecked(True)
-            
-            chk_modificar = QCheckBox("Puede modificar")
-            
-            chk_eliminar = QCheckBox("Puede eliminar")
-            
-            chk_reportes = QCheckBox("Ver reportes")
-            chk_reportes.setChecked(True)
-            
-            # Habilitar/deshabilitar permisos según acceso
-            def toggle_permisos(estado, controles):
-                for control in controles:
-                    control.setEnabled(estado)
-            
-            controles_permisos = [chk_registrar, chk_modificar, chk_eliminar, chk_reportes]
-            chk_acceso.toggled.connect(lambda state, c=controles_permisos: toggle_permisos(state, c))
-            
-            # Inicialmente deshabilitados
-            for control in controles_permisos:
-                control.setEnabled(False)
-            
-            permisos_layout.addWidget(chk_registrar)
-            permisos_layout.addWidget(chk_modificar)
-            permisos_layout.addWidget(chk_eliminar)
-            permisos_layout.addWidget(chk_reportes)
-            permisos_layout.addStretch()
-            
-            grupo_layout.addWidget(chk_acceso)
-            grupo_layout.addLayout(permisos_layout)
-            
-            grupo_empresa.setLayout(grupo_layout)
-            empresas_layout.addWidget(grupo_empresa)
-            
-            self.lista_empresas.append({
-                'empresa_id': emp.id,
-                'chk_acceso': chk_acceso,
-                'chk_registrar': chk_registrar,
-                'chk_modificar': chk_modificar,
-                'chk_eliminar': chk_eliminar,
-                'chk_reportes': chk_reportes
-            })
+            chk_empresa = QCheckBox(f"🏢 {emp.razon_social}")
+            chk_empresa.setStyleSheet("font-weight: bold; color: #1a73e8; padding: 5px;")
+            empresas_layout.addWidget(chk_empresa)
+            self.lista_empresas_chks.append({'empresa': emp, 'checkbox': chk_empresa})
         
         empresas_layout.addStretch()
         tab_empresas.setLayout(empresas_layout)
-        tabs.addTab(tab_empresas, "🏢 Empresas y Permisos")
+        tabs.addTab(tab_empresas, "🏢 Empresas Asignadas")
         
         layout.addWidget(tabs)
         
@@ -252,28 +205,16 @@ class UsuarioDialog(QDialog):
         self.txt_email.setText(self.usuario.email or "")
         
         # Seleccionar rol
-        for i in range(self.cmb_rol.count()):
-            if self.cmb_rol.itemData(i) == self.usuario.rol.value:
-                self.cmb_rol.setCurrentIndex(i)
-                break
+        if self.usuario.rol:
+            index = self.cmb_rol.findData(self.usuario.rol.id)
+            if index != -1:
+                self.cmb_rol.setCurrentIndex(index)
         
         # Cargar empresas asignadas
-        empresas_usuario = self.session.query(UsuarioEmpresa).filter_by(
-            usuario_id=self.usuario.id
-        ).all()
-        
-        for emp_data in self.lista_empresas:
-            empresa_asignada = next(
-                (eu for eu in empresas_usuario if eu.empresa_id == emp_data['empresa_id']),
-                None
-            )
-            
-            if empresa_asignada:
-                emp_data['chk_acceso'].setChecked(True)
-                emp_data['chk_registrar'].setChecked(empresa_asignada.puede_registrar)
-                emp_data['chk_modificar'].setChecked(empresa_asignada.puede_modificar)
-                emp_data['chk_eliminar'].setChecked(empresa_asignada.puede_eliminar)
-                emp_data['chk_reportes'].setChecked(empresa_asignada.puede_ver_reportes)
+        empresas_usuario_ids = {emp.id for emp in self.usuario.empresas}
+        for item in self.lista_empresas_chks:
+            if item['empresa'].id in empresas_usuario_ids:
+                item['checkbox'].setChecked(True)
     
     def guardar(self):
         """Guarda el usuario"""
@@ -301,12 +242,14 @@ class UsuarioDialog(QDialog):
                 return
         
         # Validar que tenga al menos una empresa asignada
-        empresas_seleccionadas = [e for e in self.lista_empresas if e['chk_acceso'].isChecked()]
+        empresas_seleccionadas = [item['empresa'] for item in self.lista_empresas_chks if item['checkbox'].isChecked()]
         if not empresas_seleccionadas:
             QMessageBox.warning(self, "Error", "Debe asignar al menos una empresa al usuario")
             return
         
         try:
+            rol_id_seleccionado = self.cmb_rol.currentData()
+
             if not self.usuario:
                 # Verificar que no exista el username
                 existe = self.session.query(Usuario).filter_by(username=username).first()
@@ -320,39 +263,24 @@ class UsuarioDialog(QDialog):
                     password_hash=generate_password_hash(password),
                     nombre_completo=nombre,
                     email=self.txt_email.text().strip() or None,
-                    rol=RolUsuario(self.cmb_rol.currentData())
+                    rol_id=rol_id_seleccionado
                 )
-                
                 self.session.add(usuario)
-                self.session.flush()
-                
                 mensaje = f"Usuario '{username}' creado exitosamente"
             else:
                 # Editar existente
                 self.usuario.nombre_completo = nombre
                 self.usuario.email = self.txt_email.text().strip() or None
-                self.usuario.rol = RolUsuario(self.cmb_rol.currentData())
+                self.usuario.rol_id = rol_id_seleccionado
                 
                 if password:
                     self.usuario.password_hash = generate_password_hash(password)
                 
                 usuario = self.usuario
                 mensaje = f"Usuario '{username}' actualizado exitosamente"
-                
-                # Eliminar asignaciones anteriores
-                self.session.query(UsuarioEmpresa).filter_by(usuario_id=usuario.id).delete()
             
             # Asignar empresas
-            for emp_data in empresas_seleccionadas:
-                asignacion = UsuarioEmpresa(
-                    usuario_id=usuario.id,
-                    empresa_id=emp_data['empresa_id'],
-                    puede_registrar=emp_data['chk_registrar'].isChecked(),
-                    puede_modificar=emp_data['chk_modificar'].isChecked(),
-                    puede_eliminar=emp_data['chk_eliminar'].isChecked(),
-                    puede_ver_reportes=emp_data['chk_reportes'].isChecked()
-                )
-                self.session.add(asignacion)
+            usuario.empresas = empresas_seleccionadas
             
             self.session.commit()
             QMessageBox.information(self, "Éxito", mensaje)
@@ -483,16 +411,12 @@ class UsuariosWindow(QWidget):
             self.tabla.setItem(row, 2, QTableWidgetItem(user.email or ""))
             
             # Rol
-            rol_texto = {
-                RolUsuario.ADMINISTRADOR: "👑 Administrador",
-                RolUsuario.SUPERVISOR: "👔 Supervisor",
-                RolUsuario.OPERADOR: "👤 Operador"
-            }
-            self.tabla.setItem(row, 3, QTableWidgetItem(rol_texto[user.rol]))
+            rol_nombre = user.rol.nombre if user.rol else "Sin Asignar"
+            self.tabla.setItem(row, 3, QTableWidgetItem(f"👑 {rol_nombre}"))
             
             # Empresas asignadas
-            empresas = self.session.query(UsuarioEmpresa).filter_by(usuario_id=user.id).count()
-            self.tabla.setItem(row, 4, QTableWidgetItem(f"{empresas} empresa(s)"))
+            empresas_count = len(user.empresas)
+            self.tabla.setItem(row, 4, QTableWidgetItem(f"{empresas_count} empresa(s)"))
             
             # Estado
             estado = "✓ Activo" if user.activo else "✕ Inactivo"

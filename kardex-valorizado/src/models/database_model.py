@@ -3,7 +3,7 @@ Modelo de Base de Datos Completo - Sistema Kardex Valorizado
 SQLAlchemy ORM con SQLite
 """
 
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean, Text, ForeignKey, Date, Enum
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean, Text, ForeignKey, Date, Enum, Table
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 from datetime import datetime
@@ -51,11 +51,6 @@ class EstadoOrden(enum.Enum):
     PARCIAL = "PARCIAL"
     COMPLETA = "COMPLETA"
     ANULADA = "ANULADA"
-
-class RolUsuario(enum.Enum):
-    ADMINISTRADOR = "ADMINISTRADOR"
-    SUPERVISOR = "SUPERVISOR"
-    OPERADOR = "OPERADOR"
 
 class EstadoAnio(enum.Enum):
     ABIERTO = "Abierto"
@@ -105,7 +100,7 @@ class Empresa(Base):
     almacenes = relationship("Almacen", back_populates="empresa")
     movimientos = relationship("MovimientoStock", back_populates="empresa")
     ordenes_compra = relationship("OrdenCompra", back_populates="empresa")
-    usuarios_asignados = relationship("UsuarioEmpresa", back_populates="empresa")
+    usuarios = relationship("Usuario", secondary="usuario_empresa")
 
 # ============================================
 # TABLA: ALMACENES
@@ -661,6 +656,39 @@ class MovimientoStock(Base):
     almacen = relationship("Almacen", back_populates="movimientos")
 
 # ============================================
+# TABLAS: ROLES Y PERMISOS
+# ============================================
+
+# Tabla de Asociación Rol-Permiso
+rol_permisos = Table('rol_permisos', Base.metadata,
+    Column('rol_id', Integer, ForeignKey('roles.id'), primary_key=True),
+    Column('permiso_id', Integer, ForeignKey('permisos.id'), primary_key=True)
+)
+
+class Rol(Base):
+    __tablename__ = 'roles'
+    id = Column(Integer, primary_key=True)
+    nombre = Column(String(50), unique=True, nullable=False)
+    descripcion = Column(String(255))
+
+    usuarios = relationship('Usuario', back_populates='rol')
+    permisos = relationship('Permiso', secondary=rol_permisos, back_populates='roles')
+
+    def __repr__(self):
+        return f"<Rol(nombre='{self.nombre}')>"
+
+class Permiso(Base):
+    __tablename__ = 'permisos'
+    id = Column(Integer, primary_key=True)
+    clave = Column(String(50), unique=True, nullable=False) # ej: "ver_modulo_compras"
+    descripcion = Column(String(255))
+
+    roles = relationship('Rol', secondary=rol_permisos, back_populates='permisos')
+
+    def __repr__(self):
+        return f"<Permiso(clave='{self.clave}')>"
+
+# ============================================
 # TABLA: USUARIOS
 # ============================================
 
@@ -673,38 +701,26 @@ class Usuario(Base):
     
     nombre_completo = Column(String(200), nullable=False)
     email = Column(String(100))
-    
-    rol = Column(Enum(RolUsuario), default=RolUsuario.OPERADOR)
+
+    rol_id = Column(Integer, ForeignKey('roles.id'))
+    rol = relationship("Rol", back_populates="usuarios")
     
     activo = Column(Boolean, default=True)
     fecha_registro = Column(DateTime, default=datetime.now)
     ultimo_acceso = Column(DateTime, nullable=True)
     
     # Relaciones
-    empresas_asignadas = relationship("UsuarioEmpresa", back_populates="usuario")
     acciones_auditoria = relationship("Auditoria", back_populates="usuario")
+    empresas = relationship("Empresa", secondary="usuario_empresa")
 
 # ============================================
-# TABLA: USUARIO - EMPRESA (Many-to-Many)
+# TABLA DE ASOCIACIÓN: USUARIO - EMPRESA
 # ============================================
 
-class UsuarioEmpresa(Base):
-    __tablename__ = 'usuario_empresas'
-    
-    id = Column(Integer, primary_key=True)
-    usuario_id = Column(Integer, ForeignKey('usuarios.id'), nullable=False)
-    empresa_id = Column(Integer, ForeignKey('empresas.id'), nullable=False)
-    
-    puede_registrar = Column(Boolean, default=True)
-    puede_modificar = Column(Boolean, default=False)
-    puede_eliminar = Column(Boolean, default=False)
-    puede_ver_reportes = Column(Boolean, default=True)
-    
-    fecha_asignacion = Column(DateTime, default=datetime.now)
-    
-    # Relaciones
-    usuario = relationship("Usuario", back_populates="empresas_asignadas")
-    empresa = relationship("Empresa", back_populates="usuarios_asignados")
+usuario_empresa = Table('usuario_empresa', Base.metadata,
+    Column('usuario_id', Integer, ForeignKey('usuarios.id'), primary_key=True),
+    Column('empresa_id', Integer, ForeignKey('empresas.id'), primary_key=True)
+)
 
 # ============================================
 # TABLA: AUDITORÍA
@@ -779,12 +795,59 @@ def poblar_datos_iniciales(session):
     
     # Usuario administrador por defecto
     from werkzeug.security import generate_password_hash
+
+    # Crear Permisos
+    permisos = {
+        'acceso_total': Permiso(clave='acceso_total', descripcion='Acceso sin restricciones a todas las funcionalidades.'),
+        'ver_dashboard': Permiso(clave='ver_dashboard', descripcion='Ver el panel principal.'),
+        'gestionar_compras': Permiso(clave='gestionar_compras', descripcion='Crear, ver y editar compras.'),
+        'gestionar_ventas': Permiso(clave='gestionar_ventas', descripcion='Crear, ver y editar ventas.'),
+        'gestionar_requisiciones': Permiso(clave='gestionar_requisiciones', descripcion='Crear, ver y editar requisiciones.'),
+        'gestionar_inventario': Permiso(clave='gestionar_inventario', descripcion='Gestionar productos, categorías y ajustes.'),
+        'ver_reportes': Permiso(clave='ver_reportes', descripcion='Acceder y generar reportes.'),
+        'gestionar_usuarios': Permiso(clave='gestionar_usuarios', descripcion='Crear, editar y eliminar usuarios y roles.'),
+        'configuracion_sistema': Permiso(clave='configuracion_sistema', descripcion='Acceder a la configuración del sistema.')
+    }
+    for permiso in permisos.values():
+        session.add(permiso)
+
+    # Crear Roles y Asignar Permisos
+    rol_admin = Rol(nombre='Administrador', descripcion='Acceso total al sistema.')
+    rol_admin.permisos = list(permisos.values())
+
+    rol_supervisor = Rol(nombre='Supervisor', descripcion='Acceso a módulos de gestión y reportes.')
+    rol_supervisor.permisos = [
+        permisos['ver_dashboard'],
+        permisos['gestionar_compras'],
+        permisos['gestionar_ventas'],
+        permisos['gestionar_requisiciones'],
+        permisos['ver_reportes']
+    ]
+
+    rol_operador = Rol(nombre='Operador', descripcion='Acceso limitado a operaciones diarias.')
+    rol_operador.permisos = [
+        permisos['ver_dashboard'],
+        permisos['gestionar_compras'],
+        permisos['gestionar_ventas'],
+        permisos['gestionar_requisiciones']
+    ]
+
+    session.add_all([rol_admin, rol_supervisor, rol_operador])
+    session.flush() # Para obtener los IDs de los roles
+
+    # Crear Usuario Administrador y Asignar Rol
     admin = Usuario(
         username="admin",
         password_hash=generate_password_hash("admin123"),
-        nombre_completo="Administrador",
-        rol=RolUsuario.ADMINISTRADOR
+        nombre_completo="Administrador del Sistema",
+        rol_id=rol_admin.id
     )
+
+    # Asignar empresa al admin si existe alguna
+    primera_empresa = session.query(Empresa).first()
+    if primera_empresa:
+        admin.empresas.append(primera_empresa)
+
     session.add(admin)
     
     session.commit()

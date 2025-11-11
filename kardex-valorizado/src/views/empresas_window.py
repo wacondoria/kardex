@@ -17,7 +17,7 @@ import re
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models.database_model import (obtener_session, Empresa, Almacen,
-                                   MetodoValuacion, UsuarioEmpresa)
+                                   MetodoValuacion)
 from utils.widgets import UpperLineEdit, SearchableComboBox
 from utils.button_utils import style_button
 

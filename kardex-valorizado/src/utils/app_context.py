@@ -14,6 +14,7 @@ class _AppContext:
         self.main_window = None
         self.session = None
         self.empresa = None
+        self.user_permissions = set()
 
     def set_user_info(self, user_info):
         """Guarda la información del usuario logueado."""
@@ -22,6 +23,23 @@ class _AppContext:
     def get_user_info(self):
         """Devuelve la información del usuario."""
         return self.user_info
+
+    def set_user_permissions(self, permissions):
+        """
+        Guarda los permisos del usuario actual.
+        'permissions' debe ser un iterable de strings (claves de permiso).
+        """
+        self.user_permissions = set(permissions)
+        print(f"🔑 Permisos de usuario cargados: {self.user_permissions}")
+
+    def has_permission(self, permission_key):
+        """
+        Verifica si el usuario actual tiene un permiso específico.
+        Permite acceso total si el permiso 'acceso_total' está presente.
+        """
+        if "acceso_total" in self.user_permissions:
+            return True
+        return permission_key in self.user_permissions
 
     def set_selected_year(self, year):
         """Guarda el año contable seleccionado."""
