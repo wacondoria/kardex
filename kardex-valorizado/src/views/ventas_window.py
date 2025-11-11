@@ -354,11 +354,11 @@ class VentaDialog(QDialog):
         """Carga clientes, productos y almacenes"""
         # Clientes
         self.cmb_cliente.clear()
-        clientes = self.session.query(Cliente).filter_by(activo=True).order_by(Cliente.razon_social).all()
+        clientes = self.session.query(Cliente).filter_by(activo=True).order_by(Cliente.razon_social_o_nombre).all()
         if not clientes:
             QMessageBox.warning(self, "Sin clientes", "No hay clientes registrados.")
         for cli in clientes:
-            self.cmb_cliente.addItem(f"{cli.ruc} - {cli.razon_social}", cli.id)
+            self.cmb_cliente.addItem(f"{cli.ruc} - {cli.razon_social_o_nombre}", cli.id)
         self.cmb_cliente.setCurrentIndex(-1)
 
         # Productos
@@ -1093,7 +1093,7 @@ class DetalleVentaDialog(QDialog):
 
         grupo_datos = QGroupBox("Datos Generales")
         form_datos = QFormLayout()
-        form_datos.addRow(QLabel("<b>Cliente:</b>"), QLabel(self.venta.cliente.razon_social))
+        form_datos.addRow(QLabel("<b>Cliente:</b>"), QLabel(self.venta.cliente.razon_social_o_nombre))
         form_datos.addRow(QLabel("<b>Fecha Emisión:</b>"), QLabel(self.venta.fecha.strftime('%d/%m/%Y')))
         
         f_contable_str = self.venta.fecha_registro_contable.strftime('%d/%m/%Y') if getattr(self.venta, 'fecha_registro_contable', None) else "--"
@@ -1282,10 +1282,10 @@ class VentasWindow(QWidget):
         clientes = self.session.query(Cliente).join(Venta).filter(
             Cliente.activo==True,
             extract('year', Venta.fecha) == anio_sel
-        ).distinct().order_by(Cliente.razon_social).all()
+        ).distinct().order_by(Cliente.razon_social_o_nombre).all()
         
         for cli in clientes:
-            self.cmb_cliente_filtro.addItem(cli.razon_social, cli.id)
+            self.cmb_cliente_filtro.addItem(cli.razon_social_o_nombre, cli.id)
         
         self.cmb_cliente_filtro.setCurrentText(texto_actual)
         self.cmb_cliente_filtro.blockSignals(False)
@@ -1356,7 +1356,7 @@ class VentasWindow(QWidget):
             self.tabla.setItem(row, 1, QTableWidgetItem(f_contable_str))
             self.tabla.setItem(row, 2, QTableWidgetItem(venta.fecha.strftime('%d/%m/%Y')))
             self.tabla.setItem(row, 3, QTableWidgetItem(f"{venta.tipo_documento.value} {venta.numero_documento}"))
-            cliente_nombre = venta.cliente.razon_social if venta.cliente else "Cliente Desconocido"
+            cliente_nombre = venta.cliente.razon_social_o_nombre if venta.cliente else "Cliente Desconocido"
             self.tabla.setItem(row, 4, QTableWidgetItem(cliente_nombre))
             self.tabla.setItem(row, 5, QTableWidgetItem(moneda_simbolo_mostrar))
             self.tabla.setItem(row, 6, QTableWidgetItem(f"{moneda_simbolo_mostrar} {subtotal_mostrar:.2f}"))
@@ -1405,7 +1405,7 @@ class VentasWindow(QWidget):
         confirmar = QMessageBox.warning(self, "Confirmar Eliminación",
             f"¿Está seguro de eliminar la venta:\n\n"
             f"Documento: {venta_a_eliminar.numero_documento}\n"
-            f"Cliente: {venta_a_eliminar.cliente.razon_social}\n"
+            f"Cliente: {venta_a_eliminar.cliente.razon_social_o_nombre}\n"
             f"Total: {venta_a_eliminar.total:.2f}\n\n"
             f"Esta acción anulará los movimientos de Kardex y recalculará los saldos. No se puede deshacer.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
