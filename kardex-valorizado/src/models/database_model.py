@@ -61,6 +61,10 @@ class EstadoAnio(enum.Enum):
     ABIERTO = "Abierto"
     CERRADO = "Cerrado"
 
+class TipoAjuste(enum.Enum):
+    INGRESO = "INGRESO"
+    SALIDA = "SALIDA"
+
 # ============================================
 # TABLA: AÑO CONTABLE
 # ============================================
@@ -481,7 +485,7 @@ class SerieCorrelativo(Base):
 
     id = Column(Integer, primary_key=True)
     empresa_id = Column(Integer, ForeignKey('empresas.id'), nullable=False)
-    
+
     tipo_documento = Column(Enum(TipoDocumento), nullable=False)
     serie = Column(String(4), nullable=False) # F001, B001
     correlativo_actual = Column(Integer, default=0, nullable=False)
@@ -502,6 +506,63 @@ class Destino(Base):
     
     # Relaciones
     requisiciones = relationship("Requisicion", back_populates="destino")
+
+# ============================================
+# TABLA: MOTIVOS DE AJUSTE
+# ============================================
+
+class MotivoAjuste(Base):
+    __tablename__ = 'motivos_ajuste'
+
+    id = Column(Integer, primary_key=True)
+    nombre = Column(String(100), unique=True, nullable=False)
+    descripcion = Column(Text)
+    tipo = Column(Enum(TipoAjuste), nullable=False) # Si es para INGRESO o SALIDA
+    activo = Column(Boolean, default=True)
+
+    # Relaciones
+    ajustes = relationship("AjusteInventario", back_populates="motivo")
+
+# ============================================
+# TABLA: AJUSTES DE INVENTARIO
+# ============================================
+
+class AjusteInventario(Base):
+    __tablename__ = 'ajustes_inventario'
+
+    id = Column(Integer, primary_key=True)
+    motivo_id = Column(Integer, ForeignKey('motivos_ajuste.id'), nullable=False)
+
+    numero_ajuste = Column(String(20), nullable=False, unique=True)
+    tipo = Column(Enum(TipoAjuste), nullable=False)
+    fecha = Column(Date, nullable=False)
+    observaciones = Column(Text)
+
+    fecha_registro = Column(DateTime, default=datetime.now)
+
+    # Relaciones
+    motivo = relationship("MotivoAjuste", back_populates="ajustes")
+    detalles = relationship("AjusteInventarioDetalle", back_populates="ajuste")
+
+# ============================================
+# TABLA: DETALLE AJUSTE DE INVENTARIO
+# ============================================
+
+class AjusteInventarioDetalle(Base):
+    __tablename__ = 'ajuste_inventario_detalles'
+
+    id = Column(Integer, primary_key=True)
+    ajuste_id = Column(Integer, ForeignKey('ajustes_inventario.id'), nullable=False)
+    producto_id = Column(Integer, ForeignKey('productos.id'), nullable=False)
+    almacen_id = Column(Integer, ForeignKey('almacenes.id'), nullable=False)
+
+    cantidad = Column(Float, nullable=False)
+    costo_unitario = Column(Float, nullable=True) # Editable para ingresos
+
+    # Relaciones
+    ajuste = relationship("AjusteInventario", back_populates="detalles")
+    producto = relationship("Producto")
+    almacen = relationship("Almacen")
 
 # ============================================
 # TABLA: REQUISICIONES
@@ -568,6 +629,7 @@ class MovimientoStock(Base):
     proveedor_id = Column(Integer, ForeignKey('proveedores.id'), nullable=True)
     cliente_id = Column(Integer, ForeignKey('clientes.id'), nullable=True)
     destino_id = Column(Integer, ForeignKey('destinos.id'), nullable=True)
+    motivo_ajuste_id = Column(Integer, ForeignKey('motivos_ajuste.id'), nullable=True)
     
     # Movimiento
     cantidad_entrada = Column(Float, default=0)
