@@ -15,10 +15,11 @@ import sys
 from pathlib import Path
 
 # Agregar src al path si no está
+from sqlalchemy.orm import joinedload
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models.database_model import (obtener_session, Usuario, Licencia,
-                                   AnioContable, EstadoAnio)
+                                   AnioContable, EstadoAnio, Rol)
 from utils.app_context import app_context
 from utils.widgets import SearchableComboBox
 
