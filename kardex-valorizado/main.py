@@ -249,6 +249,18 @@ def verificar_y_actualizar_db(db_url='sqlite:///kardex.db'):
     except Exception as e:
         print(f"❌ Error al crear las tablas del sistema de roles: {e}")
 
+    # 11. Verificar columna 'rol_id' en 'usuarios'
+    try:
+        columns = [col['name'] for col in inspector.get_columns('usuarios')]
+        if 'rol_id' not in columns:
+            print("⚠️  Detectado modelo de 'usuarios' antiguo. Actualizando BD...")
+            with engine.connect() as connection:
+                connection.execute(text("ALTER TABLE usuarios ADD COLUMN rol_id INTEGER REFERENCES roles(id)"))
+                connection.commit()
+            print("✓  Columna 'rol_id' añadida a 'usuarios' exitosamente.")
+    except Exception as e:
+        print(f"🔷 Info: Tabla 'usuarios' probablemente no existe aún. Se creará más tarde. ({e})")
+
 
 class KardexMainWindow(QMainWindow):
     """Ventana principal del sistema"""
