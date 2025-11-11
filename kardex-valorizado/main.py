@@ -25,6 +25,8 @@ from views.compras_window import ComprasWindow
 from views.ventas_window import VentasWindow
 from views.kardex_window import KardexWindow
 from views.backup_window import BackupWindow
+from views.motivos_ajuste_window import MotivosAjusteWindow
+from views.ajustes_inventario_window import AjustesInventarioWindow
 from views.requisiciones_window import RequisicionesWindow
 from views.ordenes_compra_window import OrdenesCompraWindow
 from views.usuarios_window import UsuariosWindow
@@ -197,6 +199,34 @@ def verificar_y_actualizar_db(db_url='sqlite:///kardex.db'):
     except Exception as e:
         print(f"🔷 Info: Tabla 'movimientos_stock' probablemente no existe aún. Se creará más tarde. ({e})")
 
+    # 8. Verificar nuevas tablas del módulo de Ajustes de Inventario
+    try:
+        from models.database_model import MotivoAjuste, AjusteInventario, AjusteInventarioDetalle
+        tablas_ajustes = {
+            'motivos_ajuste': MotivoAjuste,
+            'ajustes_inventario': AjusteInventario,
+            'ajuste_inventario_detalles': AjusteInventarioDetalle
+        }
+        for nombre_tabla, modelo_tabla in tablas_ajustes.items():
+            if not inspector.has_table(nombre_tabla):
+                print(f"⚠️  Tabla '{nombre_tabla}' del módulo de ajustes no encontrada. Creándola...")
+                modelo_tabla.__table__.create(engine)
+                print(f"✓  Tabla '{nombre_tabla}' creada exitosamente.")
+    except Exception as e:
+        print(f"❌ Error al crear las tablas del módulo de ajustes: {e}")
+
+    # 9. Verificar columna 'motivo_ajuste_id' en 'movimientos_stock'
+    try:
+        columns = [col['name'] for col in inspector.get_columns('movimientos_stock')]
+        if 'motivo_ajuste_id' not in columns:
+            print("⚠️  Detectado modelo de 'movimientos_stock' antiguo. Actualizando BD...")
+            with engine.connect() as connection:
+                connection.execute(text("ALTER TABLE movimientos_stock ADD COLUMN motivo_ajuste_id INTEGER REFERENCES motivos_ajuste(id)"))
+                connection.commit()
+            print("✓  Columna 'motivo_ajuste_id' añadida a 'movimientos_stock' exitosamente.")
+    except Exception as e:
+        print(f"🔷 Info: Tabla 'movimientos_stock' probablemente no existe aún. Se creará más tarde. ({e})")
+
 
 class KardexMainWindow(QMainWindow):
     """Ventana principal del sistema"""
@@ -225,6 +255,8 @@ class KardexMainWindow(QMainWindow):
         self.ventana_ordenes_compra = None
         self.ventana_admin_anios = None
         self.ventana_importacion = None
+        self.ventana_motivos_ajuste = None
+        self.ventana_ajustes_inventario = None
         self.init_ui()
 
     def init_ui(self):
@@ -321,6 +353,10 @@ class KardexMainWindow(QMainWindow):
         accion_tipo_cambio.triggered.connect(self.abrir_tipo_cambio)
         menu_maestros.addAction(accion_tipo_cambio)
 
+        accion_motivos_ajuste = QAction("📝 Motivos de Ajuste", self)
+        accion_motivos_ajuste.triggered.connect(self.abrir_motivos_ajuste)
+        menu_maestros.addAction(accion_motivos_ajuste)
+
         # Menú Operaciones
         menu_operaciones = menubar.addMenu("📊 Operaciones")
 
@@ -345,6 +381,10 @@ class KardexMainWindow(QMainWindow):
         accion_requisiciones.setShortcut("Ctrl+S") # S de Salida
         accion_requisiciones.triggered.connect(self.abrir_requisiciones)
         menu_operaciones.addAction(accion_requisiciones)
+
+        accion_ajustes = QAction("⚙️ Ajuste de Inventario", self)
+        accion_ajustes.triggered.connect(self.abrir_ajustes_inventario)
+        menu_operaciones.addAction(accion_ajustes)
 
         # Menú Reportes
         menu_reportes = menubar.addMenu("📈 Reportes")
@@ -414,6 +454,10 @@ class KardexMainWindow(QMainWindow):
         # Y se añade la siguiente para que se conecte y funcione:
         btn_requisiciones.clicked.connect(self.abrir_requisiciones)
         toolbar.addWidget(btn_requisiciones)
+
+        btn_ajustes = QPushButton("⚙️ Ajustes")
+        btn_ajustes.clicked.connect(self.abrir_ajustes_inventario)
+        toolbar.addWidget(btn_ajustes)
 
         toolbar.addSeparator()
 
@@ -582,6 +626,27 @@ class KardexMainWindow(QMainWindow):
         self.ventana_importacion.show()
         self.ventana_importacion.raise_()
         self.ventana_importacion.activateWindow()
+
+    def abrir_motivos_ajuste(self):
+        """Abre la ventana de gestión de motivos de ajuste."""
+        if self.ventana_motivos_ajuste is None:
+            self.ventana_motivos_ajuste = MotivosAjusteWindow()
+
+        self.ventana_motivos_ajuste.show()
+        self.ventana_motivos_ajuste.raise_()
+        self.ventana_motivos_ajuste.activateWindow()
+
+    def abrir_ajustes_inventario(self):
+        """Abre la ventana de gestión de ajustes de inventario en una nueva pestaña."""
+        nombre_pestana = "Ajustes de Inventario"
+        for i in range(self.tab_widget.count()):
+            if self.tab_widget.tabText(i) == nombre_pestana:
+                self.tab_widget.setCurrentIndex(i)
+                return
+
+        ajustes_widget = AjustesInventarioWindow(self.user_info)
+        self.tab_widget.addTab(ajustes_widget, nombre_pestana)
+        self.tab_widget.setCurrentWidget(ajustes_widget)
 
 
 def main():
