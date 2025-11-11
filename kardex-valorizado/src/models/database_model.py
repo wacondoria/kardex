@@ -23,6 +23,8 @@ class MetodoValuacion(enum.Enum):
 class TipoMovimiento(enum.Enum):
     COMPRA = "COMPRA"
     DEVOLUCION_COMPRA = "DEVOLUCION_COMPRA"
+    VENTA = "VENTA"
+    DEVOLUCION_VENTA = "DEVOLUCION_VENTA"
     REQUISICION = "REQUISICION"
     DEVOLUCION_REQUISICION = "DEVOLUCION_REQUISICION"
     AJUSTE_POSITIVO = "AJUSTE_POSITIVO"
@@ -35,6 +37,7 @@ class TipoDocumento(enum.Enum):
     FACTURA = "FACTURA"
     BOLETA = "BOLETA"
     GUIA_REMISION = "GUIA_REMISION"
+    NOTA_VENTA = "NOTA_VENTA"
     NOTA_CREDITO = "NOTA_CREDITO"
     NOTA_DEBITO = "NOTA_DEBITO"
     ORDEN_COMPRA = "ORDEN_COMPRA"
@@ -244,6 +247,32 @@ class Proveedor(Base):
     ordenes_compra = relationship("OrdenCompra", back_populates="proveedor")
 
 # ============================================
+# TABLA: CLIENTES
+# ============================================
+
+class Cliente(Base):
+    __tablename__ = 'clientes'
+
+    id = Column(Integer, primary_key=True)
+
+    # Datos obligatorios
+    ruc_o_dni = Column(String(11), unique=True, nullable=False)
+    razon_social_o_nombre = Column(String(200), nullable=False)
+
+    # Datos opcionales
+    direccion = Column(Text)
+    telefono = Column(String(20))
+    email = Column(String(100))
+    contacto = Column(String(100))
+
+    # Estado
+    activo = Column(Boolean, default=True)
+    fecha_registro = Column(DateTime, default=datetime.now)
+
+    # Relaciones
+    ventas = relationship("Venta", back_populates="cliente")
+
+# ============================================
 # TABLA: TIPO DE CAMBIO
 # ============================================
 
@@ -378,7 +407,90 @@ class CompraDetalle(Base):
     compra = relationship("Compra", back_populates="detalles")
     producto = relationship("Producto")
     almacen = relationship("Almacen")
+
+# ============================================
+# TABLA: VENTAS
+# ============================================
+
+class Venta(Base):
+    __tablename__ = 'ventas'
+
+    id = Column(Integer, primary_key=True)
+    cliente_id = Column(Integer, ForeignKey('clientes.id'), nullable=False)
+
+    # Documento
+    numero_proceso = Column(String(20), nullable=True)
+    tipo_documento = Column(Enum(TipoDocumento), default=TipoDocumento.BOLETA)
+    serie_documento = Column(String(4), nullable=False) # F001, B001
+    correlativo_documento = Column(String(8), nullable=False) # 00000001
+
+    fecha = Column(Date, nullable=False) # Fecha de Emisión (Kardex)
+    fecha_registro_contable = Column(Date, nullable=True) # Fecha Periodo Contable
+
+    # Moneda y cambio
+    moneda = Column(Enum(Moneda), default=Moneda.SOLES)
+    tipo_cambio = Column(Float, default=1.0)
+
+    # IGV
+    incluye_igv = Column(Boolean, default=False)
+    igv_porcentaje = Column(Float, default=18.0)
+
+    # Totales
+    subtotal = Column(Float, nullable=False)
+    igv = Column(Float, default=0)
+    total = Column(Float, nullable=False)
+
+    # Descuentos
+    descuento_global = Column(Float, default=0)
+
+    ruta_archivo = Column(String(500))
+    observaciones = Column(Text)
+    fecha_registro = Column(DateTime, default=datetime.now)
+
+    # Relaciones
+    cliente = relationship("Cliente", back_populates="ventas")
+    detalles = relationship("VentaDetalle", back_populates="venta", cascade="all, delete-orphan")
+
+# ============================================
+# TABLA: DETALLE DE VENTA
+# ============================================
+
+class VentaDetalle(Base):
+    __tablename__ = 'venta_detalles'
+
+    id = Column(Integer, primary_key=True)
+    venta_id = Column(Integer, ForeignKey('ventas.id'), nullable=False)
+    producto_id = Column(Integer, ForeignKey('productos.id'), nullable=False)
+    almacen_id = Column(Integer, ForeignKey('almacenes.id'), nullable=False)
+
+    cantidad = Column(Float, nullable=False)
+    precio_unitario_sin_igv = Column(Float, nullable=False)
+    subtotal = Column(Float, nullable=False)
+
+    # Relaciones
+    venta = relationship("Venta", back_populates="detalles")
+    producto = relationship("Producto")
+    almacen = relationship("Almacen")
+
+# ============================================
+# TABLA: SERIES Y CORRELATIVOS
+# ============================================
+
+class SerieCorrelativo(Base):
+    __tablename__ = 'serie_correlativos'
+
+    id = Column(Integer, primary_key=True)
+    empresa_id = Column(Integer, ForeignKey('empresas.id'), nullable=False)
     
+    tipo_documento = Column(Enum(TipoDocumento), nullable=False)
+    serie = Column(String(4), nullable=False) # F001, B001
+    correlativo_actual = Column(Integer, default=0, nullable=False)
+
+    activo = Column(Boolean, default=True)
+
+    # Relaciones
+    empresa = relationship("Empresa")
+
 class Destino(Base):
     __tablename__ = 'destinos'
     
@@ -454,6 +566,7 @@ class MovimientoStock(Base):
     
     # Proveedor o destino según sea ingreso o salida
     proveedor_id = Column(Integer, ForeignKey('proveedores.id'), nullable=True)
+    cliente_id = Column(Integer, ForeignKey('clientes.id'), nullable=True)
     destino_id = Column(Integer, ForeignKey('destinos.id'), nullable=True)
     
     # Movimiento
