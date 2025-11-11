@@ -7,7 +7,7 @@ Archivo: main.py
 import sys
 from pathlib import Path
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QLabel, QVBoxLayout,
-                             QWidget, QMenuBar, QMenu, QToolBar, QPushButton, QTabWidget, QTabBar)
+                             QWidget, QMenuBar, QMenu, QToolBar, QPushButton, QTabWidget, QTabBar, QMessageBox)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont, QAction
 
@@ -33,6 +33,7 @@ from views.usuarios_window import UsuariosWindow
 from views.valorizacion_window import ValorizacionWindow
 from views.anio_contable_window import AnioContableWindow
 from views.sistemas_importacion_window import SistemasImportacionWindow
+from views.admin_roles_window import AdminRolesWindow
 
 # --- Integración para actualización automática ---
 from utils.actualizador_tc import actualizar_tc_desde_excel
@@ -257,6 +258,7 @@ class KardexMainWindow(QMainWindow):
         self.ventana_importacion = None
         self.ventana_motivos_ajuste = None
         self.ventana_ajustes_inventario = None
+        self.ventana_admin_roles = None
         self.init_ui()
 
     def init_ui(self):
@@ -343,7 +345,7 @@ class KardexMainWindow(QMainWindow):
         accion_empresas = QAction("🏢 Empresas y Almacenes", self)
         accion_empresas.setShortcut("Ctrl+E")
         accion_empresas.triggered.connect(self.abrir_empresas)
-        accion_empresas.setEnabled(self.user_info['rol'] == 'ADMINISTRADOR')
+        accion_empresas.setEnabled(app_context.has_permission('configuracion_sistema'))
         menu_maestros.addAction(accion_empresas)
 
         menu_maestros.addSeparator()
@@ -403,24 +405,30 @@ class KardexMainWindow(QMainWindow):
         menu_sistema = menubar.addMenu("⚙️ Sistema")
 
         accion_usuarios = QAction("👥 Usuarios", self)
-        accion_usuarios.setEnabled(self.user_info['rol'] == 'ADMINISTRADOR')
+        accion_usuarios.setEnabled(app_context.has_permission('gestionar_usuarios'))
         accion_usuarios.triggered.connect(self.abrir_usuarios)
         menu_sistema.addAction(accion_usuarios)
 
+        accion_admin_roles = QAction("🔑 Roles y Permisos", self)
+        accion_admin_roles.setEnabled(app_context.has_permission('gestionar_usuarios'))
+        accion_admin_roles.triggered.connect(self.abrir_admin_roles)
+        menu_sistema.addAction(accion_admin_roles)
+
         accion_admin_anios = QAction("🗓️ Administración de Años", self)
-        accion_admin_anios.setEnabled(self.user_info['rol'] == 'ADMINISTRADOR')
+        accion_admin_anios.setEnabled(app_context.has_permission('configuracion_sistema'))
         accion_admin_anios.triggered.connect(self.abrir_admin_anios)
         menu_sistema.addAction(accion_admin_anios)
 
         accion_importacion = QAction("⬆️ Central de Importaciones", self)
+        accion_importacion.setEnabled(app_context.has_permission('configuracion_sistema'))
         accion_importacion.triggered.connect(self.abrir_importacion)
         menu_sistema.addAction(accion_importacion)
 
         menu_sistema.addSeparator()
 
         accion_backup = QAction("💾 Backup/Restore", self)
+        accion_backup.setEnabled(app_context.has_permission('configuracion_sistema'))
         accion_backup.triggered.connect(self.abrir_backup)
-        accion_backup.setEnabled(self.user_info['rol'] == 'ADMINISTRADOR')
         menu_sistema.addAction(accion_backup)
 
         menu_sistema.addSeparator()
@@ -530,6 +538,10 @@ class KardexMainWindow(QMainWindow):
 
     def abrir_empresas(self):
         """Abre la ventana de gestión de empresas"""
+        if not app_context.has_permission('configuracion_sistema'):
+            QMessageBox.warning(self, "Acceso Denegado", "No tienes permiso para gestionar empresas.")
+            return
+
         if self.ventana_empresas is None:
             self.ventana_empresas = EmpresasWindow()
 
@@ -557,6 +569,10 @@ class KardexMainWindow(QMainWindow):
 
     def abrir_backup(self):
         """Abre la ventana de backup"""
+        if not app_context.has_permission('configuracion_sistema'):
+            QMessageBox.warning(self, "Acceso Denegado", "No tienes permiso para gestionar backups.")
+            return
+
         if not hasattr(self, 'ventana_backup') or self.ventana_backup is None:
             self.ventana_backup = BackupWindow()
 
@@ -590,6 +606,10 @@ class KardexMainWindow(QMainWindow):
 
     def abrir_usuarios(self):
         """Abre la ventana de gestión de usuarios"""
+        if not app_context.has_permission('gestionar_usuarios'):
+            QMessageBox.warning(self, "Acceso Denegado", "No tienes permiso para gestionar usuarios.")
+            return
+
         if self.ventana_usuarios is None:
             self.ventana_usuarios = UsuariosWindow()
 
@@ -611,6 +631,10 @@ class KardexMainWindow(QMainWindow):
 
     def abrir_admin_anios(self):
         """Abre la ventana de administración de años contables."""
+        if not app_context.has_permission('configuracion_sistema'):
+            QMessageBox.warning(self, "Acceso Denegado", "No tienes permiso para gestionar los años contables.")
+            return
+
         if self.ventana_admin_anios is None:
             self.ventana_admin_anios = AnioContableWindow()
 
@@ -620,6 +644,10 @@ class KardexMainWindow(QMainWindow):
 
     def abrir_importacion(self):
         """Abre la ventana de importación de datos."""
+        if not app_context.has_permission('configuracion_sistema'):
+            QMessageBox.warning(self, "Acceso Denegado", "No tienes permiso para importar datos.")
+            return
+
         if self.ventana_importacion is None:
             self.ventana_importacion = SistemasImportacionWindow()
 
@@ -647,6 +675,15 @@ class KardexMainWindow(QMainWindow):
         ajustes_widget = AjustesInventarioWindow(self.user_info)
         self.tab_widget.addTab(ajustes_widget, nombre_pestana)
         self.tab_widget.setCurrentWidget(ajustes_widget)
+
+    def abrir_admin_roles(self):
+        """Abre la ventana de administración de roles y permisos."""
+        if self.ventana_admin_roles is None:
+            self.ventana_admin_roles = AdminRolesWindow()
+
+        self.ventana_admin_roles.show()
+        self.ventana_admin_roles.raise_()
+        self.ventana_admin_roles.activateWindow()
 
 
 def main():
