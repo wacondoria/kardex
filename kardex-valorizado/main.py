@@ -261,6 +261,16 @@ def verificar_y_actualizar_db(db_url='sqlite:///kardex.db'):
     except Exception as e:
         print(f"🔷 Info: Tabla 'usuarios' probablemente no existe aún. Se creará más tarde. ({e})")
 
+    # 12. Verificar tabla de asociación 'usuario_empresa'
+    try:
+        from models.database_model import usuario_empresa
+        if not inspector.has_table('usuario_empresa'):
+            print("⚠️  Tabla de asociación 'usuario_empresa' no encontrada. Creándola...")
+            usuario_empresa.create(engine)
+            print("✓  Tabla 'usuario_empresa' creada exitosamente.")
+    except Exception as e:
+        print(f"❌ Error al crear la tabla 'usuario_empresa': {e}")
+
 
 class KardexMainWindow(QMainWindow):
     """Ventana principal del sistema"""
