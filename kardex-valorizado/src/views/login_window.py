@@ -145,7 +145,9 @@ class LoginWindow(QWidget):
             return
 
         try:
-            user = self.session.query(Usuario).options(joinedload(Usuario.rol).joinedload(Rol.permisos)).filter_by(username=usuario, activo=True).first()
+            # --- CORRECCIÓN: Simplificada la consulta para usar lazy loading ---
+            # Esto evita posibles problemas con joinedload y asegura que los permisos se carguen.
+            user = self.session.query(Usuario).filter_by(username=usuario, activo=True).first()
 
             if not user or not check_password_hash(user.password_hash, password):
                 QMessageBox.critical(self, "Error de autenticación", "Usuario o contraseña incorrecta.")
