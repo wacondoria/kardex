@@ -262,7 +262,7 @@ def verificar_y_actualizar_db(db_url='sqlite:///kardex.db'):
 
     # 12. Lógica de Siembra y Migración de Datos
     try:
-        from models.database_model import usuario_empresa, Usuario, Empresa
+        from models.database_model import usuario_empresa, Usuario, Empresa, Rol, Permiso
 
         # Asegurar que la tabla de asociación 'usuario_empresa' exista
         if not inspector.has_table('usuario_empresa'):
@@ -285,20 +285,45 @@ def verificar_y_actualizar_db(db_url='sqlite:///kardex.db'):
                 session.commit()
                 print("✓  Empresa por defecto creada.")
 
-            # Paso 2: Asegurar que el usuario admin esté vinculado a una empresa
+            # Paso 2: Asegurar que el usuario admin esté vinculado a una empresa y tenga Rol
             admin_user = session.query(Usuario).filter_by(username='admin').first()
-            if admin_user and not admin_user.empresas:
-                print("⚠️  Usuario 'admin' no tiene empresa. Asignando la primera disponible...")
-                primera_empresa = session.query(Empresa).first()
-                if primera_empresa:
-                    admin_user.empresas.append(primera_empresa)
+
+            if admin_user:
+                # Asignar empresa si no tiene
+                if not admin_user.empresas:
+                    print("⚠️  Usuario 'admin' no tiene empresa. Asignando la primera disponible...")
+                    primera_empresa = session.query(Empresa).first()
+                    if primera_empresa:
+                        admin_user.empresas.append(primera_empresa)
+                        session.commit() # Guardar empresa
+                        print(f"✓  Usuario 'admin' asignado a '{primera_empresa.razon_social}'.")
+
+                # Asignar Rol Administrador si no tiene o es nulo
+                if not admin_user.rol:
+                    print("⚠️  Usuario 'admin' no tiene Rol asignado. Buscando rol 'Administrador'...")
+                    rol_admin = session.query(Rol).filter_by(nombre='Administrador').first()
+
+                    if not rol_admin:
+                        print("⚠️  Rol 'Administrador' no existe. Creándolo...")
+                        # Crear permisos básicos si no existen
+                        permiso_total = session.query(Permiso).filter_by(clave='acceso_total').first()
+                        if not permiso_total:
+                            permiso_total = Permiso(clave='acceso_total', descripcion='Acceso total al sistema')
+                            session.add(permiso_total)
+
+                        rol_admin = Rol(nombre='Administrador', descripcion='Acceso total')
+                        rol_admin.permisos.append(permiso_total)
+                        session.add(rol_admin)
+                        session.commit()
+                        print("✓  Rol 'Administrador' creado.")
+
+                    admin_user.rol = rol_admin
                     session.commit()
-                    print(f"✓  Usuario 'admin' asignado a '{primera_empresa.razon_social}'.")
-                else:
-                    # Este caso no debería ocurrir gracias al Paso 1, pero se incluye por seguridad
-                    print("❌ Error Crítico: No hay empresas para asignar al admin.")
-            elif admin_user:
-                print("👍  Usuario 'admin' ya tiene empresa asignada.")
+                    print("✓  Rol 'Administrador' asignado al usuario 'admin'.")
+
+            else:
+                # Si no existe el usuario admin, se podría crear, pero eso ya está en poblar_datos_iniciales
+                pass
 
     except Exception as e:
         print(f"❌ Error durante la siembra y migración de datos: {e}")
