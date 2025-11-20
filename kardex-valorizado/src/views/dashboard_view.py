@@ -22,7 +22,7 @@ from matplotlib.figure import Figure
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models.database_model import (obtener_session, Venta, Compra, Producto,
-                                   OrdenCompra, EstadoOrdenCompra)
+                                   OrdenCompra, EstadoOrden)
 from utils.app_context import app_context
 
 class KPICard(QFrame):
@@ -267,8 +267,8 @@ class DashboardWidget(QWidget):
 
         # 1. Órdenes de Compra Pendientes
         try:
-            if OrdenCompra and EstadoOrdenCompra:
-                pendientes = self.session.query(OrdenCompra).filter_by(estado=EstadoOrdenCompra.PENDIENTE).count()
+            if OrdenCompra and EstadoOrden:
+                pendientes = self.session.query(OrdenCompra).filter_by(estado=EstadoOrden.PENDIENTE).count()
                 if pendientes > 0:
                     item = QListWidgetItem(f"📝 {pendientes} Órdenes de Compra por aprobar")
                     item.setForeground(Qt.GlobalColor.darkRed)
