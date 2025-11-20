@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from models.database_model import (obtener_session, AjusteInventario, AjusteInventarioDetalle,
                                    Producto, Almacen, Empresa, MotivoAjuste, TipoAjuste,
                                    MovimientoStock, TipoMovimiento)
-from utils.widgets import UpperLineEdit, SearchableComboBox
+from utils.widgets import UpperLineEdit, SearchableComboBox, MoneyDelegate
 from utils.app_context import app_context
 from utils.button_utils import style_button
 from utils.kardex_manager import KardexManager
@@ -101,6 +101,12 @@ class AjusteInventarioDialog(QDialog):
 
         self.tabla_productos = QTableWidget(columnCount=6)
         self.tabla_productos.setHorizontalHeaderLabels(["Producto", "Almacén", "Cantidad", "Costo Unit.", "Costo Total", "Acción"])
+
+        money_delegate = MoneyDelegate(self.tabla_productos)
+        self.tabla_productos.setItemDelegateForColumn(2, money_delegate)
+        self.tabla_productos.setItemDelegateForColumn(3, money_delegate)
+        self.tabla_productos.setItemDelegateForColumn(4, money_delegate)
+
         productos_layout.addWidget(self.tabla_productos)
         grupo_productos.setLayout(productos_layout)
         layout.addWidget(grupo_productos)

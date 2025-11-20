@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models.database_model import (obtener_session, Producto, Empresa, Almacen,
                                    MovimientoStock, Moneda, MetodoValuacion, AnioContable)
-from utils.widgets import SearchableComboBox
+from utils.widgets import SearchableComboBox, MoneyDelegate
 from utils.report_utils import BaseReport
 from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet
@@ -208,6 +208,20 @@ class KardexWindow(QWidget):
         
         self.tabla.setAlternatingRowColors(True)
         
+        # Aplicar MoneyDelegate a columnas monetarias/numéricas
+        money_delegate = MoneyDelegate(self.tabla)
+        # "Entrada Cant.", "Entrada C.U.", "Entrada Total" (3, 4, 5)
+        self.tabla.setItemDelegateForColumn(3, money_delegate)
+        self.tabla.setItemDelegateForColumn(4, money_delegate)
+        self.tabla.setItemDelegateForColumn(5, money_delegate)
+        # "Salida Cant.", "Salida C.U.", "Salida Total" (6, 7, 8)
+        self.tabla.setItemDelegateForColumn(6, money_delegate)
+        self.tabla.setItemDelegateForColumn(7, money_delegate)
+        self.tabla.setItemDelegateForColumn(8, money_delegate)
+        # "Saldo Cant.", "Saldo Total" (9, 10)
+        self.tabla.setItemDelegateForColumn(9, money_delegate)
+        self.tabla.setItemDelegateForColumn(10, money_delegate)
+
         layout.addWidget(self.tabla)
         
         # Resumen

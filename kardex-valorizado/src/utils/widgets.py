@@ -3,7 +3,7 @@ Widgets personalizados para la aplicación Kardex Valorizado.
 Archivo: src/utils/widgets.py
 """
 
-from PyQt6.QtWidgets import QLineEdit, QComboBox, QCompleter
+from PyQt6.QtWidgets import QLineEdit, QComboBox, QCompleter, QStyledItemDelegate, QStyle
 from PyQt6.QtGui import QValidator
 from PyQt6.QtCore import Qt
 
@@ -67,3 +67,50 @@ class UpperLineEdit(QLineEdit):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setValidator(UppercaseValidator())
+
+class MoneyDelegate(QStyledItemDelegate):
+    """
+    Delegado para pintar celdas con importes monetarios.
+    Alinea el símbolo de moneda a la izquierda y el monto a la derecha.
+    Si no hay símbolo, solo alinea el monto a la derecha.
+    """
+    def paint(self, painter, option, index):
+        text = index.data(Qt.ItemDataRole.DisplayRole)
+        if not text:
+            super().paint(painter, option, index)
+            return
+
+        text = str(text)
+        symbol = ""
+        amount = text
+
+        # Detectar símbolo (asume S/ o $)
+        # Caso típico: "S/ 1,234.56" o "$ 1,234.56"
+        if "S/" in text:
+            symbol = "S/"
+            amount = text.replace("S/", "").strip()
+        elif "$" in text:
+            symbol = "$"
+            amount = text.replace("$", "").strip()
+
+        painter.save()
+
+        # Dibujar fondo (manejar selección)
+        if option.state & QStyle.State.State_Selected:
+            painter.fillRect(option.rect, option.palette.highlight())
+            painter.setPen(option.palette.highlightedText().color())
+        else:
+            painter.setPen(option.palette.text().color())
+
+        rect = option.rect
+        # Márgenes internos
+        rect.adjust(5, 0, -5, 0)
+
+        # Dibujar Símbolo (Izquierda)
+        if symbol:
+            painter.drawText(rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, symbol)
+
+        # Dibujar Monto (Derecha)
+        painter.drawText(rect, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, amount)
+
+        painter.restore()
