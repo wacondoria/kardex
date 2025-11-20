@@ -33,6 +33,7 @@ from views.seguridad_window import SeguridadWindow
 from views.valorizacion_window import ValorizacionWindow
 from views.anio_contable_window import AnioContableWindow
 from views.sistemas_importacion_window import SistemasImportacionWindow
+from views.dashboard_view import DashboardWidget
 
 # --- Integración para actualización automática ---
 from utils.actualizador_tc import actualizar_tc_desde_excel
@@ -381,38 +382,9 @@ class KardexMainWindow(QMainWindow):
         self.crear_pestana_bienvenida()
 
     def crear_pestana_bienvenida(self):
-        """Crea la pestaña de bienvenida inicial"""
-        bienvenida_widget = QWidget()
-        layout = QVBoxLayout()
-        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        bienvenida = QLabel(f"🎉 ¡Bienvenido al Sistema!\n\n")
-        bienvenida.setFont(QFont("Arial", 20, QFont.Weight.Bold))
-        bienvenida.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        info = QLabel(
-            f"Usuario: {self.user_info['username']}\n"
-            f"Nombre: {self.user_info['nombre_completo']}\n"
-            f"Rol: {self.user_info['rol']}\n\n"
-            f"{'⚠️ MODO SOLO CONSULTA (Licencia vencida)' if self.user_info['licencia_vencida'] else '✅ Sistema operativo'}"
-        )
-        info.setFont(QFont("Arial", 12))
-        info.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        instrucciones = QLabel(
-            "\n\n📋 Para comenzar, selecciona una opción del menú o la barra de herramientas."
-        )
-        instrucciones.setFont(QFont("Arial", 11))
-        instrucciones.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        instrucciones.setStyleSheet("color: #666;")
-
-        layout.addWidget(bienvenida)
-        layout.addWidget(info)
-        layout.addWidget(instrucciones)
-
-        bienvenida_widget.setLayout(layout)
-
-        index = self.tab_widget.addTab(bienvenida_widget, "🏠 Inicio")
+        """Crea la pestaña de Dashboard inicial"""
+        dashboard = DashboardWidget()
+        index = self.tab_widget.addTab(dashboard, "📊 Dashboard")
         self.tab_widget.tabBar().setTabButton(index, QTabBar.ButtonPosition.RightSide, None)
 
     def cerrar_pestana(self, index):
