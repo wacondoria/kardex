@@ -274,3 +274,63 @@ class KardexManager:
         costo_total = costo_unitario * Decimal(str(cantidad))
 
         return float(costo_unitario), float(costo_total)
+
+    def obtener_stock_actual(self, producto_id, almacen_id, fecha=None):
+        """
+        Obtiene el stock actual de un producto en un almacén.
+        Si se proporciona fecha, obtiene el stock a esa fecha.
+        """
+        query = self.session.query(MovimientoStock).filter_by(
+            producto_id=producto_id,
+            almacen_id=almacen_id
+        )
+
+        if fecha:
+            query = query.filter(MovimientoStock.fecha_documento <= fecha)
+
+        # Ordenar para obtener el último movimiento relevante
+        ultimo_mov = query.order_by(MovimientoStock.fecha_documento.desc(), MovimientoStock.id.desc()).first()
+
+        if ultimo_mov:
+            return ultimo_mov.saldo_cantidad
+        return 0.0
+
+    def obtener_stock_global_producto(self, producto_id):
+        """
+        Obtiene el stock total de un producto sumando todos los almacenes (último saldo de cada uno).
+        """
+        # Buscar todos los almacenes que tienen movimientos de este producto
+        almacenes = self.session.query(MovimientoStock.almacen_id).filter_by(
+            producto_id=producto_id
+        ).distinct().all()
+
+        total_stock = 0.0
+        for (alm_id,) in almacenes:
+            ultimo_mov = self.session.query(MovimientoStock).filter_by(
+                producto_id=producto_id,
+                almacen_id=alm_id
+            ).order_by(MovimientoStock.id.desc()).first()
+
+            if ultimo_mov:
+                total_stock += ultimo_mov.saldo_cantidad
+
+        return total_stock
+
+    def obtener_costo_promedio_actual(self, producto_id, almacen_id, fecha=None):
+        """
+        Obtiene el costo unitario promedio actual de un producto en un almacén.
+        Si se proporciona fecha, busca el costo a esa fecha.
+        """
+        query = self.session.query(MovimientoStock).filter_by(
+            producto_id=producto_id,
+            almacen_id=almacen_id
+        )
+
+        if fecha:
+            query = query.filter(MovimientoStock.fecha_documento < fecha)
+
+        ultimo_mov = query.order_by(MovimientoStock.fecha_documento.desc(), MovimientoStock.id.desc()).first()
+
+        if ultimo_mov and ultimo_mov.saldo_cantidad > 0:
+            return float(Decimal(str(ultimo_mov.saldo_costo_total)) / Decimal(str(ultimo_mov.saldo_cantidad)))
+        return 0.0
