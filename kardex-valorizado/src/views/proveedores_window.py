@@ -28,6 +28,7 @@ from models.database_model import obtener_session, Proveedor
 from sqlalchemy import or_
 from utils.widgets import UpperLineEdit
 from utils.button_utils import style_button
+from views.base_crud_view import BaseCRUDView
 
 
 class ProveedorDialog(QDialog):
@@ -299,204 +300,69 @@ class ProveedorDialog(QDialog):
             QMessageBox.critical(self, "Error", f"Error al guardar:\n{str(e)}")
 
 
-class ProveedoresWindow(QWidget):
+class ProveedoresWindow(BaseCRUDView):
     """Ventana principal de gestión de proveedores"""
 
     def __init__(self):
-        super().__init__()
-        self.session = obtener_session()
-        self.proveedores_mostrados = []
-        self.init_ui()
-        self.cargar_proveedores()
-
-    def keyPressEvent(self, event):
-        """Captura la pulsación de F2 para crear y F6 para editar."""
-        if event.key() == Qt.Key.Key_F2:
-            self.nuevo_proveedor()
-        elif event.key() == Qt.Key.Key_F6:
-            fila = self.tabla.currentRow()
-            if fila != -1 and fila < len(self.proveedores_mostrados):
-                proveedor_seleccionado = self.proveedores_mostrados[fila]
-                self.editar_proveedor(proveedor_seleccionado)
-        else:
-            super().keyPressEvent(event)
+        super().__init__("Gestión de Proveedores", Proveedor, ProveedorDialog)
 
     def init_ui(self):
-        self.setWindowTitle("Gestión de Proveedores")
-
-        layout = QVBoxLayout()
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(15)
-
-        # Header
-        header_layout = QHBoxLayout()
-
-        titulo = QLabel("🏪 Gestión de Proveedores")
-        titulo.setFont(QFont("Arial", 18, QFont.Weight.Bold))
-        titulo.setStyleSheet("color: #1a73e8;")
-
-        btn_nuevo = QPushButton()
-        style_button(btn_nuevo, 'add', "Nuevo Proveedor")
-        btn_nuevo.clicked.connect(self.nuevo_proveedor)
-
-        header_layout.addWidget(titulo)
-        header_layout.addStretch()
-        header_layout.addWidget(btn_nuevo)
-
-        # Búsqueda
-        self.txt_buscar = UpperLineEdit()
-        self.txt_buscar.setClearButtonEnabled(True)
+        super().init_ui()
         self.txt_buscar.setPlaceholderText("🔍 Buscar por RUC, razón social o contacto...")
-        self.txt_buscar.setStyleSheet("""
-            QLineEdit {
-                padding: 10px;
-                border: 2px solid #ddd;
-                border-radius: 5px;
-                font-size: 12px;
-            }
-            QLineEdit:focus {
-                border: 2px solid #1a73e8;
-            }
-        """)
-        self.txt_buscar.textChanged.connect(self.buscar_proveedores)
+        self.btn_nuevo.setText("+ Nuevo Proveedor")
 
-        # Contador
-        self.lbl_contador = QLabel()
-        self.lbl_contador.setStyleSheet("color: #666; font-size: 11px; padding: 5px;")
-
-        # Tabla
-        self.tabla = QTableWidget()
+    def setup_table_columns(self):
         self.tabla.setColumnCount(8)
         self.tabla.setHorizontalHeaderLabels([
             "ID", "RUC", "Razón Social", "Teléfono", "Email", "Contacto", "Dirección", "Acciones"
         ])
 
-        self.tabla.setStyleSheet("""
-            QTableWidget {
-                border: 1px solid #ddd;
-                border-radius: 5px;
-                background-color: white;
-            }
-            QHeaderView::section {
-                background-color: #f1f3f4;
-                padding: 10px;
-                border: none;
-                font-weight: bold;
-            }
-        """)
-
         header = self.tabla.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents) # NUEVO: Columna ID
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents) # RUC
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)         # Razón Social
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents) # Teléfono
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents) # Email
-        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents) # Contacto
-        header.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents) # Dirección
-        header.setSectionResizeMode(7, QHeaderView.ResizeMode.Fixed)               # Acciones
-        self.tabla.setColumnWidth(7, 150) # MODIFICADO: 6 -> 7
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(7, QHeaderView.ResizeMode.Fixed)
+        self.tabla.setColumnWidth(7, 150)
 
-        self.tabla.setAlternatingRowColors(True)
-        self.tabla.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+    def apply_ordering(self, query):
+        return query.order_by(Proveedor.razon_social)
 
-        # Agregar al layout
-        layout.addLayout(header_layout)
-        layout.addWidget(self.txt_buscar)
-        layout.addWidget(self.lbl_contador)
-        layout.addWidget(self.tabla)
+    def fill_row(self, row, prov):
+        item_id = QTableWidgetItem(str(prov.id))
+        item_id.setFlags(item_id.flags() & ~Qt.ItemFlag.ItemIsEditable)
+        item_id.setForeground(Qt.GlobalColor.gray)
+        self.tabla.setItem(row, 0, item_id)
 
-        self.setLayout(layout)
+        self.tabla.setItem(row, 1, QTableWidgetItem(prov.ruc))
+        self.tabla.setItem(row, 2, QTableWidgetItem(prov.razon_social))
+        self.tabla.setItem(row, 3, QTableWidgetItem(prov.telefono or ""))
+        self.tabla.setItem(row, 4, QTableWidgetItem(prov.email or ""))
+        self.tabla.setItem(row, 5, QTableWidgetItem(prov.contacto or ""))
+        self.tabla.setItem(row, 6, QTableWidgetItem(prov.direccion or ""))
 
-    def cargar_proveedores(self):
-        """Carga todos los proveedores en la tabla"""
-        proveedores = self.session.query(Proveedor).filter_by(activo=True).order_by(Proveedor.razon_social).all()
-        self.mostrar_proveedores(proveedores)
-
-    def mostrar_proveedores(self, proveedores):
-        """Muestra proveedores en la tabla"""
-        self.proveedores_mostrados = proveedores
-        self.tabla.setRowCount(len(proveedores))
-
-        for row, prov in enumerate(proveedores):
-
-            # --- Columna 0: ID ---
-            item_id = QTableWidgetItem(str(prov.id))
-            item_id.setFlags(item_id.flags() & ~Qt.ItemFlag.ItemIsEditable)
-            item_id.setForeground(Qt.GlobalColor.gray)
-            self.tabla.setItem(row, 0, item_id)
-
-            # --- Columnas 1-6: Datos ---
-            self.tabla.setItem(row, 1, QTableWidgetItem(prov.ruc))
-            self.tabla.setItem(row, 2, QTableWidgetItem(prov.razon_social))
-            self.tabla.setItem(row, 3, QTableWidgetItem(prov.telefono or ""))
-            self.tabla.setItem(row, 4, QTableWidgetItem(prov.email or ""))
-            self.tabla.setItem(row, 5, QTableWidgetItem(prov.contacto or ""))
-            self.tabla.setItem(row, 6, QTableWidgetItem(prov.direccion or ""))
-
-            # --- Columna 7: Botones de acción ---
-
-            # (Aquí estaba el error, faltaba esta sección)
-            btn_widget = QWidget()
-            btn_layout = QHBoxLayout() # <--- ESTA LÍNEA FALTABA O ESTABA MAL UBICADA
-            btn_layout.setContentsMargins(5, 5, 5, 5)
-
-            btn_editar = QPushButton()
-            style_button(btn_editar, 'edit', "Editar")
-            btn_editar.clicked.connect(lambda checked, p=prov: self.editar_proveedor(p))
-
-            btn_eliminar = QPushButton()
-            style_button(btn_eliminar, 'delete', "Eliminar")
-            btn_eliminar.clicked.connect(lambda checked, p=prov: self.eliminar_proveedor(p))
-
-            # (Fin de la sección que faltaba)
-
-            btn_layout.addWidget(btn_editar)
-            btn_layout.addWidget(btn_eliminar)
-            btn_widget.setLayout(btn_layout)
-
-            self.tabla.setCellWidget(row, 7, btn_widget) # Asegúrate que sea la columna 7
-
-        # Actualizar contador
-        self.lbl_contador.setText(f"📊 Total: {len(proveedores)} proveedor(es)")
-
-    def buscar_proveedores(self):
-        """Busca proveedores por texto"""
-        texto = self.txt_buscar.text().lower().strip()
-
-        # Empezar la consulta base
-        query = self.session.query(Proveedor).filter_by(activo=True)
-
-        if texto:
-            # ilike es como 'LIKE' pero ignora mayúsculas/minúsculas
-            filtro_texto = f"%{texto}%"
-            query = query.filter(
-                or_(
-                    Proveedor.ruc.ilike(filtro_texto),
-                    Proveedor.razon_social.ilike(filtro_texto),
-                    Proveedor.contacto.ilike(filtro_texto),
-                    Proveedor.email.ilike(filtro_texto)
-                )
+    def apply_search_filters(self, query, text):
+        filtro_texto = f"%{text}%"
+        return query.filter(
+            or_(
+                Proveedor.ruc.ilike(filtro_texto),
+                Proveedor.razon_social.ilike(filtro_texto),
+                Proveedor.contacto.ilike(filtro_texto),
+                Proveedor.email.ilike(filtro_texto)
             )
+        )
 
-        # Ordenar y ejecutar la consulta final
-        proveedores = query.order_by(Proveedor.razon_social).all()
-        self.mostrar_proveedores(proveedores)
-
-    def nuevo_proveedor(self):
-        """Abre diálogo para crear proveedor"""
-        dialog = ProveedorDialog(self, session=self.session)
+    def _open_dialog(self, item=None):
+        dialog = ProveedorDialog(self, proveedor=item, session=self.session)
         if dialog.exec() == QDialog.DialogCode.Accepted:
-            self.cargar_proveedores()
+            if item: self.session.refresh(item)
+            self.load_data()
 
-    def editar_proveedor(self, proveedor):
-        """Abre diálogo para editar proveedor"""
-        dialog = ProveedorDialog(self, proveedor=proveedor, session=self.session)
-        if dialog.exec() == QDialog.DialogCode.Accepted:
-            self.session.refresh(proveedor)
-            self.cargar_proveedores()
-
-    def eliminar_proveedor(self, proveedor):
-        """Elimina (desactiva) un proveedor"""
+    def delete_item(self, proveedor):
+        # Override to provide specific message
         respuesta = QMessageBox.question(
             self,
             "Confirmar eliminación",
@@ -510,19 +376,10 @@ class ProveedoresWindow(QWidget):
                 proveedor.activo = False
                 self.session.commit()
                 QMessageBox.information(self, "Éxito", "Proveedor eliminado correctamente")
-                self.cargar_proveedores()
+                self.load_data()
             except Exception as e:
                 self.session.rollback()
                 QMessageBox.critical(self, "Error", f"Error al eliminar:\n{str(e)}")
-    def closeEvent(self, event):
-        """Se asegura de cerrar la sesión de BD al cerrar la ventana"""
-        try:
-            self.session.close()
-            print("Sesión de proveedores cerrada.")
-        except Exception as e:
-            print(f"Error al cerrar la sesión de proveedores: {e}")
-        finally:
-            event.accept()
 
 # PRUEBA STANDALONE
 if __name__ == "__main__":
