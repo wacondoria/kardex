@@ -19,7 +19,7 @@ from sqlalchemy.orm import joinedload
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models.database_model import (obtener_session, Usuario, Licencia,
-                                   AnioContable, EstadoAnio, Rol)
+                                   AnioContable, EstadoAnio, Rol, Permiso)
 from utils.app_context import app_context
 from utils.widgets import SearchableComboBox
 
@@ -145,21 +145,30 @@ class LoginWindow(QWidget):
             return
 
         try:
-            # --- CORRECCIÓN: Simplificada la consulta para usar lazy loading ---
-            # Esto evita posibles problemas con joinedload y asegura que los permisos se carguen.
-            user = self.session.query(Usuario).filter_by(username=usuario, activo=True).first()
+            # --- CORRECCIÓN: Usar joinedload para asegurar la carga de relaciones ---
+            # Usamos joinedload para traer rol y permisos en una sola consulta y evitar problemas de sesión.
+            user = self.session.query(Usuario).options(
+                joinedload(Usuario.rol).joinedload(Rol.permisos)
+            ).filter_by(username=usuario, activo=True).first()
 
             if not user or not check_password_hash(user.password_hash, password):
                 QMessageBox.critical(self, "Error de autenticación", "Usuario o contraseña incorrecta.")
                 self.txt_password.clear()
                 return
 
-            # Cargar permisos en el app_context
+            # Cargar permisos
+            permission_keys = set()
+
             if user.rol and user.rol.permisos:
-                permission_keys = [p.clave for p in user.rol.permisos]
-                app_context.set_user_permissions(permission_keys)
-            else:
-                app_context.set_user_permissions([]) # Sin permisos si no tiene rol
+                permission_keys.update([p.clave for p in user.rol.permisos])
+
+            # FALLBACK DE SEGURIDAD: Si es el usuario 'admin', agregar permisos críticos
+            # Esto asegura que el admin nunca quede bloqueado, incluso si la BD falla
+            if user.username == 'admin':
+                 permission_keys.update(['acceso_total', 'gestionar_usuarios', 'configuracion_sistema'])
+                 print("⚠️ Usuario 'admin' detectado: Se aseguraron permisos críticos.")
+
+            app_context.set_user_permissions(list(permission_keys))
 
             # Guardar sesión y empresa en AppContext
             app_context.set_session(self.session)
