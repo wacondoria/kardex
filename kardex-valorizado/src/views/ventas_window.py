@@ -41,6 +41,7 @@ from utils.validation import verificar_estado_anio, AnioCerradoError
 from utils.button_utils import style_button
 from utils.kardex_manager import KardexManager
 from utils.ventas_manager import VentasManager
+from utils.styles import STYLE_CUADRADO_VERDE, STYLE_CHECKBOX_CUSTOM
 
 # ============================================
 # CLASES AUXILIARES (para seleccionar texto)
@@ -104,18 +105,6 @@ class VentaDialog(QDialog):
         titulo.setStyleSheet("color: #1a73e8; padding: 10px;")
         layout.addWidget(titulo)
         
-        style_cuadrado_verde = """
-            QPushButton {
-                background-color: #34a853; 
-                color: white; 
-                font-weight: bold; 
-                font-size: 16px;
-                border-radius: 5px;
-                padding: 0px;
-            }
-            QPushButton:hover { background-color: #2e8b4e; }
-        """
-
         # === DATOS DE LA VENTA ===
         grupo_venta = QGroupBox("Datos de la Venta")
         form_venta = QFormLayout()
@@ -136,7 +125,7 @@ class VentaDialog(QDialog):
         self.btn_nuevo_cliente = QPushButton("+")
         self.btn_nuevo_cliente.setToolTip("Crear nuevo cliente")
         self.btn_nuevo_cliente.setFixedSize(30, 30)
-        self.btn_nuevo_cliente.setStyleSheet(style_cuadrado_verde)
+        self.btn_nuevo_cliente.setStyleSheet(STYLE_CUADRADO_VERDE)
         self.btn_nuevo_cliente.clicked.connect(self.crear_nuevo_cliente)
         fila_cliente_proceso.addWidget(self.btn_nuevo_cliente)
 
@@ -232,12 +221,7 @@ class VentaDialog(QDialog):
 
         # IGV
         self.chk_incluye_igv = QCheckBox("Los precios INCLUYEN IGV (18%)")
-        self.chk_incluye_igv.setStyleSheet(
-            "QCheckBox { font-weight: bold; color: #ea4335; spacing: 5px; }"
-            "QCheckBox::indicator { width: 16px; height: 16px; border: 1px solid #aaa; border-radius: 3px; background-color: white; }"
-            "QCheckBox::indicator:checked { background-color: #34a853; border: 1px solid #2e8b4e; image: url(:/qt-project.org/styles/commonstyle/images/check-16.png); }"
-            "QCheckBox::indicator:hover { border: 1px solid #1a73e8; }"
-        )
+        self.chk_incluye_igv.setStyleSheet(STYLE_CHECKBOX_CUSTOM)
         self.chk_incluye_igv.toggled.connect(self.recalcular_totales)
         form_venta.addRow("", self.chk_incluye_igv)
 
@@ -257,7 +241,7 @@ class VentaDialog(QDialog):
         self.btn_nuevo_producto = QPushButton("+")
         self.btn_nuevo_producto.setToolTip("Crear nuevo producto")
         self.btn_nuevo_producto.setFixedSize(30, 30)
-        self.btn_nuevo_producto.setStyleSheet(style_cuadrado_verde)
+        self.btn_nuevo_producto.setStyleSheet(STYLE_CUADRADO_VERDE)
         self.btn_nuevo_producto.clicked.connect(self.crear_nuevo_producto)
 
         self.cmb_almacen = SearchableComboBox()
