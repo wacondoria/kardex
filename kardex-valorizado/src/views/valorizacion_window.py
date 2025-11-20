@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models.database_model import (obtener_session, Producto, Empresa, Almacen,
                                    MovimientoStock, Categoria, Moneda)
-from utils.widgets import SearchableComboBox
+from utils.widgets import SearchableComboBox, MoneyDelegate
 
 
 class ValorizacionWindow(QWidget):
@@ -173,6 +173,11 @@ class ValorizacionWindow(QWidget):
         
         self.tabla.setAlternatingRowColors(True)
         
+        money_delegate = MoneyDelegate(self.tabla)
+        self.tabla.setItemDelegateForColumn(4, money_delegate)
+        self.tabla.setItemDelegateForColumn(5, money_delegate)
+        self.tabla.setItemDelegateForColumn(6, money_delegate)
+
         layout.addWidget(self.tabla)
         
         # Totales por categoría

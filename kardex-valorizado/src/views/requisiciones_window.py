@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from models.database_model import (obtener_session, Requisicion, RequisicionDetalle,
                                    Producto, Almacen, Empresa, Destino,
                                    MovimientoStock, TipoMovimiento, MetodoValuacion)
-from utils.widgets import UpperLineEdit, SearchableComboBox
+from utils.widgets import UpperLineEdit, SearchableComboBox, MoneyDelegate
 from utils.app_context import app_context
 from utils.button_utils import style_button
 from utils.kardex_manager import KardexManager
@@ -168,6 +168,12 @@ class RequisicionDialog(QDialog):
         header.setSectionResizeMode(6, QHeaderView.ResizeMode.Fixed)
         self.tabla_productos.setColumnWidth(6, 80)
         
+        money_delegate = MoneyDelegate(self.tabla_productos)
+        self.tabla_productos.setItemDelegateForColumn(2, money_delegate)
+        self.tabla_productos.setItemDelegateForColumn(3, money_delegate)
+        self.tabla_productos.setItemDelegateForColumn(4, money_delegate)
+        self.tabla_productos.setItemDelegateForColumn(5, money_delegate)
+
         productos_layout.addWidget(self.tabla_productos)
         
         grupo_productos.setLayout(productos_layout)

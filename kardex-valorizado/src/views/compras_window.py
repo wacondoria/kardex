@@ -44,7 +44,7 @@ from models.database_model import (obtener_session, Compra, CompraDetalle,
                                    Proveedor, Producto, Almacen, Empresa,
                                    TipoCambio, TipoDocumento, Moneda,
                                    MovimientoStock, TipoMovimiento)
-from utils.widgets import UppercaseValidator, SearchableComboBox
+from utils.widgets import UppercaseValidator, SearchableComboBox, MoneyDelegate
 from utils.app_context import app_context
 from utils.validation import verificar_estado_anio, AnioCerradoError
 from utils.button_utils import style_button
@@ -353,6 +353,11 @@ class CompraDialog(QDialog):
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(5, QHeaderView.ResizeMode.Fixed)
         self.tabla_productos.setColumnWidth(5, 80)
+
+        money_delegate = MoneyDelegate(self.tabla_productos)
+        self.tabla_productos.setItemDelegateForColumn(2, money_delegate) # Cantidad
+        self.tabla_productos.setItemDelegateForColumn(3, money_delegate) # Precio
+        self.tabla_productos.setItemDelegateForColumn(4, money_delegate) # Subtotal
 
         productos_layout.addWidget(self.tabla_productos)
 
@@ -1372,6 +1377,12 @@ class DetalleCompraDialog(QDialog):
 
         tabla.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         tabla.resizeColumnsToContents()
+
+        money_delegate = MoneyDelegate(tabla)
+        tabla.setItemDelegateForColumn(2, money_delegate)
+        tabla.setItemDelegateForColumn(3, money_delegate)
+        tabla.setItemDelegateForColumn(4, money_delegate)
+
         layout.addWidget(tabla)
 
         # --- Grupo de Totales (CORREGIDO) ---
@@ -1561,6 +1572,11 @@ class ComprasWindow(QWidget):
 
         self.tabla.setAlternatingRowColors(True)
         self.tabla.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+
+        money_delegate_main = MoneyDelegate(self.tabla)
+        self.tabla.setItemDelegateForColumn(6, money_delegate_main) # Subtotal
+        self.tabla.setItemDelegateForColumn(7, money_delegate_main) # IGV
+        self.tabla.setItemDelegateForColumn(8, money_delegate_main) # Total
 
         layout.addLayout(header_layout)
         layout.addLayout(filtro_layout)

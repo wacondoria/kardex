@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from models.database_model import (obtener_session, OrdenCompra, OrdenCompraDetalle,
                                    Proveedor, Producto, Empresa, TipoCambio,
                                    Moneda, EstadoOrden, Usuario)
-from utils.widgets import UpperLineEdit, SearchableComboBox
+from utils.widgets import UpperLineEdit, SearchableComboBox, MoneyDelegate
 
 
 class OrdenCompraDialog(QDialog):
@@ -190,6 +190,11 @@ class OrdenCompraDialog(QDialog):
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.Fixed)
         self.tabla_productos.setColumnWidth(4, 80)
         
+        money_delegate = MoneyDelegate(self.tabla_productos)
+        self.tabla_productos.setItemDelegateForColumn(1, money_delegate)
+        self.tabla_productos.setItemDelegateForColumn(2, money_delegate)
+        self.tabla_productos.setItemDelegateForColumn(3, money_delegate)
+
         productos_layout.addWidget(self.tabla_productos)
         
         grupo_productos.setLayout(productos_layout)
@@ -579,6 +584,9 @@ class OrdenesCompraWindow(QWidget):
         
         self.tabla.setAlternatingRowColors(True)
         
+        money_delegate_main = MoneyDelegate(self.tabla)
+        self.tabla.setItemDelegateForColumn(5, money_delegate_main)
+
         layout.addLayout(header_layout)
         layout.addLayout(filtro_layout)
         layout.addWidget(self.lbl_contador)
