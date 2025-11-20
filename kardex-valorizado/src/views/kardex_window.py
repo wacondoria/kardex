@@ -502,10 +502,10 @@ class KardexWindow(QWidget):
             
             # Entrada
             if mov.cantidad_entrada > 0:
-                self.tabla.setItem(row, 3, QTableWidgetItem(f"{mov.cantidad_entrada:.2f}"))
+                self.tabla.setItem(row, 3, QTableWidgetItem(f"{mov.cantidad_entrada:,.2f}"))
                 cu = getattr(mov, 'costo_unitario_calculado', mov.costo_unitario)
-                self.tabla.setItem(row, 4, QTableWidgetItem(f"{moneda_simbolo} {cu:.2f}"))
-                self.tabla.setItem(row, 5, QTableWidgetItem(f"{moneda_simbolo} {mov.cantidad_entrada * cu:.2f}"))
+                self.tabla.setItem(row, 4, QTableWidgetItem(f"{moneda_simbolo} {cu:,.2f}"))
+                self.tabla.setItem(row, 5, QTableWidgetItem(f"{moneda_simbolo} {mov.cantidad_entrada * cu:,.2f}"))
             else:
                 self.tabla.setItem(row, 3, QTableWidgetItem(""))
                 self.tabla.setItem(row, 4, QTableWidgetItem(""))
@@ -513,11 +513,11 @@ class KardexWindow(QWidget):
             
             # Salida
             if mov.cantidad_salida > 0:
-                self.tabla.setItem(row, 6, QTableWidgetItem(f"{mov.cantidad_salida:.2f}"))
+                self.tabla.setItem(row, 6, QTableWidgetItem(f"{mov.cantidad_salida:,.2f}"))
                 cu = getattr(mov, 'costo_unitario_calculado', 0)
                 ct = getattr(mov, 'costo_total_calculado', 0)
-                self.tabla.setItem(row, 7, QTableWidgetItem(f"{moneda_simbolo} {cu:.2f}"))
-                self.tabla.setItem(row, 8, QTableWidgetItem(f"{moneda_simbolo} {ct:.2f}"))
+                self.tabla.setItem(row, 7, QTableWidgetItem(f"{moneda_simbolo} {cu:,.2f}"))
+                self.tabla.setItem(row, 8, QTableWidgetItem(f"{moneda_simbolo} {ct:,.2f}"))
             else:
                 self.tabla.setItem(row, 6, QTableWidgetItem(""))
                 self.tabla.setItem(row, 7, QTableWidgetItem(""))
@@ -526,8 +526,8 @@ class KardexWindow(QWidget):
             # Saldo
             saldo_cant = getattr(mov, 'saldo_cantidad_calculado', mov.saldo_cantidad)
             saldo_val = getattr(mov, 'saldo_valor_calculado', mov.saldo_costo_total)
-            self.tabla.setItem(row, 9, QTableWidgetItem(f"{saldo_cant:.2f}"))
-            self.tabla.setItem(row, 10, QTableWidgetItem(f"{moneda_simbolo} {saldo_val:.2f}"))
+            self.tabla.setItem(row, 9, QTableWidgetItem(f"{saldo_cant:,.2f}"))
+            self.tabla.setItem(row, 10, QTableWidgetItem(f"{moneda_simbolo} {saldo_val:,.2f}"))
         
         # Resumen
         if self.movimientos:
@@ -539,9 +539,9 @@ class KardexWindow(QWidget):
             total_salidas = sum(m.cantidad_salida for m in self.movimientos)
             
             resumen = f"📊 Total Movimientos: {len(self.movimientos)} | "
-            resumen += f"Total Entradas: {total_entradas:.2f} | "
-            resumen += f"Total Salidas: {total_salidas:.2f} | "
-            resumen += f"<strong>Saldo Final: {saldo_final_cant:.2f} unidades = {moneda_simbolo} {saldo_final_val:.2f}</strong>"
+            resumen += f"Total Entradas: {total_entradas:,.2f} | "
+            resumen += f"Total Salidas: {total_salidas:,.2f} | "
+            resumen += f"<strong>Saldo Final: {saldo_final_cant:,.2f} unidades = {moneda_simbolo} {saldo_final_val:,.2f}</strong>"
             
             self.lbl_resumen.setText(resumen)
     
@@ -662,9 +662,9 @@ class KardexWindow(QWidget):
                 doc = f"{mov.tipo_documento.value if mov.tipo_documento else ''} {mov.numero_documento or ''}"
                 detalle = mov.tipo.value
 
-                entrada = f"{mov.cantidad_entrada:.2f}" if mov.cantidad_entrada > 0 else ""
-                salida = f"{mov.cantidad_salida:.2f}" if mov.cantidad_salida > 0 else ""
-                saldo = f"{getattr(mov, 'saldo_cantidad_calculado', mov.saldo_cantidad):.2f}"
+                entrada = f"{mov.cantidad_entrada:,.2f}" if mov.cantidad_entrada > 0 else ""
+                salida = f"{mov.cantidad_salida:,.2f}" if mov.cantidad_salida > 0 else ""
+                saldo = f"{getattr(mov, 'saldo_cantidad_calculado', mov.saldo_cantidad):,.2f}"
 
                 data.append([fecha, doc, detalle, entrada, salida, saldo])
 

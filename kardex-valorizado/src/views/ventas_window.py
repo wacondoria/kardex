@@ -522,12 +522,12 @@ class VentaDialog(QDialog):
             item_alm.setFlags(item_alm.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self.tabla_productos.setItem(row, 1, item_alm)
 
-            item_cant = QTableWidgetItem(f"{det['cantidad']:.2f}")
-            item_precio = QTableWidgetItem(f"{det['precio_unitario']:.2f}")
+            item_cant = QTableWidgetItem(f"{det['cantidad']:,.2f}")
+            item_precio = QTableWidgetItem(f"{det['precio_unitario']:,.2f}")
             self.tabla_productos.setItem(row, 2, item_cant)
             self.tabla_productos.setItem(row, 3, item_precio)
 
-            item_subtotal = QTableWidgetItem(f"{det['subtotal']:.2f}")
+            item_subtotal = QTableWidgetItem(f"{det['subtotal']:,.2f}")
             item_subtotal.setFlags(item_subtotal.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self.tabla_productos.setItem(row, 4, item_subtotal)
 
@@ -573,15 +573,15 @@ class VentaDialog(QDialog):
                 subtotal_item = QTableWidgetItem()
                 subtotal_item.setFlags(subtotal_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 self.tabla_productos.setItem(row, 4, subtotal_item)
-            subtotal_item.setText(f"{subtotal_sin_igv:.2f}")
+            subtotal_item.setText(f"{subtotal_sin_igv:,.2f}")
 
         self.tabla_productos.blockSignals(False)
 
         subtotal, igv, total, _, _ = self._calcular_montos_decimal()
         moneda_simbolo = "S/" if self.cmb_moneda.currentData() == Moneda.SOLES.value else "$"
-        self.lbl_subtotal.setText(f"{moneda_simbolo} {subtotal:.2f}")
-        self.lbl_igv.setText(f"{moneda_simbolo} {igv:.2f}")
-        self.lbl_total.setText(f"{moneda_simbolo} {total:.2f}")
+        self.lbl_subtotal.setText(f"{moneda_simbolo} {subtotal:,.2f}")
+        self.lbl_igv.setText(f"{moneda_simbolo} {igv:,.2f}")
+        self.lbl_total.setText(f"{moneda_simbolo} {total:,.2f}")
         
     def _calcular_montos_decimal(self):
         DOS_DECIMALES = Decimal('0.01')
@@ -977,7 +977,8 @@ class VentaDialog(QDialog):
         if column not in [2, 3]: return
         item = self.tabla_productos.item(row, column)
         if not item: return
-        nuevo_valor_str = item.text().replace(',', '.')
+        # Eliminar comas (separador de miles) antes de convertir
+        nuevo_valor_str = item.text().replace(',', '')
 
         try:
             nuevo_valor = float(nuevo_valor_str)
@@ -985,8 +986,8 @@ class VentaDialog(QDialog):
         except ValueError:
             QMessageBox.warning(self, "Valor inválido", f"Ingrese un número válido.")
             self.tabla_productos.blockSignals(True)
-            if column == 2: item.setText(f"{self.detalles_venta[row]['cantidad']:.2f}")
-            else: item.setText(f"{self.detalles_venta[row]['precio_unitario']:.2f}")
+            if column == 2: item.setText(f"{self.detalles_venta[row]['cantidad']:,.2f}")
+            else: item.setText(f"{self.detalles_venta[row]['precio_unitario']:,.2f}")
             self.tabla_productos.blockSignals(False)
             return
 
@@ -1124,11 +1125,11 @@ class DetalleVentaDialog(QDialog):
 
             tabla.setItem(row, 0, QTableWidgetItem(producto_nombre))
             tabla.setItem(row, 1, QTableWidgetItem(almacen_nombre))
-            tabla.setItem(row, 2, QTableWidgetItem(f"{det.cantidad:.2f}"))
-            tabla.setItem(row, 3, QTableWidgetItem(f"{det.precio_unitario_sin_igv:.2f}"))
-            tabla.setItem(row, 4, QTableWidgetItem(f"{det.subtotal:.2f}"))
+            tabla.setItem(row, 2, QTableWidgetItem(f"{det.cantidad:,.2f}"))
+            tabla.setItem(row, 3, QTableWidgetItem(f"{det.precio_unitario_sin_igv:,.2f}"))
+            tabla.setItem(row, 4, QTableWidgetItem(f"{det.subtotal:,.2f}"))
             tabla.setItem(row, 5, QTableWidgetItem(f"{det.costo_unitario_kardex:.4f}")) # Más decimales para costo
-            tabla.setItem(row, 6, QTableWidgetItem(f"{det.costo_total_kardex:.2f}"))
+            tabla.setItem(row, 6, QTableWidgetItem(f"{det.costo_total_kardex:,.2f}"))
 
         tabla.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         tabla.resizeColumnsToContents()
@@ -1165,9 +1166,9 @@ class DetalleVentaDialog(QDialog):
         igv_real = Decimal(str(getattr(self.venta, 'igv', '0')))
         total_real = Decimal(str(getattr(self.venta, 'total', '0')))
         simbolo = "$" if self.venta.moneda == Moneda.DOLARES else "S/"
-        self.lbl_subtotal_detalle.setText(f"{simbolo} {subtotal_real:.2f}")
-        self.lbl_igv_detalle.setText(f"{simbolo} {igv_real:.2f}")
-        self.lbl_total_detalle.setText(f"{simbolo} {total_real:.2f}")
+        self.lbl_subtotal_detalle.setText(f"{simbolo} {subtotal_real:,.2f}")
+        self.lbl_igv_detalle.setText(f"{simbolo} {igv_real:,.2f}")
+        self.lbl_total_detalle.setText(f"{simbolo} {total_real:,.2f}")
 
 # ============================================
 # VENTANA PRINCIPAL DE VENTAS
@@ -1359,9 +1360,9 @@ class VentasWindow(QWidget):
             cliente_nombre = venta.cliente.razon_social_o_nombre if venta.cliente else "Cliente Desconocido"
             self.tabla.setItem(row, 4, QTableWidgetItem(cliente_nombre))
             self.tabla.setItem(row, 5, QTableWidgetItem(moneda_simbolo_mostrar))
-            self.tabla.setItem(row, 6, QTableWidgetItem(f"{moneda_simbolo_mostrar} {subtotal_mostrar:.2f}"))
-            self.tabla.setItem(row, 7, QTableWidgetItem(f"{moneda_simbolo_mostrar} {igv_mostrar:.2f}"))
-            self.tabla.setItem(row, 8, QTableWidgetItem(f"{moneda_simbolo_mostrar} {total_mostrar:.2f}"))
+            self.tabla.setItem(row, 6, QTableWidgetItem(f"{moneda_simbolo_mostrar} {subtotal_mostrar:,.2f}"))
+            self.tabla.setItem(row, 7, QTableWidgetItem(f"{moneda_simbolo_mostrar} {igv_mostrar:,.2f}"))
+            self.tabla.setItem(row, 8, QTableWidgetItem(f"{moneda_simbolo_mostrar} {total_mostrar:,.2f}"))
 
             botones_layout = QHBoxLayout(); botones_layout.setContentsMargins(0, 0, 0, 0); botones_layout.setSpacing(5)
             btn_ver = QPushButton(); style_button(btn_ver, 'view', "Ver")
@@ -1379,7 +1380,7 @@ class VentasWindow(QWidget):
             botones_widget = QWidget(); botones_widget.setLayout(botones_layout)
             self.tabla.setCellWidget(row, 9, botones_widget)
 
-        self.lbl_contador.setText(f"📊 Total: {len(ventas)} venta(s) | Total en soles: S/ {total_soles_calculado.quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP):.2f}")
+        self.lbl_contador.setText(f"📊 Total: {len(ventas)} venta(s) | Total en soles: S/ {total_soles_calculado.quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP):,.2f}")
 
     def nueva_venta(self):
         dialog = VentaDialog(self, self.user_info)
@@ -1406,7 +1407,7 @@ class VentasWindow(QWidget):
             f"¿Está seguro de eliminar la venta:\n\n"
             f"Documento: {venta_a_eliminar.numero_documento}\n"
             f"Cliente: {venta_a_eliminar.cliente.razon_social_o_nombre}\n"
-            f"Total: {venta_a_eliminar.total:.2f}\n\n"
+            f"Total: {venta_a_eliminar.total:,.2f}\n\n"
             f"Esta acción anulará los movimientos de Kardex y recalculará los saldos. No se puede deshacer.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No

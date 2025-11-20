@@ -373,9 +373,9 @@ class OrdenCompraDialog(QDialog):
         
         for row, det in enumerate(self.detalles):
             self.tabla_productos.setItem(row, 0, QTableWidgetItem(det['producto_nombre']))
-            self.tabla_productos.setItem(row, 1, QTableWidgetItem(f"{det['cantidad']:.2f}"))
-            self.tabla_productos.setItem(row, 2, QTableWidgetItem(f"{det['precio_unitario']:.2f}"))
-            self.tabla_productos.setItem(row, 3, QTableWidgetItem(f"{det['subtotal']:.2f}"))
+            self.tabla_productos.setItem(row, 1, QTableWidgetItem(f"{det['cantidad']:,.2f}"))
+            self.tabla_productos.setItem(row, 2, QTableWidgetItem(f"{det['precio_unitario']:,.2f}"))
+            self.tabla_productos.setItem(row, 3, QTableWidgetItem(f"{det['subtotal']:,.2f}"))
             
             btn_eliminar = QPushButton("✕")
             btn_eliminar.setStyleSheet("background-color: #ea4335; color: white;")
@@ -393,7 +393,7 @@ class OrdenCompraDialog(QDialog):
         """Recalcula el total"""
         total = sum(det['subtotal'] for det in self.detalles)
         moneda_simbolo = "S/" if self.cmb_moneda.currentData() == Moneda.SOLES.value else "$"
-        self.lbl_total.setText(f"TOTAL: {moneda_simbolo} {total:.2f}")
+        self.lbl_total.setText(f"TOTAL: {moneda_simbolo} {total:,.2f}")
     
     def guardar_orden(self):
         """Guarda la orden de compra"""
@@ -624,7 +624,7 @@ class OrdenesCompraWindow(QWidget):
             # Total
             total = sum(det.subtotal for det in orden.detalles)
             moneda = "S/" if orden.moneda == Moneda.SOLES else "$"
-            self.tabla.setItem(row, 5, QTableWidgetItem(f"{moneda} {total:.2f}"))
+            self.tabla.setItem(row, 5, QTableWidgetItem(f"{moneda} {total:,.2f}"))
             
             # Porcentaje recibido
             total_cantidad = sum(det.cantidad for det in orden.detalles)

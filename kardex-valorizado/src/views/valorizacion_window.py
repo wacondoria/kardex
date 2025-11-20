@@ -356,17 +356,17 @@ class ValorizacionWindow(QWidget):
             self.tabla.setItem(row, 3, QTableWidgetItem(dato['unidad']))
             
             # Cantidad
-            item_cant = QTableWidgetItem(f"{dato['cantidad']:.2f}")
+            item_cant = QTableWidgetItem(f"{dato['cantidad']:,.2f}")
             item_cant.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             self.tabla.setItem(row, 4, item_cant)
             
             # Costo Unitario
-            item_cu = QTableWidgetItem(f"{moneda_simbolo} {dato['costo_unitario']:.2f}")
+            item_cu = QTableWidgetItem(f"{moneda_simbolo} {dato['costo_unitario']:,.2f}")
             item_cu.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             self.tabla.setItem(row, 5, item_cu)
             
             # Valor Total
-            item_vt = QTableWidgetItem(f"{moneda_simbolo} {dato['valor_total']:.2f}")
+            item_vt = QTableWidgetItem(f"{moneda_simbolo} {dato['valor_total']:,.2f}")
             item_vt.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             item_vt.setFont(QFont("Arial", 10, QFont.Weight.Bold))
             self.tabla.setItem(row, 6, item_vt)
