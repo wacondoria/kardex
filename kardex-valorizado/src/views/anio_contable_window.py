@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from models.database_model import (obtener_session, AnioContable, EstadoAnio,
                                    MovimientoStock, TipoMovimiento, Producto, Almacen)
 from utils.app_context import app_context
+from utils.button_utils import style_button
 
 class AnioContableWindow(QWidget):
     """Ventana para gestionar los años contables."""
