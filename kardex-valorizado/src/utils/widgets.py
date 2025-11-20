@@ -96,7 +96,7 @@ class MoneyDelegate(QStyledItemDelegate):
         painter.save()
 
         # Dibujar fondo (manejar selección)
-        if option.state & QStyle.State.State_Selected:
+        if option.state & QStyle.StateFlag.State_Selected:
             painter.fillRect(option.rect, option.palette.highlight())
             painter.setPen(option.palette.highlightedText().color())
         else:
