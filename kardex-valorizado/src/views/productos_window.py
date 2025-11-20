@@ -1,7 +1,7 @@
 """
 Gestión de Productos - Sistema Kardex Valorizado
 Archivo: src/views/productos_window.py
-(Versión con QComboBox anidados para Prefijo y Nombre)
+(Versión refactorizada usando BaseCRUDView)
 """
 
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
@@ -35,6 +35,7 @@ except ImportError:
     MovimientoStock = None
 from utils.widgets import UpperLineEdit, SearchableComboBox
 from utils.button_utils import style_button
+from views.base_crud_view import BaseCRUDView
 
 UNIDADES_SUNAT = [
     "UND - Unidad", "KG - Kilogramo", "GR - Gramo", "LT - Litro",
@@ -73,7 +74,6 @@ class ProductoDialog(QDialog):
             self.cargar_datos_producto()
         else:
             self.cmb_codigo.setCurrentIndex(-1)
-            # --- MEJORA: Placeholder inicial para el QComboBox de nombre ---
             self.cmb_nombre.lineEdit().setPlaceholderText("Escriba un nombre o seleccione uno")
             self.cmb_nombre.setCurrentIndex(-1)
 
@@ -90,7 +90,6 @@ class ProductoDialog(QDialog):
             QLineEdit:focus, QTextEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus {
                 border: 2px solid #1a73e8;
             }
-            /* --- MEJORA: Estilo para placeholder en QComboBox editable --- */
             QComboBox::placeholder { color: #999; }
             QComboBox QLineEdit::placeholder { color: #999; }
 
@@ -123,8 +122,6 @@ class ProductoDialog(QDialog):
         self.cmb_codigo.lineEdit().textChanged.connect(lambda text: self.cmb_codigo.lineEdit().setText(text.upper()))
 
         self.cmb_codigo.currentTextChanged.connect(self.actualizar_siguiente_correlativo)
-
-        # --- MEJORA: Conectar señal para actualizar nombres por prefijo ---
         self.cmb_codigo.currentTextChanged.connect(self.actualizar_nombres_por_prefijo)
 
         self.lbl_codigo_completo = QLabel("-...")
@@ -136,14 +133,11 @@ class ProductoDialog(QDialog):
 
         form_layout.addRow("Código (Prefijo):*", codigo_layout)
 
-        # --- MEJORA: QLineEdit a QComboBox editable para Nombre ---
+        # --- NOMBRE ---
         self.cmb_nombre = SearchableComboBox()
         self.cmb_nombre.setToolTip("Escriba un nombre nuevo o seleccione uno existente para editarlo")
         self.cmb_nombre.lineEdit().textChanged.connect(lambda text: self.cmb_nombre.lineEdit().setText(text.upper()))
-        # El placeholder se establece en init y en actualizar_nombres_por_prefijo
-
         form_layout.addRow("Nombre:*", self.cmb_nombre)
-        # --- FIN MEJORA ---
 
         self.txt_descripcion = QTextEdit()
         self.txt_descripcion.setMaximumHeight(80)
@@ -151,7 +145,7 @@ class ProductoDialog(QDialog):
         form_layout.addRow("Descripción:", self.txt_descripcion)
 
         self.cmb_categoria = SearchableComboBox()
-        self.cargar_categorias() # Esto ahora también carga los prefijos
+        self.cargar_categorias()
         form_layout.addRow("Categoría:*", self.cmb_categoria)
 
         self.cmb_unidad = SearchableComboBox()
@@ -205,7 +199,6 @@ class ProductoDialog(QDialog):
         btn_guardar = QPushButton("Guardar")
         btn_guardar.clicked.connect(self.guardar)
 
-        # Estilos de botones (movidos aquí para referencia)
         btn_cancelar.setStyleSheet("""
             QPushButton { background-color: #f1f3f4; color: #333; padding: 10px 30px;
                 border: none; border-radius: 5px; font-weight: bold; }
@@ -224,15 +217,12 @@ class ProductoDialog(QDialog):
         self.setLayout(layout)
 
     def keyPressEvent(self, event):
-        """Captura la pulsación de teclas en el diálogo."""
         if event.key() == Qt.Key.Key_F4:
             self.guardar()
         else:
             super().keyPressEvent(event)
 
-    # --- ESTA ES LA FUNCIÓN CORREGIDA EN EL PASO ANTERIOR ---
     def cargar_prefijos_existentes(self):
-        """Carga los prefijos de 5 caracteres únicos de la base de datos."""
         try:
             codigos_tuplas = self.session.query(Producto.codigo).distinct().all()
 
@@ -257,7 +247,6 @@ class ProductoDialog(QDialog):
 
         except Exception as e:
             print(f"Error al cargar prefijos: {e}")
-    # --- FIN FUNCIÓN CORREGIDA ---
 
     def cargar_categorias(self):
         categorias = self.session.query(Categoria).filter_by(activo=True).all()
@@ -273,10 +262,8 @@ class ProductoDialog(QDialog):
         self.cmb_codigo.setEnabled(False)
         self.lbl_codigo_completo.setText('-' + self.producto.codigo.split('-')[1])
 
-        # --- MEJORA: Cargar nombres para el prefijo y seleccionar el actual ---
         self.actualizar_nombres_por_prefijo_edicion(prefijo_actual)
         self.cmb_nombre.setCurrentText(self.producto.nombre)
-        # --- FIN MEJORA ---
 
         self.txt_descripcion.setPlainText(self.producto.descripcion or "")
 
@@ -310,7 +297,6 @@ class ProductoDialog(QDialog):
             self.spn_dias_vencimiento.setValue(self.producto.dias_vencimiento)
 
     def actualizar_siguiente_correlativo(self, prefijo):
-        """Actualiza la etiqueta del correlativo dinámicamente."""
         if self.cmb_codigo.isEnabled() == False:
             return
 
@@ -328,15 +314,11 @@ class ProductoDialog(QDialog):
             print(f"Error al actualizar correlativo: {e}")
             self.lbl_codigo_completo.setText("-Error")
 
-    # --- MEJORA: Nueva función para actualizar el QComboBox de Nombres ---
     def actualizar_nombres_por_prefijo(self, prefijo):
-        """Filtra la lista de nombres de productos basado en el prefijo."""
         if self.cmb_codigo.isEnabled() == False:
-            return # No hacer nada si estamos en modo edición (ya lo hizo cargar_datos)
+            return
 
         prefijo = prefijo.strip().upper()
-
-        # Guardar el texto que el usuario pudo haber escrito
         texto_actual = self.cmb_nombre.currentText()
 
         self.cmb_nombre.clear()
@@ -359,15 +341,13 @@ class ProductoDialog(QDialog):
             except Exception as e:
                 print(f"Error al cargar nombres por prefijo: {e}")
 
-        # Restaurar el texto y el placeholder
         self.cmb_nombre.setCurrentText(texto_actual)
-        if self.cmb_nombre.lineEdit(): # Asegurarse de que el lineEdit exista
+        if self.cmb_nombre.lineEdit():
             self.cmb_nombre.lineEdit().setPlaceholderText(placeholder)
-        self.cmb_nombre.setCurrentIndex(-1 if texto_actual else 0) # <-- Ajuste
-        self.cmb_nombre.setCurrentText(texto_actual) # Volver a poner el texto
+        self.cmb_nombre.setCurrentIndex(-1 if texto_actual else 0)
+        self.cmb_nombre.setCurrentText(texto_actual)
 
     def actualizar_nombres_por_prefijo_edicion(self, prefijo):
-        """Versión de 'actualizar_nombres_por_prefijo' para modo edición (sin checks)."""
         self.cmb_nombre.clear()
         if len(prefijo) == 5:
             try:
@@ -378,15 +358,10 @@ class ProductoDialog(QDialog):
                 self.cmb_nombre.addItems([nombre[0] for nombre in nombres])
             except Exception as e:
                 print(f"Error al cargar nombres (edición): {e}")
-    # --- FIN MEJORA ---
 
     def guardar(self):
         codigo_prefijo = self.cmb_codigo.currentText().strip().upper()
-
-        # --- MEJORA: Leer el nombre desde el QComboBox ---
         nombre = self.cmb_nombre.currentText().strip()
-        # --- FIN MEJORA ---
-
         categoria_id = self.cmb_categoria.currentData()
         unidad = self.cmb_unidad.currentText().split(' - ')[0]
 
@@ -404,7 +379,6 @@ class ProductoDialog(QDialog):
 
         try:
             if not self.producto:
-                # --- LÓGICA DE CREACIÓN ---
                 codigo_completo = generar_codigo_completo(self.session, codigo_prefijo)
 
                 existe = self.session.query(Producto).filter_by(codigo=codigo_completo).first()
@@ -413,11 +387,10 @@ class ProductoDialog(QDialog):
                     self.actualizar_siguiente_correlativo(codigo_prefijo)
                     return
 
-                # --- MEJORA: Validar nombre + prefijo ---
                 existe_nombre = self.session.query(Producto).filter(
                     Producto.nombre == nombre,
                     Producto.codigo.like(f"{codigo_prefijo}-%"),
-                    Producto.activo == True # --- Añadido por si acaso ---
+                    Producto.activo == True
                 ).first()
                 if existe_nombre:
                         QMessageBox.warning(self, "Error", f"Ya existe un producto activo con el nombre '{nombre}' y el prefijo '{codigo_prefijo}'.")
@@ -441,21 +414,18 @@ class ProductoDialog(QDialog):
                 self.nuevo_producto_id = producto.id
                 mensaje = "Producto creado exitosamente"
             else:
-                # --- LÓGICA DE EDICIÓN ---
                 self.producto = self.session.merge(self.producto)
 
-                # --- MEJORA: Validar nombre duplicado al editar (excluyendo el propio producto) ---
-                if self.producto.nombre != nombre: # Solo si el nombre cambió
+                if self.producto.nombre != nombre:
                     existe_nombre = self.session.query(Producto).filter(
                         Producto.nombre == nombre,
                         Producto.codigo.like(f"{codigo_prefijo}-%"),
-                        Producto.id != self.producto.id, # Excluirse a sí mismo
+                        Producto.id != self.producto.id,
                         Producto.activo == True
                     ).first()
                     if existe_nombre:
                         QMessageBox.warning(self, "Error", f"Ya existe OTRO producto activo con el nombre '{nombre}' y el prefijo '{codigo_prefijo}'.")
                         return
-                # --- FIN MEJORA ---
 
                 self.producto.nombre = nombre
                 self.producto.descripcion = self.txt_descripcion.toPlainText()
@@ -490,87 +460,53 @@ class ProductoDialog(QDialog):
         super().reject()
 
 
-class ProductosWindow(QWidget):
+class ProductosWindow(BaseCRUDView):
     """Ventana principal de gestión de productos"""
 
     def __init__(self, user_info=None):
-        super().__init__()
-        self.session = obtener_session()
         self.user_info = user_info
-        self.productos_mostrados = []
-        self.init_ui()
-        self.cargar_productos()
-
-    def keyPressEvent(self, event):
-        """Captura la pulsación de F2 para crear y F6 para editar."""
-        if event.key() == Qt.Key.Key_F2:
-            self.nuevo_producto()
-        elif event.key() == Qt.Key.Key_F6:
-            fila = self.tabla.currentRow()
-            if fila != -1 and fila < len(self.productos_mostrados):
-                producto_seleccionado = self.productos_mostrados[fila]
-                self.editar_producto(producto_seleccionado)
-        else:
-            super().keyPressEvent(event)
+        # BaseCRUDView constructor calls init_ui and load_data.
+        # We need to override them because ProductosWindow has extra logic (category filter)
+        super().__init__("Gestión de Productos", Producto, ProductoDialog)
 
     def init_ui(self):
-        self.setWindowTitle("Gestión de Productos")
+        # We call super().init_ui() first to get the basic structure
+        super().init_ui()
 
-        layout = QVBoxLayout()
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(15)
-
-        # Header
-        header_layout = QHBoxLayout()
-
-        titulo = QLabel("📦 Gestión de Productos")
-        titulo.setFont(QFont("Arial", 18, QFont.Weight.Bold))
-        titulo.setStyleSheet("color: #1a73e8;")
-
-        btn_nuevo = QPushButton()
-        style_button(btn_nuevo, 'add', "Nuevo Producto")
-        btn_nuevo.clicked.connect(self.nuevo_producto)
-
-        if self.user_info and self.user_info.get('licencia_vencida'):
-            btn_nuevo.setEnabled(False)
-            btn_nuevo.setToolTip("Licencia vencida - Solo consulta")
-
-        header_layout.addWidget(titulo)
-        header_layout.addStretch()
-        header_layout.addWidget(btn_nuevo)
-
-        # Búsqueda
-        search_layout = QHBoxLayout()
-
-        self.txt_buscar = UpperLineEdit()
+        # Customize title and buttons
+        self.btn_nuevo.setText("+ Nuevo Producto")
         self.txt_buscar.setPlaceholderText("🔍 Buscar por código, nombre o categoría...")
-        self.txt_buscar.setStyleSheet("""
-            QLineEdit { padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 12px; }
-            QLineEdit:focus { border: 2px solid #1a73e8; }
-        """)
-        self.txt_buscar.textChanged.connect(self.buscar_productos)
 
+        # Handle license restriction
+        if self.user_info and self.user_info.get('licencia_vencida'):
+            self.btn_nuevo.setEnabled(False)
+            self.btn_nuevo.setToolTip("Licencia vencida - Solo consulta")
+
+    def add_extra_filters(self, layout):
+        """Overrides BaseCRUDView hook to add category filter."""
         self.cmb_categoria_filtro = SearchableComboBox()
         self.cmb_categoria_filtro.setStyleSheet("padding: 8px; min-width: 200px;")
         self.cargar_categorias_filtro()
-        self.cmb_categoria_filtro.currentIndexChanged.connect(self.buscar_productos)
+        self.cmb_categoria_filtro.currentIndexChanged.connect(self.search_data)
+        layout.addWidget(self.cmb_categoria_filtro, 1)
 
-        search_layout.addWidget(self.txt_buscar, 3)
-        search_layout.addWidget(self.cmb_categoria_filtro, 1)
+    def cargar_categorias_filtro(self):
+        self.cmb_categoria_filtro.clear()
+        self.cmb_categoria_filtro.addItem("Todas las categorías", None)
+        try:
+            # Use a fresh session or the current one
+            categorias = self.session.query(Categoria).filter_by(activo=True).order_by(Categoria.nombre).all()
+            for cat in categorias:
+                self.cmb_categoria_filtro.addItem(cat.nombre, cat.id)
+        except Exception as e:
+            print(f"Error loading categories for filter: {e}")
 
-        # Tabla
-        self.tabla = QTableWidget()
+    def setup_table_columns(self):
         self.tabla.setColumnCount(8)
         self.tabla.setHorizontalHeaderLabels([
             "Código", "Nombre", "Categoría", "Unidad", "Stock Mín.",
             "Lote", "Serie", "Acciones"
         ])
-
-        self.tabla.setStyleSheet("""
-            QTableWidget { border: 1px solid #ddd; border-radius: 5px; background-color: white; }
-            QHeaderView::section { background-color: #f1f3f4; padding: 10px;
-                border: none; font-weight: bold; }
-        """)
 
         header = self.tabla.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
@@ -579,174 +515,116 @@ class ProductosWindow(QWidget):
         header.setSectionResizeMode(7, QHeaderView.ResizeMode.Fixed)
         self.tabla.setColumnWidth(7, 150)
 
-        self.tabla.setAlternatingRowColors(True)
-        self.tabla.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self.tabla.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+    def get_base_query(self):
+        """Override to eager load category."""
+        return self.session.query(Producto).options(
+            joinedload(Producto.categoria)
+        ).filter_by(activo=True)
 
-        layout.addLayout(header_layout)
-        layout.addLayout(search_layout)
-        layout.addWidget(self.tabla)
+    def apply_ordering(self, query):
+        return query.order_by(Producto.nombre)
 
-        self.setLayout(layout)
+    def fill_row(self, row, prod):
+        self.tabla.setItem(row, 0, QTableWidgetItem(prod.codigo))
+        self.tabla.setItem(row, 1, QTableWidgetItem(prod.nombre))
 
-    def cargar_categorias_filtro(self):
-        self.cmb_categoria_filtro.clear()
-        self.cmb_categoria_filtro.addItem("Todas las categorías", None)
-        categorias = self.session.query(Categoria).filter_by(activo=True).order_by(Categoria.nombre).all()
-        for cat in categorias:
-            self.cmb_categoria_filtro.addItem(cat.nombre, cat.id)
+        cat_nombre = prod.categoria.nombre if prod.categoria else "N/A"
+        self.tabla.setItem(row, 2, QTableWidgetItem(cat_nombre))
 
-    def cargar_productos(self):
-        try:
-            self.session.expire_all()
-            productos = self.session.query(Producto).options(
-                joinedload(Producto.categoria)
-            ).filter_by(activo=True).order_by(Producto.nombre).all()
-            self.mostrar_productos(productos)
-        except Exception as e:
-            print(f"Error al recargar productos: {e}")
-            self.session.rollback()
-            self.session = obtener_session()
-            productos = self.session.query(Producto).options(
-                joinedload(Producto.categoria)
-            ).filter_by(activo=True).order_by(Producto.nombre).all()
-            self.mostrar_productos(productos)
+        self.tabla.setItem(row, 3, QTableWidgetItem(prod.unidad_medida))
+        self.tabla.setItem(row, 4, QTableWidgetItem(str(prod.stock_minimo)))
 
-    def mostrar_productos(self, productos):
-        self.productos_mostrados = productos
-        self.tabla.setRowCount(0)
-        self.tabla.setRowCount(len(productos))
+        check_lote = QTableWidgetItem("✓" if prod.tiene_lote else "✗")
+        check_lote.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.tabla.setItem(row, 5, check_lote)
 
-        for row, prod in enumerate(productos):
-            self.tabla.setItem(row, 0, QTableWidgetItem(prod.codigo))
-            self.tabla.setItem(row, 1, QTableWidgetItem(prod.nombre))
+        check_serie = QTableWidgetItem("✓" if prod.tiene_serie else "✗")
+        check_serie.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.tabla.setItem(row, 6, check_serie)
 
-            cat_nombre = prod.categoria.nombre if prod.categoria else "N/A"
-            self.tabla.setItem(row, 2, QTableWidgetItem(cat_nombre))
+    def customize_buttons(self, layout, item, btn_edit, btn_delete):
+        # License check
+        if self.user_info and self.user_info.get('licencia_vencida'):
+            btn_edit.setEnabled(False)
+            btn_delete.setEnabled(False)
 
-            self.tabla.setItem(row, 3, QTableWidgetItem(prod.unidad_medida))
-            self.tabla.setItem(row, 4, QTableWidgetItem(str(prod.stock_minimo)))
+    def apply_search_filters(self, query, text):
+        search_text = f"%{text}%"
+        # We need to join Categoria again if not already joined?
+        # get_base_query already does joinedload, but for filtering we might need explicit join if we filter by category name.
+        # SQLAlchemy is smart enough usually.
+        return query.join(Categoria).filter(
+            or_(
+                Producto.codigo.ilike(search_text),
+                Producto.nombre.ilike(search_text),
+                Categoria.nombre.ilike(search_text)
+            )
+        )
 
-            check_lote = QTableWidgetItem("✓" if prod.tiene_lote else "✗")
-            check_lote.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.tabla.setItem(row, 5, check_lote)
-
-            check_serie = QTableWidgetItem("✓" if prod.tiene_serie else "✗")
-            check_serie.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.tabla.setItem(row, 6, check_serie)
-
-            btn_widget = QWidget()
-            btn_layout = QHBoxLayout()
-            btn_layout.setContentsMargins(5, 5, 5, 5)
-            btn_layout.setSpacing(5)
-
-            btn_editar = QPushButton()
-            style_button(btn_editar, 'edit', "Editar")
-            btn_editar.clicked.connect(lambda checked, p=prod: self.editar_producto(p))
-
-            btn_eliminar = QPushButton()
-            style_button(btn_eliminar, 'delete', "Eliminar")
-            btn_eliminar.clicked.connect(lambda checked, p=prod: self.eliminar_producto(p))
-
-            if self.user_info and self.user_info.get('licencia_vencida'):
-                btn_editar.setEnabled(False)
-                btn_eliminar.setEnabled(False)
-
-            btn_layout.addWidget(btn_editar)
-            btn_layout.addWidget(btn_eliminar)
-            btn_layout.addStretch()
-            btn_widget.setLayout(btn_layout)
-
-            self.tabla.setCellWidget(row, 7, btn_widget)
-
-    def buscar_productos(self):
-        texto = self.txt_buscar.text().strip()
+    def apply_extra_filters(self, query):
         categoria_id = self.cmb_categoria_filtro.currentData()
+        if categoria_id:
+            query = query.filter(Producto.categoria_id == categoria_id)
+        return query
 
-        try:
-            query = self.session.query(Producto).options(
-                joinedload(Producto.categoria)
-            ).filter(Producto.activo == True)
+    def _open_dialog(self, item=None):
+        """Override to connect the signal and handle dialog execution."""
+        dialog = ProductoDialog(self, producto=item)
 
-            if categoria_id:
-                query = query.filter_by(categoria_id=categoria_id)
+        # We connect the signal, but BaseCRUDView logic just calls exec().
+        # In original code: dialog.producto_guardado.connect(self.recargar_datos)
+        # recargar_datos reloaded products AND categories.
 
-            if texto:
-                search_text = f"%{texto}%"
-                query = query.join(Categoria).filter(
-                    or_(
-                        Producto.codigo.ilike(search_text),
-                        Producto.nombre.ilike(search_text),
-                        Categoria.nombre.ilike(search_text)
-                    )
-                )
+        dialog.producto_guardado.connect(self.recargar_datos_completos)
 
-            productos = query.order_by(Producto.nombre).all()
-            self.mostrar_productos(productos)
-
-        except Exception as e:
-            QMessageBox.critical(self, "Error de Búsqueda", f"Error al consultar la base de datos:\n{e}")
-
-
-    def nuevo_producto(self):
-        dialog = ProductoDialog(self)
-        dialog.producto_guardado.connect(self.recargar_datos)
         dialog.exec()
+        # Note: BaseCRUDView.create_item calls _open_dialog then load_data().
+        # If dialog.exec() returns Accepted, base calls load_data().
+        # But ProductoDialog emits a signal and might return Accepted too.
+        # We should ensure double loading doesn't cause issues.
+        # Actually, ProductoDialog.guardar calls accept().
+        # So load_data will be called by BaseCRUDView.
+        # But we also need to reload categories filter if a new category was added (less likely here, but good practice).
+        # Original code reloaded categories.
 
-    def editar_producto(self, producto):
-        dialog = ProductoDialog(self, producto)
-        dialog.producto_guardado.connect(self.recargar_datos)
-        dialog.exec()
-
-    def recargar_datos(self):
-        """Slot para recargar productos y categorías."""
-        print("DEBUG: Señal recibida, recargando productos y categorías...")
-        self.cargar_productos()
+    def recargar_datos_completos(self):
+        """Slot to reload everything."""
+        self.load_data()
         self.cargar_categorias_filtro()
 
-    def eliminar_producto(self, producto):
-        """Elimina (desactiva) un producto, validando movimientos primero"""
+    def create_item(self):
+        # Override to match original method name/logic if needed, but BaseCRUDView.create_item is fine.
+        # Except we need to handle the signal.
+        # BaseCRUDView: create_item -> _open_dialog.
+        super().create_item()
+
+    def edit_item(self, item):
+        super().edit_item(item)
+
+    def delete_item(self, producto):
+        # Override for specific validation logic (MovimientoStock check)
 
         if MovimientoStock is None:
-            print("Advertencia: No se pudo importar 'MovimientoStock'. "
-                  "Se omitirá la validación de movimientos al eliminar.")
+            print("Advertencia: No se pudo importar 'MovimientoStock'.")
         else:
             try:
                 movimiento_existente = self.session.query(MovimientoStock).filter_by(producto_id=producto.id).first()
-
                 if movimiento_existente:
                     QMessageBox.warning(self, "Eliminación Bloqueada",
                         f"No se puede eliminar el producto '{producto.nombre}'.\n\n"
                         "Este producto ya tiene movimientos de Kardex registrados. "
                         "Desactivarlo podría causar inconsistencias en los reportes.")
                     return
-
             except Exception as e:
                 self.session.rollback()
                 QMessageBox.critical(self, "Error de Validación",
                     f"No se pudo verificar la existencia de movimientos:\n{str(e)}")
                 return
 
-        respuesta = QMessageBox.question(
-            self,
-            "Confirmar eliminación",
-            f"¿Está seguro de eliminar el producto:\n{producto.codigo} - {producto.nombre}?\n\n"
-            "El producto se desactivará pero se mantendrá en el historial.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        )
-
-        if respuesta == QMessageBox.StandardButton.Yes:
-            try:
-                producto_a_eliminar = self.session.merge(producto)
-                producto_a_eliminar.activo = False
-                self.session.commit()
-                QMessageBox.information(self, "Éxito", "Producto eliminado correctamente")
-                self.cargar_productos()
-                self.cargar_categorias_filtro() # Recargar categorías también
-            except Exception as e:
-                self.session.rollback()
-                QMessageBox.critical(self, "Error", f"Error al eliminar:\n{str(e)}")
-
+        # Call super to proceed with standard delete (confirmation + active=False)
+        super().delete_item(producto)
+        # Also reload categories if needed? Probably not.
+        self.cargar_categorias_filtro()
 
 # PRUEBA STANDALONE
 if __name__ == "__main__":

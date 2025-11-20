@@ -19,6 +19,7 @@ from models.database_model import obtener_session, Cliente
 from sqlalchemy import or_
 from utils.widgets import UpperLineEdit
 from utils.button_utils import style_button
+from views.base_crud_view import BaseCRUDView
 
 
 class ClienteDialog(QDialog):
@@ -105,6 +106,16 @@ class ClienteDialog(QDialog):
         btn_cancelar.clicked.connect(self.reject)
         self.btn_guardar = QPushButton("Guardar")
         self.btn_guardar.clicked.connect(self.guardar)
+
+        style_button(btn_cancelar, 'view', "Cancelar") # Just re-using style
+        # Override style for cancel
+        btn_cancelar.setStyleSheet("""
+            QPushButton { background-color: #f1f3f4; color: #333; padding: 10px 30px; border: none; border-radius: 5px; font-weight: bold; }
+            QPushButton:hover { background-color: #e8eaed; }
+        """)
+
+        style_button(self.btn_guardar, 'add', "Guardar") # Reuse add style for save (green)
+
         btn_layout.addWidget(btn_cancelar)
         btn_layout.addWidget(self.btn_guardar)
         layout.addLayout(btn_layout)
@@ -193,46 +204,22 @@ class ClienteDialog(QDialog):
             self.session.rollback()
             QMessageBox.critical(self, "Error", f"Error al guardar:\n{str(e)}")
 
-class ClientesWindow(QWidget):
-    def __init__(self):
-        super().__init__()
-        self.session = obtener_session()
-        self.clientes_mostrados = []
-        self.init_ui()
-        self.cargar_clientes()
 
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key.Key_F2: self.nuevo_cliente()
-        elif event.key() == Qt.Key.Key_F6:
-            fila = self.tabla.currentRow()
-            if fila != -1 and fila < len(self.clientes_mostrados):
-                self.editar_cliente(self.clientes_mostrados[fila])
-        else: super().keyPressEvent(event)
+class ClientesWindow(BaseCRUDView):
+    def __init__(self):
+        super().__init__("Gestión de Clientes", Cliente, ClienteDialog)
 
     def init_ui(self):
-        self.setWindowTitle("Gestión de Clientes")
-        layout = QVBoxLayout()
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(15)
-
-        header_layout = QHBoxLayout()
-        titulo = QLabel("👤 Gestión de Clientes")
-        titulo.setFont(QFont("Arial", 18, QFont.Weight.Bold))
-        titulo.setStyleSheet("color: #1a73e8;")
-        btn_nuevo = QPushButton()
-        style_button(btn_nuevo, 'add', "Nuevo Cliente")
-        btn_nuevo.clicked.connect(self.nuevo_cliente)
-        header_layout.addWidget(titulo)
-        header_layout.addStretch()
-        header_layout.addWidget(btn_nuevo)
-
-        self.txt_buscar = UpperLineEdit()
-        self.txt_buscar.setClearButtonEnabled(True)
+        super().init_ui()
         self.txt_buscar.setPlaceholderText("🔍 Buscar por RUC/DNI, Razón Social/Nombre o contacto...")
-        self.txt_buscar.textChanged.connect(self.buscar_clientes)
+        # Re-style or re-text button if needed
+        self.btn_nuevo.setText("Nuevo Cliente")
+        # Note: BaseCRUDView uses 'Nuevo (F2)' with 'add' icon.
+        # The original file had "Nuevo Cliente". I'll keep it "Nuevo Cliente" to match user expectation.
+        # style_button is already called in base, but we can update text.
+        self.btn_nuevo.setText("+ Nuevo Cliente")
 
-        self.lbl_contador = QLabel()
-        self.tabla = QTableWidget()
+    def setup_table_columns(self):
         self.tabla.setColumnCount(8)
         self.tabla.setHorizontalHeaderLabels(["ID", "RUC/DNI", "Razón Social/Nombre", "Teléfono", "Email", "Contacto", "Dirección", "Acciones"])
 
@@ -242,85 +229,45 @@ class ClientesWindow(QWidget):
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(7, QHeaderView.ResizeMode.Fixed)
         self.tabla.setColumnWidth(7, 150)
-        self.tabla.setAlternatingRowColors(True)
-        self.tabla.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
 
-        layout.addLayout(header_layout)
-        layout.addWidget(self.txt_buscar)
-        layout.addWidget(self.lbl_contador)
-        layout.addWidget(self.tabla)
-        self.setLayout(layout)
+    def apply_ordering(self, query):
+        return query.order_by(Cliente.razon_social_o_nombre)
 
-    def cargar_clientes(self):
-        clientes = self.session.query(Cliente).filter_by(activo=True).order_by(Cliente.razon_social_o_nombre).all()
-        self.mostrar_clientes(clientes)
+    def fill_row(self, row, cli):
+        self.tabla.setItem(row, 0, QTableWidgetItem(str(cli.id)))
+        self.tabla.setItem(row, 1, QTableWidgetItem(cli.ruc_o_dni))
+        self.tabla.setItem(row, 2, QTableWidgetItem(cli.razon_social_o_nombre))
+        self.tabla.setItem(row, 3, QTableWidgetItem(cli.telefono or ""))
+        self.tabla.setItem(row, 4, QTableWidgetItem(cli.email or ""))
+        self.tabla.setItem(row, 5, QTableWidgetItem(cli.contacto or ""))
+        self.tabla.setItem(row, 6, QTableWidgetItem(cli.direccion or ""))
 
-    def mostrar_clientes(self, clientes):
-        self.clientes_mostrados = clientes
-        self.tabla.setRowCount(len(clientes))
-        for row, cli in enumerate(clientes):
-            self.tabla.setItem(row, 0, QTableWidgetItem(str(cli.id)))
-            self.tabla.setItem(row, 1, QTableWidgetItem(cli.ruc_o_dni))
-            self.tabla.setItem(row, 2, QTableWidgetItem(cli.razon_social_o_nombre))
-            self.tabla.setItem(row, 3, QTableWidgetItem(cli.telefono or ""))
-            self.tabla.setItem(row, 4, QTableWidgetItem(cli.email or ""))
-            self.tabla.setItem(row, 5, QTableWidgetItem(cli.contacto or ""))
-            self.tabla.setItem(row, 6, QTableWidgetItem(cli.direccion or ""))
+    def apply_search_filters(self, query, text):
+        filtro_texto = f"%{text}%"
+        return query.filter(or_(
+            Cliente.ruc_o_dni.ilike(filtro_texto),
+            Cliente.razon_social_o_nombre.ilike(filtro_texto),
+            Cliente.contacto.ilike(filtro_texto)
+        ))
 
-            btn_widget = QWidget()
-            btn_layout = QHBoxLayout()
-            btn_layout.setContentsMargins(5, 5, 5, 5)
-            btn_editar = QPushButton()
-            style_button(btn_editar, 'edit', "Editar")
-            btn_editar.clicked.connect(lambda checked, c=cli: self.editar_cliente(c))
-            btn_eliminar = QPushButton()
-            style_button(btn_eliminar, 'delete', "Eliminar")
-            btn_eliminar.clicked.connect(lambda checked, c=cli: self.eliminar_cliente(c))
-            btn_layout.addWidget(btn_editar)
-            btn_layout.addWidget(btn_eliminar)
-            btn_widget.setLayout(btn_layout)
-            self.tabla.setCellWidget(row, 7, btn_widget)
-
-        self.lbl_contador.setText(f"📊 Total: {len(clientes)} cliente(es)")
-
-    def buscar_clientes(self):
-        texto = self.txt_buscar.text().lower().strip()
-        query = self.session.query(Cliente).filter_by(activo=True)
-        if texto:
-            filtro_texto = f"%{texto}%"
-            query = query.filter(or_(
-                Cliente.ruc_o_dni.ilike(filtro_texto),
-                Cliente.razon_social_o_nombre.ilike(filtro_texto),
-                Cliente.contacto.ilike(filtro_texto)
-            ))
-        self.mostrar_clientes(query.order_by(Cliente.razon_social_o_nombre).all())
-
-    def nuevo_cliente(self):
-        dialog = ClienteDialog(self, session=self.session)
-        if dialog.exec() == QDialog.DialogCode.Accepted: self.cargar_clientes()
-
-    def editar_cliente(self, cliente):
-        dialog = ClienteDialog(self, cliente=cliente, session=self.session)
+    def _open_dialog(self, item=None):
+        dialog = ClienteDialog(self, cliente=item, session=self.session)
         if dialog.exec() == QDialog.DialogCode.Accepted:
-            self.session.refresh(cliente)
-            self.cargar_clientes()
+            if item: self.session.refresh(item)
+            self.load_data()
 
-    def eliminar_cliente(self, cliente):
+    def delete_item(self, cliente):
+        # We override this to show the specific message format from the original file
         respuesta = QMessageBox.question(self, "Confirmar eliminación",
             f"¿Está seguro de eliminar al cliente:\n{cliente.ruc_o_dni} - {cliente.razon_social_o_nombre}?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+
         if respuesta == QMessageBox.StandardButton.Yes:
             try:
                 cliente.activo = False
                 self.session.commit()
                 QMessageBox.information(self, "Éxito", "Cliente eliminado correctamente")
-                self.cargar_clientes()
+                self.load_data()
             except Exception as e:
                 self.session.rollback()
                 QMessageBox.critical(self, "Error", f"Error al eliminar:\n{str(e)}")
-
-    def closeEvent(self, event):
-        try:
-            self.session.close()
-        finally:
-            event.accept()
