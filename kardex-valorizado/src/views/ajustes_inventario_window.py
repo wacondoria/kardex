@@ -175,9 +175,9 @@ class AjusteInventarioDialog(QDialog):
         for row, det in enumerate(self.detalles_ajuste):
             self.tabla_productos.setItem(row, 0, QTableWidgetItem(det['producto_nombre']))
             self.tabla_productos.setItem(row, 1, QTableWidgetItem(det['almacen_nombre']))
-            self.tabla_productos.setItem(row, 2, QTableWidgetItem(f"{det['cantidad']:.2f}"))
+            self.tabla_productos.setItem(row, 2, QTableWidgetItem(f"{det['cantidad']:,.2f}"))
             self.tabla_productos.setItem(row, 3, QTableWidgetItem(f"{det['costo_unitario']:.6f}"))
-            self.tabla_productos.setItem(row, 4, QTableWidgetItem(f"{det['costo_total']:.2f}"))
+            self.tabla_productos.setItem(row, 4, QTableWidgetItem(f"{det['costo_total']:,.2f}"))
             btn_eliminar = QPushButton("✕", clicked=lambda _, r=row: self.eliminar_producto(r))
             self.tabla_productos.setCellWidget(row, 5, btn_eliminar)
 

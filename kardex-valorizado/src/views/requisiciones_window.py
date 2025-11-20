@@ -390,8 +390,8 @@ class RequisicionDialog(QDialog):
             stock = ultimo_mov.saldo_cantidad
             costo_stock = ultimo_mov.saldo_costo_total
             color = "#34a853" if stock > 0 else "#ea4335"
-            self.lbl_stock_disponible.setText(f"Stock: {stock:.2f}")
-            self.lbl_costo_stock_disponible.setText(f"Costo Stock: S/ {costo_stock:.2f}")
+            self.lbl_stock_disponible.setText(f"Stock: {stock:,.2f}")
+            self.lbl_costo_stock_disponible.setText(f"Costo Stock: S/ {costo_stock:,.2f}")
             self.lbl_stock_disponible.setStyleSheet(f"font-weight: bold; color: {color};")
             self.lbl_costo_stock_disponible.setStyleSheet(f"font-weight: bold; color: {color};")
         else:
@@ -472,7 +472,7 @@ class RequisicionDialog(QDialog):
             QMessageBox.warning(
                 self,
                 "Stock Insuficiente",
-                f"Stock disponible: {stock_disponible:.2f}\nCantidad solicitada: {cantidad:.2f}\n\n"
+                f"Stock disponible: {stock_disponible:,.2f}\nCantidad solicitada: {cantidad:,.2f}\n\n"
                 "No hay suficiente stock para esta salida."
             )
             return
@@ -510,10 +510,10 @@ class RequisicionDialog(QDialog):
         for row, det in enumerate(self.detalles_requisicion):
             self.tabla_productos.setItem(row, 0, QTableWidgetItem(det['producto_nombre']))
             self.tabla_productos.setItem(row, 1, QTableWidgetItem(det['almacen_nombre']))
-            self.tabla_productos.setItem(row, 2, QTableWidgetItem(f"{det['stock_disponible']:.2f}"))
-            self.tabla_productos.setItem(row, 3, QTableWidgetItem(f"{det['cantidad']:.2f}"))
-            self.tabla_productos.setItem(row, 4, QTableWidgetItem(f"S/ {det['costo_unitario']:.2f}"))
-            self.tabla_productos.setItem(row, 5, QTableWidgetItem(f"S/ {det['costo_total']:.2f}"))
+            self.tabla_productos.setItem(row, 2, QTableWidgetItem(f"{det['stock_disponible']:,.2f}"))
+            self.tabla_productos.setItem(row, 3, QTableWidgetItem(f"{det['cantidad']:,.2f}"))
+            self.tabla_productos.setItem(row, 4, QTableWidgetItem(f"S/ {det['costo_unitario']:,.2f}"))
+            self.tabla_productos.setItem(row, 5, QTableWidgetItem(f"S/ {det['costo_total']:,.2f}"))
             costo_total_requisicion += det['costo_total']
             
             # Botón eliminar
@@ -523,7 +523,7 @@ class RequisicionDialog(QDialog):
             self.tabla_productos.setCellWidget(row, 6, btn_eliminar)
         
         # Actualizar resumen
-        self.lbl_resumen.setText(f"Total productos: {len(self.detalles_requisicion)} | Costo Total: S/ {costo_total_requisicion:.2f}")
+        self.lbl_resumen.setText(f"Total productos: {len(self.detalles_requisicion)} | Costo Total: S/ {costo_total_requisicion:,.2f}")
     
     def eliminar_producto(self, row):
         """Elimina un producto de la lista"""
