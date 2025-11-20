@@ -62,6 +62,10 @@ class ComprasManager:
             if not compra:
                 raise ValueError(f"Compra ID {compra_id} no encontrada")
 
+            # Capturar valores originales para anulación de Kardex
+            orig_tipo_doc = compra.tipo_documento
+            orig_num_doc = compra.numero_documento
+
             for key, value in datos_cabecera.items():
                 if hasattr(compra, key):
                     setattr(compra, key, value)
@@ -102,16 +106,11 @@ class ComprasManager:
                 detalle_obj = self.session.get(CompraDetalle, detalle_id)
                 if detalle_obj:
                     producto_almacen_afectados.add((detalle_obj.producto_id, detalle_obj.almacen_id))
+                    # Usar valores originales para encontrar el movimiento a revertir
                     mov_original = self.session.query(MovimientoStock).filter_by(
-                        tipo=TipoMovimiento.COMPRA, tipo_documento=compra.tipo_documento,
-                        numero_documento=compra.numero_documento, # Ojo: si cambió el nro doc, esto podría fallar si buscamos por el nuevo.
-                        # En guardar_venta usamos compra.numero_documento que ya tiene el nuevo valor.
-                        # Asumimos que la búsqueda debe hacerse con los valores actuales del objeto compra (si cambiaron, igual deberían coincidir con lo que se guardó en el movimiento si se actualiza... pero los movimientos antiguos tienen el valor antiguo?)
-                        # NO, los movimientos antiguos tienen el valor con el que se crearon.
-                        # Si cambiamos el numero_documento de la compra, deberíamos actualizar los movimientos también, o buscarlos de otra forma.
-                        # Para simplificar, asumimos que no cambia radicalmente o que el usuario no cambia nro documento en edición a menudo.
-                        # Mejor estrategia: buscar por ID del detalle si hubiera enlace, pero no lo hay directo en MovimientoStock.
-                        # Usamos producto+almacen+tipo+doc.
+                        tipo=TipoMovimiento.COMPRA,
+                        tipo_documento=orig_tipo_doc,
+                        numero_documento=orig_num_doc,
                         producto_id=detalle_obj.producto_id, almacen_id=detalle_obj.almacen_id,
                     ).order_by(MovimientoStock.id.desc()).first()
 
@@ -206,10 +205,11 @@ class ComprasManager:
 
                 # Si cambió producto o almacén, hay que revertir el anterior y crear uno nuevo
                 if (producto_id_original != detalle_obj.producto_id or almacen_id_original != detalle_obj.almacen_id):
-                    # Revertir original
+                    # Revertir original usando valores originales
                     mov_original = self.session.query(MovimientoStock).filter_by(
-                        tipo=TipoMovimiento.COMPRA, tipo_documento=compra.tipo_documento,
-                        numero_documento=compra.numero_documento, # Riesgo si cambió documento
+                        tipo=TipoMovimiento.COMPRA,
+                        tipo_documento=orig_tipo_doc,
+                        numero_documento=orig_num_doc,
                         producto_id=producto_id_original, almacen_id=almacen_id_original
                     ).order_by(MovimientoStock.id.desc()).first()
 

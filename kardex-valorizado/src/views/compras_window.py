@@ -50,6 +50,7 @@ from utils.validation import verificar_estado_anio, AnioCerradoError
 from utils.button_utils import style_button
 from utils.kardex_manager import KardexManager
 from utils.compras_manager import ComprasManager
+from utils.styles import STYLE_CUADRADO_VERDE, STYLE_CHECKBOX_CUSTOM
 
 # ============================================
 # CLASES AUXILIARES (para seleccionar texto)
@@ -113,23 +114,6 @@ class CompraDialog(QDialog):
         titulo.setStyleSheet("color: #1a73e8; padding: 10px;")
         layout.addWidget(titulo)
         
-        # --- (INICIO) SOLUCIÓN 1: Estilo unificado para botones '+' ---
-        # Estilo común para los botones '+'
-        style_cuadrado_verde = """
-            QPushButton {
-                background-color: #34a853; 
-                color: white; 
-                font-weight: bold; 
-                font-size: 16px;
-                border-radius: 5px; /* <-- Esta es la clave: 5px (no 15px) */
-                padding: 0px;
-            }
-            QPushButton:hover {
-                background-color: #2e8b4e;
-            }
-        """
-        # --- (FIN) SOLUCIÓN 1 ---
-
         # === DATOS DE LA COMPRA ===
         grupo_compra = QGroupBox("Datos de la Compra")
         form_compra = QFormLayout()
@@ -154,7 +138,7 @@ class CompraDialog(QDialog):
         self.btn_nuevo_proveedor = QPushButton("+")
         self.btn_nuevo_proveedor.setToolTip("Crear nuevo proveedor")
         self.btn_nuevo_proveedor.setFixedSize(30, 30) # Tamaño cuadrado
-        self.btn_nuevo_proveedor.setStyleSheet(style_cuadrado_verde) # Aplicar estilo
+        self.btn_nuevo_proveedor.setStyleSheet(STYLE_CUADRADO_VERDE) # Aplicar estilo
         self.btn_nuevo_proveedor.clicked.connect(self.crear_nuevo_proveedor)
         fila_proveedor_proceso.addWidget(self.btn_nuevo_proveedor)
 
@@ -253,38 +237,7 @@ class CompraDialog(QDialog):
 
         # IGV
         self.chk_incluye_igv = QCheckBox("Los precios INCLUYEN IGV (18%)")
-        self.chk_incluye_igv.setStyleSheet("""
-            QCheckBox {
-                font-weight: bold; 
-                color: #ea4335;
-                spacing: 5px; /* Espacio entre la caja y el texto */
-            }
-            
-            /* --- ESTO ARREGLA EL PROBLEMA --- */
-
-            /* Define la caja (el indicador) */
-            QCheckBox::indicator {
-                width: 16px;
-                height: 16px;
-                border: 1px solid #aaa;
-                border-radius: 3px;
-                background-color: white;
-            }
-
-            /* Define cómo se ve la caja cuando está MARCADA */
-            QCheckBox::indicator:checked {
-                background-color: #34a853; /* Fondo verde (como tus botones) */
-                border: 1px solid #2e8b4e;
-                
-                /* Carga la imagen del 'check' de los recursos internos de Qt */
-                image: url(:/qt-project.org/styles/commonstyle/images/check-16.png);
-            }
-
-            /* (Opcional) Estilo para cuando el ratón está encima */
-            QCheckBox::indicator:hover {
-                border: 1px solid #1a73e8;
-            }
-        """)
+        self.chk_incluye_igv.setStyleSheet(STYLE_CHECKBOX_CUSTOM)
         self.chk_incluye_igv.toggled.connect(self.recalcular_totales)
         form_compra.addRow("", self.chk_incluye_igv)
 
@@ -306,7 +259,7 @@ class CompraDialog(QDialog):
         self.btn_nuevo_producto = QPushButton("+")
         self.btn_nuevo_producto.setToolTip("Crear nuevo producto")
         self.btn_nuevo_producto.setFixedSize(30, 30) # Tamaño cuadrado
-        self.btn_nuevo_producto.setStyleSheet(style_cuadrado_verde) # Aplicar estilo
+        self.btn_nuevo_producto.setStyleSheet(STYLE_CUADRADO_VERDE) # Aplicar estilo
         self.btn_nuevo_producto.clicked.connect(self.crear_nuevo_producto)
         # --- (FIN) SOLUCIÓN 1 ---
 

@@ -101,6 +101,10 @@ class VentasManager:
             if not venta:
                 raise ValueError(f"Venta ID {venta_id} no encontrada")
 
+            # Capturar valores originales para anulación de Kardex
+            orig_tipo_doc = venta.tipo_documento
+            orig_num_doc = venta.numero_documento
+
             # Actualizar campos
             for key, value in datos_cabecera.items():
                 if hasattr(venta, key):
@@ -137,9 +141,11 @@ class VentasManager:
                     producto_almacen_afectados.add((detalle_obj.producto_id, detalle_obj.almacen_id))
 
                     # Movimiento de anulación (Devolución)
+                    # Usamos los valores originales del documento por si cambiaron en la edición
                     mov_original = self.session.query(MovimientoStock).filter_by(
-                        tipo=TipoMovimiento.VENTA, tipo_documento=venta.tipo_documento,
-                        numero_documento=venta.numero_documento,
+                        tipo=TipoMovimiento.VENTA,
+                        tipo_documento=orig_tipo_doc,
+                        numero_documento=orig_num_doc,
                         producto_id=detalle_obj.producto_id, almacen_id=detalle_obj.almacen_id,
                     ).order_by(MovimientoStock.id.desc()).first()
 
@@ -239,9 +245,11 @@ class VentasManager:
                 producto_almacen_afectados.add((detalle_obj.producto_id, detalle_obj.almacen_id))
 
                 # 1. Anular movimiento original
+                # Usamos los valores originales del documento por si cambiaron en la edición
                 mov_original = self.session.query(MovimientoStock).filter_by(
-                    tipo=TipoMovimiento.VENTA, tipo_documento=venta.tipo_documento,
-                    numero_documento=venta.numero_documento,
+                    tipo=TipoMovimiento.VENTA,
+                    tipo_documento=orig_tipo_doc,
+                    numero_documento=orig_num_doc,
                     producto_id=producto_id_original, almacen_id=almacen_id_original
                 ).order_by(MovimientoStock.id.desc()).first()
 
