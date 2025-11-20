@@ -49,6 +49,7 @@ from utils.app_context import app_context
 from utils.validation import verificar_estado_anio, AnioCerradoError
 from utils.button_utils import style_button
 from utils.kardex_manager import KardexManager
+from utils.compras_manager import ComprasManager
 
 # ============================================
 # CLASES AUXILIARES (para seleccionar texto)
@@ -89,6 +90,7 @@ class CompraDialog(QDialog):
         self.detalles_originales_obj = detalles_originales
         self.detalles_compra = []
         self.lista_completa_productos = []
+        self.compras_manager = ComprasManager(self.session)
         self.kardex_manager = KardexManager(self.session)
 
         self.init_ui()
@@ -545,18 +547,6 @@ class CompraDialog(QDialog):
         producto = self.session.query(Producto).get(prod_id)
         almacen = self.session.query(Almacen).get(alm_id)
 
-        IGV_FACTOR = Decimal('1.18')
-        DOS_DECIMALES = Decimal('0.01')
-
-        cantidad_dec = Decimal(str(cantidad))
-        precio_dec = Decimal(str(precio))
-
-        subtotal_sin_igv = Decimal('0')
-        if self.chk_incluye_igv.isChecked():
-            subtotal_sin_igv = (cantidad_dec * (precio_dec / IGV_FACTOR)).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
-        else:
-            subtotal_sin_igv = (cantidad_dec * precio_dec).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
-
         detalle = {
             'producto_id': prod_id,
             'producto_nombre': f"{producto.codigo} - {producto.nombre}",
@@ -564,12 +554,12 @@ class CompraDialog(QDialog):
             'almacen_nombre': almacen.nombre,
             'cantidad': cantidad,
             'precio_unitario': precio,
-            'subtotal': float(subtotal_sin_igv) # <-- El subtotal ya está sin IGV
+            'subtotal': 0.0 # Se calculará en recalcular_totales
         }
 
         self.detalles_compra.append(detalle)
+        self.recalcular_totales() # Recalcula el subtotal inmediatamente
         self.actualizar_tabla_productos()
-        self.recalcular_totales()
 
         # Limpiar y preparar para el siguiente producto
         self.spn_cantidad.setValue(1.00)
@@ -641,77 +631,36 @@ class CompraDialog(QDialog):
 
     def _actualizar_calculos_igv(self):
         """
-        Recalcula los subtotales de cada producto en la tabla según el estado
-        del checkbox de IGV y luego actualiza los totales generales.
+        Recalcula los subtotales de cada producto en la tabla y los totales generales
+        usando el ComprasManager.
         """
+        # Delegar cálculos al manager
+        subtotal, igv, total, _, _ = self.compras_manager.calcular_totales(
+            self.detalles_compra,
+            self.chk_incluye_igv.isChecked(),
+            self.spn_costo_adicional.value()
+        )
+
+        # Actualizar UI de la tabla con los nuevos subtotales calculados en la lista
         self.tabla_productos.blockSignals(True)
-        IGV_FACTOR = Decimal('1.18')
-        DOS_DECIMALES = Decimal('0.01')
-
         for row, det in enumerate(self.detalles_compra):
-            cantidad = Decimal(str(det['cantidad']))
-            precio_unitario = Decimal(str(det['precio_unitario']))
-            subtotal_sin_igv = Decimal('0')
-
-            if self.chk_incluye_igv.isChecked():
-                subtotal_sin_igv = (cantidad * (precio_unitario / IGV_FACTOR)).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
-            else:
-                subtotal_sin_igv = (cantidad * precio_unitario).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
-
-            det['subtotal'] = float(subtotal_sin_igv) # Actualizar el 'subtotal' (ya sin IGV)
-
             subtotal_item = self.tabla_productos.item(row, 4)
             if not subtotal_item:
                 subtotal_item = QTableWidgetItem()
                 subtotal_item.setFlags(subtotal_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 self.tabla_productos.setItem(row, 4, subtotal_item)
-            subtotal_item.setText(f"{subtotal_sin_igv:,.2f}")
-
+            subtotal_item.setText(f"{det['subtotal']:,.2f}")
         self.tabla_productos.blockSignals(False)
 
-        # Ahora, calcular los totales generales
-        subtotal_productos = sum(Decimal(str(det['subtotal'])) for det in self.detalles_compra)
-        costo_adicional = Decimal(str(self.spn_costo_adicional.value()))
-        IGV_PORCENTAJE = Decimal('0.18')
-
-        subtotal_general_sin_igv = subtotal_productos + costo_adicional
-        igv = (subtotal_general_sin_igv * IGV_PORCENTAJE).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
-        total = (subtotal_general_sin_igv + igv).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
-
+        # Actualizar etiquetas de totales
         moneda_simbolo = "S/" if self.cmb_moneda.currentData() == Moneda.SOLES.value else "$"
-        self.lbl_subtotal.setText(f"{moneda_simbolo} {subtotal_general_sin_igv:,.2f}")
+        self.lbl_subtotal.setText(f"{moneda_simbolo} {subtotal:,.2f}")
         self.lbl_igv.setText(f"{moneda_simbolo} {igv:,.2f}")
         self.lbl_total.setText(f"{moneda_simbolo} {total:,.2f}")
-        
-    # --- (INICIO) SOLUCIÓN 3: Función de cálculo de IGV FALTANTE ---
-    def _calcular_montos_decimal(self):
-        """
-        Calcula los montos finales (Subtotal sin IGV, IGV, Total) 
-        basado en los 'subtotal' (ya sin IGV) de self.detalles_compra.
-        Retorna: (subtotal_general_sin_igv, igv, total, subtotal_productos, costo_adicional)
-        """
-        DOS_DECIMALES = Decimal('0.01')
-        IGV_PORCENTAJE = Decimal('0.18')
-
-        # Asumimos que self.detalles_compra[...]['subtotal'] YA ESTÁ SIN IGV
-        # (Gracias a _actualizar_calculos_igv, agregar_producto y detalle_editado)
-        subtotal_productos = sum(Decimal(str(det['subtotal'])) for det in self.detalles_compra)
-        costo_adicional = Decimal(str(self.spn_costo_adicional.value()))
-
-        subtotal_general_sin_igv = (subtotal_productos + costo_adicional).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
-        igv = (subtotal_general_sin_igv * IGV_PORCENTAJE).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
-        total = (subtotal_general_sin_igv + igv).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
-        
-        return subtotal_general_sin_igv, igv, total, subtotal_productos, costo_adicional
-    # --- (FIN) SOLUCIÓN 3 ---
 
     def guardar_compra(self):
-        """Guarda una compra nueva o actualiza una existente, ajustando el Kardex."""
+        """Guarda una compra nueva o actualiza una existente."""
         try:
-            fecha_doc = self.date_fecha.date().toPyDate()
-            fecha_contable = self.date_fecha_contable.date().toPyDate()
-            verificar_estado_anio(fecha_contable)
-
             if not self.cmb_proveedor.currentData():
                 QMessageBox.warning(self, "Error", "Seleccione un proveedor")
                 return
@@ -726,275 +675,48 @@ class CompraDialog(QDialog):
             if not serie or not numero:
                 QMessageBox.warning(self, "Error", "Debe ingresar la serie y el número del documento")
                 return
-
             numero_documento_completo = f"{serie}-{numero}"
 
             if not self.detalles_compra and self.compra_original is None:
                 QMessageBox.warning(self, "Error", "Agregue al menos un producto")
                 return
 
+            mes_contable = self.date_fecha_contable.date().month()
+            numero_proceso_completo = f"06{mes_contable:02d}{int(numero_proceso_correlativo):06d}"
+
+            # Recalcular totales para asegurar consistencia
+            subtotal, igv, total, _, _ = self.compras_manager.calcular_totales(
+                self.detalles_compra,
+                self.chk_incluye_igv.isChecked(),
+                self.spn_costo_adicional.value()
+            )
+
+            # Preparar datos cabecera
+            datos_cabecera = {
+                'numero_proceso': numero_proceso_completo,
+                'proveedor_id': self.cmb_proveedor.currentData(),
+                'fecha': self.date_fecha.date().toPyDate(),
+                'fecha_registro_contable': self.date_fecha_contable.date().toPyDate(),
+                'tipo_documento': TipoDocumento(self.cmb_tipo_doc.currentData()),
+                'numero_documento': numero_documento_completo,
+                'moneda': Moneda(self.cmb_moneda.currentData()),
+                'tipo_cambio': Decimal(str(self.spn_tipo_cambio.value())),
+                'incluye_igv': self.chk_incluye_igv.isChecked(),
+                'igv_porcentaje': Decimal('18.0'),
+                'subtotal': subtotal,
+                'igv': igv,
+                'total': total,
+                'costo_adicional': Decimal(str(self.spn_costo_adicional.value())) if self.spn_costo_adicional.value() > 0 else None,
+                'descripcion_costo': self.txt_desc_costo.text().strip() or None,
+                'observaciones': self.txt_observaciones.toPlainText().strip() or None
+            }
+
             es_edicion = self.compra_original is not None
+            compra_id = self.compra_original.id if es_edicion else None
 
-            # Esta función ahora existe y calculará correctamente los totales
-            subtotal, igv, total, subtotal_productos_ui, costo_adicional = self._calcular_montos_decimal()
+            # Delegar al manager
+            self.compras_manager.guardar_compra(datos_cabecera, self.detalles_compra, compra_id)
 
-            if es_edicion:
-                compra = self.session.get(Compra, self.compra_original.id)
-                if not compra:
-                    raise Exception(f"No se pudo encontrar la Compra ID {self.compra_original.id} en la sesión del diálogo.")
-
-                mes_contable = self.date_fecha_contable.date().month()
-                numero_proceso_completo = f"06{mes_contable:02d}{int(numero_proceso_correlativo):06d}"
-
-                compra.numero_proceso = numero_proceso_completo
-                compra.proveedor_id = self.cmb_proveedor.currentData()
-                compra.tipo_documento = TipoDocumento(self.cmb_tipo_doc.currentData())
-                compra.numero_documento = numero_documento_completo
-                compra.moneda = Moneda(self.cmb_moneda.currentData())
-                compra.tipo_cambio = Decimal(str(self.spn_tipo_cambio.value()))
-                compra.incluye_igv = self.chk_incluye_igv.isChecked()
-                compra.subtotal = subtotal
-                compra.igv = igv
-                compra.total = total
-                compra.fecha_registro_contable = self.date_fecha_contable.date().toPyDate()
-                compra.costo_adicional = costo_adicional if costo_adicional > 0 else None
-                compra.descripcion_costo = self.txt_desc_costo.text().strip() or None
-                compra.observaciones = self.txt_observaciones.toPlainText().strip() or None
-
-            else:
-                mes_contable = self.date_fecha_contable.date().month()
-                numero_proceso_completo = f"06{mes_contable:02d}{int(numero_proceso_correlativo):06d}"
-
-                compra = Compra(
-                    numero_proceso=numero_proceso_completo,
-                    proveedor_id=self.cmb_proveedor.currentData(),
-                    fecha=fecha_doc,
-                    fecha_registro_contable=self.date_fecha_contable.date().toPyDate(),
-                    tipo_documento=TipoDocumento(self.cmb_tipo_doc.currentData()),
-                    numero_documento=numero_documento_completo,
-                    moneda=Moneda(self.cmb_moneda.currentData()),
-                    tipo_cambio=Decimal(str(self.spn_tipo_cambio.value())),
-                    incluye_igv=self.chk_incluye_igv.isChecked(),
-                    igv_porcentaje=Decimal('18.0'),
-                    subtotal=subtotal,
-                    igv=igv,
-                    total=total,
-                    costo_adicional=costo_adicional if costo_adicional > 0 else None,
-                    descripcion_costo=self.txt_desc_costo.text().strip() or None,
-                    observaciones=self.txt_observaciones.toPlainText().strip() or None
-                )
-                self.session.add(compra)
-                self.session.flush()
-
-            ids_detalles_ui = {det.get('detalle_original_id') for det in self.detalles_compra if det.get('detalle_original_id')}
-            ids_detalles_originales = {det.id for det in self.detalles_originales_obj} if es_edicion else set()
-
-            detalles_a_eliminar_ids = ids_detalles_originales - ids_detalles_ui
-            detalles_a_anadir_ui = [det for det in self.detalles_compra if not det.get('detalle_original_id')]
-            detalles_a_modificar_ui = [det for det in self.detalles_compra if det.get('detalle_original_id') in ids_detalles_originales]
-
-            DOS_DECIMALES = Decimal('0.01')
-            IGV_FACTOR = Decimal('1.18')
-            movimientos_kardex = []
-            producto_almacen_afectados = set()
-
-            if es_edicion and detalles_a_eliminar_ids:
-                for detalle_id in detalles_a_eliminar_ids:
-                    detalle_obj = self.session.get(CompraDetalle, detalle_id)
-                    if detalle_obj:
-                         producto_almacen_afectados.add((detalle_obj.producto_id, detalle_obj.almacen_id))
-                         mov_original = self.session.query(MovimientoStock).filter_by(
-                             tipo=TipoMovimiento.COMPRA, tipo_documento=compra.tipo_documento,
-                             numero_documento=self.compra_original.numero_documento,
-                             producto_id=detalle_obj.producto_id, almacen_id=detalle_obj.almacen_id,
-                         ).order_by(MovimientoStock.id.desc()).first()
-
-                         if mov_original:
-                             ajuste_salida = MovimientoStock(
-                                 empresa_id=mov_original.empresa_id, producto_id=mov_original.producto_id, almacen_id=mov_original.almacen_id,
-                                 tipo=TipoMovimiento.DEVOLUCION_COMPRA,
-                                 tipo_documento=compra.tipo_documento, numero_documento=compra.numero_documento,
-                                 fecha_documento=compra.fecha, proveedor_id=compra.proveedor_id,
-                                 cantidad_entrada=0, cantidad_salida=mov_original.cantidad_entrada,
-                                 costo_unitario=mov_original.costo_unitario, costo_total=mov_original.costo_total,
-                                 saldo_cantidad=0, saldo_costo_total=0, moneda=compra.moneda, tipo_cambio=float(compra.tipo_cambio),
-                                 observaciones=f"Ajuste por edición de compra ID {compra.id} (Detalle ID {detalle_id} eliminado)"
-                             )
-                             movimientos_kardex.append(ajuste_salida)
-                         else:
-                              print(f"ADVERTENCIA: No se encontró MovimientoStock original para el detalle eliminado ID {detalle_id}")
-                         self.session.delete(detalle_obj)
-                         print(f"DEBUG: Detalle {detalle_id} eliminado.")
-                    else:
-                         print(f"ADVERTENCIA: No se encontró Detalle {detalle_id} para eliminar.")
-
-            for det_ui in detalles_a_anadir_ui:
-                cantidad_dec = Decimal(str(det_ui['cantidad']))
-                precio_unitario_ui = Decimal(str(det_ui['precio_unitario']))
-                if self.chk_incluye_igv.isChecked():
-                    precio_sin_igv = (precio_unitario_ui / IGV_FACTOR).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
-                else:
-                    precio_sin_igv = precio_unitario_ui
-                subtotal_det_sin_igv = (cantidad_dec * precio_sin_igv).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
-                subtotal_base_prorrateo = sum(
-                    (Decimal(str(d['cantidad'])) * (Decimal(str(d['precio_unitario'])) / (IGV_FACTOR if self.chk_incluye_igv.isChecked() else Decimal('1'))))
-                    for d in self.detalles_compra
-                ).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
-                costo_unitario_final = precio_sin_igv
-                if costo_adicional > 0 and subtotal_base_prorrateo > 0:
-                    proporcion = subtotal_det_sin_igv / subtotal_base_prorrateo if subtotal_base_prorrateo != 0 else Decimal('0')
-                    costo_prorrateado = (costo_adicional * proporcion).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
-                    if cantidad_dec != 0:
-                       costo_unitario_final += (costo_prorrateado / cantidad_dec).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
-                subtotal_final_det = (cantidad_dec * costo_unitario_final).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
-
-                nuevo_detalle = CompraDetalle()
-                nuevo_detalle.compra_id = compra.id
-                nuevo_detalle.producto_id = det_ui['producto_id']
-                nuevo_detalle.almacen_id = det_ui['almacen_id']
-                nuevo_detalle.cantidad = cantidad_dec
-                nuevo_detalle.precio_unitario_sin_igv = costo_unitario_final
-                nuevo_detalle.subtotal = subtotal_final_det
-                self.session.add(nuevo_detalle)
-
-                producto_almacen_afectados.add((det_ui['producto_id'], det_ui['almacen_id']))
-
-                almacen = self.session.get(Almacen, det_ui['almacen_id'])
-                if almacen:
-                    nuevo_movimiento = MovimientoStock(
-                        empresa_id=almacen.empresa_id, producto_id=det_ui['producto_id'], almacen_id=det_ui['almacen_id'],
-                        tipo=TipoMovimiento.COMPRA,
-                        tipo_documento=compra.tipo_documento, numero_documento=compra.numero_documento,
-                        fecha_documento=compra.fecha, proveedor_id=compra.proveedor_id,
-                        cantidad_entrada=cantidad_dec, cantidad_salida=0,
-                        costo_unitario=float(costo_unitario_final), costo_total=float(subtotal_final_det),
-                        saldo_cantidad=0, saldo_costo_total=0,
-                        moneda=compra.moneda, tipo_cambio=float(compra.tipo_cambio),
-                        observaciones=f"Registro por {'edición (añadido)' if es_edicion else 'nueva compra'} ID {compra.id}"
-                    )
-                    movimientos_kardex.append(nuevo_movimiento)
-                else:
-                     print(f"ADVERTENCIA: No se encontró Almacén ID {det_ui['almacen_id']} para añadir movimiento.")
-                print(f"DEBUG: Detalle nuevo añadido para producto {det_ui['producto_id']}.")
-
-            if es_edicion:
-                 for det_ui in detalles_a_modificar_ui:
-                     detalle_obj = self.session.get(CompraDetalle, det_ui['detalle_original_id'])
-                     if not detalle_obj:
-                         print(f"ADVERTENCIA: No se encontró detalle original ID {det_ui['detalle_original_id']} para modificar.")
-                         continue
-
-                     cantidad_original_dec = Decimal(str(detalle_obj.cantidad))
-                     costo_unitario_original_dec = Decimal(str(detalle_obj.precio_unitario_sin_igv))
-                     costo_total_original_dec = Decimal(str(detalle_obj.subtotal))
-                     producto_id_original = detalle_obj.producto_id
-                     almacen_id_original = detalle_obj.almacen_id
-
-                     producto_almacen_afectados.add((producto_id_original, almacen_id_original))
-
-                     cantidad_dec = Decimal(str(det_ui['cantidad']))
-                     precio_unitario_ui = Decimal(str(det_ui['precio_unitario']))
-                     if self.chk_incluye_igv.isChecked():
-                         precio_sin_igv = (precio_unitario_ui / IGV_FACTOR).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
-                     else:
-                         precio_sin_igv = precio_unitario_ui
-                     subtotal_det_sin_igv = (cantidad_dec * precio_sin_igv).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
-                     subtotal_base_prorrateo = sum(
-                         (Decimal(str(d['cantidad'])) * (Decimal(str(d['precio_unitario'])) / (IGV_FACTOR if self.chk_incluye_igv.isChecked() else Decimal('1'))))
-                         for d in self.detalles_compra
-                     ).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
-                     costo_unitario_final = precio_sin_igv
-                     if costo_adicional > 0 and subtotal_base_prorrateo > 0:
-                         proporcion = subtotal_det_sin_igv / subtotal_base_prorrateo if subtotal_base_prorrateo != 0 else Decimal('0')
-                         costo_prorrateado = (costo_adicional * proporcion).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
-                         if cantidad_dec != 0:
-                            costo_unitario_final += (costo_prorrateado / cantidad_dec).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
-                     subtotal_final_det = (cantidad_dec * costo_unitario_final).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
-
-                     detalle_obj.producto_id = det_ui['producto_id']
-                     detalle_obj.almacen_id = det_ui['almacen_id']
-                     detalle_obj.cantidad = cantidad_dec
-                     detalle_obj.precio_unitario_sin_igv = costo_unitario_final
-                     detalle_obj.subtotal = subtotal_final_det
-
-                     producto_almacen_afectados.add((detalle_obj.producto_id, detalle_obj.almacen_id))
-
-                     if (detalle_obj.producto_id != producto_id_original or detalle_obj.almacen_id != almacen_id_original):
-                         mov_original = self.session.query(MovimientoStock).filter_by(
-                             tipo=TipoMovimiento.COMPRA, tipo_documento=compra.tipo_documento,
-                             numero_documento=self.compra_original.numero_documento,
-                             producto_id=producto_id_original, almacen_id=almacen_id_original
-                         ).order_by(MovimientoStock.id.desc()).first()
-                         if mov_original:
-                             ajuste_salida = MovimientoStock(
-                                 empresa_id=mov_original.empresa_id, producto_id=mov_original.producto_id, almacen_id=mov_original.almacen_id,
-                                 tipo=TipoMovimiento.DEVOLUCION_COMPRA,
-                                 tipo_documento=compra.tipo_documento, numero_documento=compra.numero_documento,
-                                 fecha_documento=compra.fecha, proveedor_id=compra.proveedor_id,
-                                 cantidad_entrada=0, cantidad_salida=mov_original.cantidad_entrada,
-                                 costo_unitario=mov_original.costo_unitario, costo_total=mov_original.costo_total,
-                                 saldo_cantidad=0, saldo_costo_total=0, moneda=compra.moneda, tipo_cambio=float(compra.tipo_cambio),
-                                 observaciones=f"Ajuste (salida) por cambio Prod/Alm en edición Compra ID {compra.id} (Detalle ID {detalle_obj.id})"
-                             )
-                             movimientos_kardex.append(ajuste_salida)
-                         almacen_nuevo = self.session.get(Almacen, detalle_obj.almacen_id)
-                         if almacen_nuevo:
-                             ajuste_entrada = MovimientoStock(
-                                 empresa_id=almacen_nuevo.empresa_id, producto_id=detalle_obj.producto_id, almacen_id=detalle_obj.almacen_id,
-                                 tipo=TipoMovimiento.COMPRA,
-                                 tipo_documento=compra.tipo_documento, numero_documento=compra.numero_documento,
-                                 fecha_documento=compra.fecha, proveedor_id=compra.proveedor_id,
-                                 cantidad_entrada=cantidad_dec, cantidad_salida=0,
-                                 costo_unitario=float(costo_unitario_final), costo_total=float(subtotal_final_det),
-                                 saldo_cantidad=0, saldo_costo_total=0, moneda=compra.moneda, tipo_cambio=float(compra.tipo_cambio),
-                                 observaciones=f"Ajuste (entrada) por cambio Prod/Alm en edición Compra ID {compra.id} (Detalle ID {detalle_obj.id})"
-                             )
-                             movimientos_kardex.append(ajuste_entrada)
-                     else:
-                         dif_cantidad = cantidad_dec - cantidad_original_dec
-                         dif_costo_total = subtotal_final_det - costo_total_original_dec
-                         if dif_cantidad != 0 or dif_costo_total != 0:
-                             almacen = self.session.get(Almacen, detalle_obj.almacen_id)
-                             if almacen:
-                                 tipo_ajuste = TipoMovimiento.AJUSTE_POSITIVO if dif_cantidad >= 0 else TipoMovimiento.AJUSTE_NEGATIVO
-                                 cant_ent = max(Decimal('0'), dif_cantidad)
-                                 cant_sal = max(Decimal('0'), -dif_cantidad)
-                                 costo_unit_ajuste = Decimal('0')
-                                 if cant_ent > 0:
-                                     costo_unit_ajuste = (dif_costo_total / cant_ent).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP) if cant_ent != 0 else Decimal('0')
-                                 elif cant_sal > 0:
-                                     costo_unit_ajuste = costo_unitario_original_dec
-                                     dif_costo_total = (cant_sal * costo_unit_ajuste).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
-                                 ajuste_mov = MovimientoStock(
-                                     empresa_id=almacen.empresa_id, producto_id=detalle_obj.producto_id, almacen_id=detalle_obj.almacen_id,
-                                     tipo=tipo_ajuste,
-                                     tipo_documento=compra.tipo_documento, numero_documento=compra.numero_documento,
-                                     fecha_documento=compra.fecha, proveedor_id=compra.proveedor_id,
-                                     cantidad_entrada=cant_ent, cantidad_salida=cant_sal,
-                                     costo_unitario=float(costo_unit_ajuste), costo_total=float(dif_costo_total),
-                                     saldo_cantidad=0, saldo_costo_total=0,
-                                     moneda=compra.moneda, tipo_cambio=float(compra.tipo_cambio),
-                                     observaciones=f"Ajuste por edición Compra ID {compra.id} (Detalle ID {detalle_obj.id})"
-                                 )
-                                 movimientos_kardex.append(ajuste_mov)
-                     print(f"DEBUG: Detalle {detalle_obj.id} modificado.")
-
-            for mov in movimientos_kardex:
-                self.session.add(mov)
-
-            if producto_almacen_afectados:
-                 print(f"DEBUG: Productos/Almacenes afectados: {producto_almacen_afectados}")
-                 self.session.flush()
-                 self.kardex_manager.recalcular_kardex_posterior(producto_almacen_afectados, compra.fecha)
-            else:
-                 print("DEBUG: No hubo movimientos de kardex que requieran recálculo.")
-
-
-            print(f"DEBUG (guardar_compra PRE-COMMIT): Intentando guardar Compra ID {compra.id}")
-            print(f"  -> Subtotal={compra.subtotal}, IGV={compra.igv}, Total={compra.total}")
-
-            self.session.commit()
-            print(f"DEBUG (guardar_compra POST-COMMIT): Commit realizado.")
             QMessageBox.information(self, "Éxito", f"Compra {'actualizada' if es_edicion else 'registrada'} exitosamente.")
             self.accept()
 
@@ -1002,7 +724,7 @@ class CompraDialog(QDialog):
             QMessageBox.warning(self, "Operación no permitida", str(e))
         except Exception as e:
             self.session.rollback()
-            QMessageBox.critical(self, "Error", f"Error al {'actualizar' if es_edicion else 'guardar'} compra:\n{str(e)}")
+            QMessageBox.critical(self, "Error", f"Error al {'actualizar' if self.compra_original else 'guardar'} compra:\n{str(e)}")
             import traceback
             traceback.print_exc()
 
@@ -1775,11 +1497,6 @@ class ComprasWindow(QWidget):
             traceback.print_exc()
 
     def eliminar_compra(self, compra_a_eliminar):
-        """
-        Elimina una compra, sus detalles y movimientos de stock asociados,
-        y luego recalcula el Kardex.
-        """
-
         confirmar = QMessageBox.warning(self, "Confirmar Eliminación",
             f"¿Está seguro de que desea eliminar permanentemente la compra:\n\n"
             f"Documento: {compra_a_eliminar.numero_documento}\n"
@@ -1789,59 +1506,17 @@ class ComprasWindow(QWidget):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No
         )
-
-        if confirmar == QMessageBox.StandardButton.No:
-            return
-
-        producto_almacen_afectados = set()
-        fecha_compra = compra_a_eliminar.fecha
-        numero_doc_original = compra_a_eliminar.numero_documento
-        tipo_doc_original = compra_a_eliminar.tipo_documento
-        compra_id = compra_a_eliminar.id
+        if confirmar == QMessageBox.StandardButton.No: return
 
         try:
-            compra = self.session.get(Compra, compra_id)
-            if not compra:
-                 raise Exception("La compra ya no existe o no se pudo cargar en la sesión.")
-
-            detalles = self.session.query(CompraDetalle).filter_by(compra_id=compra.id).all()
-
-            print(f"DEBUG (Eliminar): Eliminando {len(detalles)} detalles y sus movimientos...")
-
-            for det in detalles:
-                producto_almacen_afectados.add((det.producto_id, det.almacen_id))
-
-                mov_original = self.session.query(MovimientoStock).filter_by(
-                    tipo=TipoMovimiento.COMPRA,
-                    tipo_documento=tipo_doc_original,
-                    numero_documento=numero_doc_original,
-                    producto_id=det.producto_id,
-                    almacen_id=det.almacen_id
-                ).first()
-
-                if mov_original:
-                    print(f"DEBUG (Eliminar): Eliminando MovimientoStock ID {mov_original.id}")
-                    self.session.delete(mov_original)
-                else:
-                    print(f"ADVERTENCIA (Eliminar): No se encontró MovimientoStock para el detalle {det.id}")
-
-                self.session.delete(det)
-
-            print(f"DEBUG (Eliminar): Eliminando Compra ID {compra.id}")
-            self.session.delete(compra)
-
-            self.session.flush()
-
-            if producto_almacen_afectados:
-                print(f"DEBUG (Eliminar): Recalculando Kardex para {producto_almacen_afectados} desde {fecha_compra}")
-                self.kardex_manager.recalcular_kardex_posterior(producto_almacen_afectados, fecha_compra)
-
-            self.session.commit()
+            self.compras_manager.eliminar_compra(compra_a_eliminar.id)
 
             QMessageBox.information(self, "Éxito", "Compra eliminada y Kardex recalculado exitosamente.")
-
             self.cargar_compras()
 
+        except AnioCerradoError as e:
+            QMessageBox.warning(self, "Operación no permitida", str(e))
+            self.session.rollback()
         except Exception as e:
             self.session.rollback()
             QMessageBox.critical(self, "Error al Eliminar", f"No se pudo eliminar la compra:\n{str(e)}")
