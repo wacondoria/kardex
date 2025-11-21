@@ -7,6 +7,10 @@ from decimal import Decimal, ROUND_HALF_UP
 from sqlalchemy.orm.session import Session
 from models.database_model import MovimientoStock, TipoMovimiento, Empresa, Producto, MetodoValuacion
 
+class AnioCerradoError(Exception):
+    """Excepción lanzada cuando se intenta modificar un periodo cerrado."""
+    pass
+
 class KardexManager:
     """
     Gestiona toda la lógica de negocio relacionada con el Kardex, incluyendo movimientos de stock,
