@@ -1,0 +1,21 @@
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Traceback (most recent call last):
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 582, in abrir_compras
+    compras_widget = ComprasWindow(self.user_info)
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\compras_window.py", line 784, in __init__
+    self.cargar_compras()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\compras_window.py", line 915, in cargar_compras
+    primer_dia, num_dias = calendar.monthrange(anio_sel, mes_sel)
+                           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.2544.0_x64__qbz5n2kfra8p0\Lib\calendar.py", line 171, in monthrange
+    day1 = weekday(year, month, 1)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.2544.0_x64__qbz5n2kfra8p0\Lib\calendar.py", line 158, in weekday
+    if not datetime.MINYEAR <= year <= datetime.MAXYEAR:
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '<=' not supported between instances of 'int' and 'NoneType'
