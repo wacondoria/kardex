@@ -9,6 +9,7 @@ from models.database_model import (
     Compra, CompraDetalle, Producto, Almacen, MovimientoStock,
     TipoMovimiento, TipoDocumento, Moneda, Proveedor
 )
+from config.settings import IGV_FACTOR, IGV_PORCENTAJE
 from utils.kardex_manager import KardexManager
 from utils.validation import verificar_estado_anio, AnioCerradoError
 
@@ -24,8 +25,8 @@ class ComprasManager:
         Actualiza los subtotales dentro de la lista 'detalles'.
         """
         DOS_DECIMALES = Decimal('0.01')
-        IGV_FACTOR = Decimal('1.18')
-        IGV_PORCENTAJE = Decimal('0.18')
+        DOS_DECIMALES = Decimal('0.01')
+        # IGV_FACTOR y IGV_PORCENTAJE importados de settings
 
         for det in detalles:
             cantidad = Decimal(str(det['cantidad']))
@@ -88,7 +89,8 @@ class ComprasManager:
         movimientos_kardex = []
 
         DOS_DECIMALES = Decimal('0.01')
-        IGV_FACTOR = Decimal('1.18')
+        DOS_DECIMALES = Decimal('0.01')
+        # IGV_FACTOR importado de settings
 
         # Pre-cálculo para prorrateo (base total de la nueva estructura de detalles)
         # Nota: esto debería hacerse sobre TODOS los detalles finales (nuevos + modificados + sin cambios que no se tocan)
