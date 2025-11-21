@@ -49,19 +49,6 @@ except ImportError:
 class CompraDialog(QDialog):
     """Diálogo para crear o editar una compra."""
     
-    def __init__(self, parent=None, user_info=None, compra_a_editar=None, detalles_originales=None):
-        super().__init__(parent)
-        self.user_info = user_info
-        self.compra_a_editar = compra_a_editar
-        self.detalles_originales = detalles_originales or []
-        self.session = obtener_session()
-        self.detalles_compra = [] # Lista de dicts con detalle
-        self.lista_completa_productos = [] # Cache de productos
-        
-        self.setWindowTitle("Nueva Compra" if not compra_a_editar else f"Editar Compra {compra_a_editar.numero_documento}")
-        self.setMinimumSize(1000, 700)
-        
-        self.init_ui()
         
         if self.compra_a_editar:
             self.cargar_datos()
@@ -400,53 +387,38 @@ class CompraDialog(QDialog):
             return
             
         try:
-            # Crear o actualizar objeto Compra
-            if not self.compra_a_editar:
-                compra = Compra()
-                self.session.add(compra)
-            else:
-                compra = self.compra_a_editar
-                
-            compra.proveedor_id = self.cmb_proveedor.currentData()
-            compra.fecha = self.date_fecha.date().toPyDate()
-            compra.fecha_registro_contable = self.date_fecha_contable.date().toPyDate()
-            compra.tipo_documento = self.cmb_tipo_doc.currentText() # Ajustar a Enum si es necesario
-            compra.numero_documento = self.txt_numero_doc.text()
-            compra.moneda = self.cmb_moneda.currentData()
-            compra.tipo_cambio = Decimal(str(self.spn_tc.value()))
-            compra.incluye_igv = self.chk_incluye_igv.isChecked()
-            compra.observaciones = self.txt_observaciones.toPlainText()
+            # 1. Preparar datos de cabecera
+            datos_cabecera = {
+                'proveedor_id': self.cmb_proveedor.currentData(),
+                'fecha': self.date_fecha.date().toPyDate(),
+                'fecha_registro_contable': self.date_fecha_contable.date().toPyDate(),
+                'tipo_documento': self.cmb_tipo_doc.currentText(),
+                'numero_documento': self.txt_numero_doc.text(),
+                'moneda': self.cmb_moneda.currentData(),
+                'tipo_cambio': Decimal(str(self.spn_tc.value())),
+                'incluye_igv': self.chk_incluye_igv.isChecked(),
+                'observaciones': self.txt_observaciones.toPlainText(),
+            }
             
-            # Totales
-            compra.subtotal = Decimal(self.lbl_subtotal.text().replace(',',''))
-            compra.igv = Decimal(self.lbl_igv.text().replace(',',''))
-            compra.total = Decimal(self.lbl_total.text().replace(',',''))
+            # 2. Preparar detalles
+            # self.detalles_compra ya es una lista de dicts compatible
             
-            self.session.flush()
+            # 3. Llamar al manager
+            compra_id = self.compra_a_editar.id if self.compra_a_editar else None
             
-            # Procesar detalles
-            # (Simplificado: borrar anteriores y crear nuevos, o actualizar)
-            # Para evitar complejidad, en edicion podriamos borrar y recrear,
-            # pero eso pierde historial si hay IDs fijos.
-            # El kardex manager maneja esto?
+            # Asegurar que el manager existe
+            if not hasattr(self, 'compras_manager'):
+                 from utils.compras_manager import ComprasManager
+                 self.compras_manager = ComprasManager(self.session)
             
-            # Por ahora, guardamos cambios basicos.
-            # NOTA: La logica real de kardex debe ser invocada.
+            self.compras_manager.guardar_compra(datos_cabecera, self.detalles_compra, compra_id=compra_id)
             
-            # Guardar detalles en BD
-            # ... (Implementacion completa requeriria mas logica de diff)
-            
-            self.session.commit()
-            
-            # Actualizar Kardex
-            kardex_manager = KardexManager(self.session)
-            kardex_manager.procesar_compra(compra) # Asumiendo que existe este metodo
-            
-            self.session.commit()
             self.accept()
             
         except Exception as e:
             self.session.rollback()
+            import traceback
+            traceback.print_exc()
             QMessageBox.critical(self, "Error", f"Error al guardar: {e}")
 
     def producto_en_detalle_editado(self, combo_index, row):
