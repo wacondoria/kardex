@@ -10,8 +10,8 @@ from reportlab.lib import colors
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import cm
 
-from src.models.database_model import Empresa
-from src.utils.app_context import app_context
+from models.database_model import Empresa
+from utils.app_context import app_context
 
 class BaseReport:
     def __init__(self, path, title, period, filters=None):
