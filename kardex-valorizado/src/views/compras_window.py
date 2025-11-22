@@ -48,11 +48,23 @@ except ImportError:
 
 class CompraDialog(QDialog):
     """Diálogo para crear o editar una compra."""
-    
-        
+
+    def __init__(self, parent=None, user_info=None, compra_a_editar=None, detalles_originales=None):
+        super().__init__(parent)
+        self.user_info = user_info
+        self.compra_a_editar = compra_a_editar
+        self.detalles_originales = detalles_originales or []
+        self.session = obtener_session()
+        self.detalles_compra = [] # Lista de dicts para la tabla
+
+        self.setWindowTitle("Nueva Compra" if not self.compra_a_editar else f"Editar Compra {self.compra_a_editar.numero_documento}")
+        self.setMinimumSize(900, 650)
+
+        self.init_ui()
+
         if self.compra_a_editar:
             self.cargar_datos()
-            
+
     def init_ui(self):
         layout = QVBoxLayout(self)
         
