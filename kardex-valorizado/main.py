@@ -264,7 +264,25 @@ def verificar_y_actualizar_db(db_url='sqlite:///kardex.db'):
     except Exception as e:
         print(f"🔷 Info: Tabla 'usuarios' probablemente no existe aún. Se creará más tarde. ({e})")
 
-    # 12. Lógica de Siembra y Migración de Datos
+    # 12. Verificar nuevas tablas del módulo de Rental (Equipos y Kits)
+    try:
+        from models.database_model import Equipo, Kit, KitComponente, Alquiler, AlquilerDetalle
+        tablas_rental = {
+            'equipos': Equipo,
+            'kits': Kit,
+            'kit_componentes': KitComponente,
+            'alquileres': Alquiler,
+            'alquiler_detalles': AlquilerDetalle
+        }
+        for nombre_tabla, modelo_tabla in tablas_rental.items():
+            if not inspector.has_table(nombre_tabla):
+                print(f"⚠️  Tabla '{nombre_tabla}' del módulo de rental no encontrada. Creándola...")
+                modelo_tabla.__table__.create(engine)
+                print(f"✓  Tabla '{nombre_tabla}' creada exitosamente.")
+    except Exception as e:
+        print(f"❌ Error al crear las tablas del módulo de rental: {e}")
+
+    # 13. Lógica de Siembra y Migración de Datos
     try:
         from models.database_model import usuario_empresa, Usuario, Empresa, Rol, Permiso
 
