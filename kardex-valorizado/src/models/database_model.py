@@ -60,6 +60,25 @@ class TipoAjuste(enum.Enum):
     INGRESO = "INGRESO"
     SALIDA = "SALIDA"
 
+class NivelEquipo(enum.Enum):
+    NIVEL_A = "NIVEL_A" # Activo Principal (Máquina Base)
+    NIVEL_B = "NIVEL_B" # Cerebro Crítico (Data Logger, etc)
+    NIVEL_C = "NIVEL_C" # Juegos de Accesorios
+    # Nivel D se maneja como Productos (Consumibles)
+
+class EstadoEquipo(enum.Enum):
+    DISPONIBLE = "DISPONIBLE"
+    ALQUILADO = "ALQUILADO"
+    MANTENIMIENTO = "MANTENIMIENTO"
+    CALIBRACION_VENCIDA = "CALIBRACION_VENCIDA"
+    BAJA = "BAJA"
+
+class EstadoAlquiler(enum.Enum):
+    COTIZACION = "COTIZACION"
+    ACTIVO = "ACTIVO"
+    FINALIZADO = "FINALIZADO"
+    ANULADO = "ANULADO"
+
 # ============================================
 # TABLA: AÑO CONTABLE
 # ============================================
@@ -198,6 +217,143 @@ class ProductoFoto(Base):
     
     # Relaciones
     producto = relationship("Producto", back_populates="fotos")
+
+# ============================================
+# TABLA: EQUIPOS (ACTIVOS DE ALQUILER)
+# ============================================
+
+class Equipo(Base):
+    __tablename__ = 'equipos'
+
+    id = Column(Integer, primary_key=True)
+    
+    # Identificación
+    codigo = Column(String(50), unique=True, nullable=False) # Ej: MQ-315-A
+    nombre = Column(String(200), nullable=False)
+    descripcion = Column(Text)
+    nivel = Column(Enum(NivelEquipo), nullable=False)
+    
+    # Estado y Ubicación
+    estado = Column(Enum(EstadoEquipo), default=EstadoEquipo.DISPONIBLE)
+    almacen_id = Column(Integer, ForeignKey('almacenes.id'), nullable=True) # Ubicación actual
+    
+    # Control Técnico
+    marca = Column(String(100))
+    modelo = Column(String(100))
+    serie = Column(String(100))
+    anio_fabricacion = Column(Integer)
+    
+    # Mantenimiento y Calibración
+    requiere_calibracion = Column(Boolean, default=False)
+    fecha_ultima_calibracion = Column(Date)
+    fecha_vencimiento_calibracion = Column(Date)
+    
+    control_horometro = Column(Boolean, default=False)
+    horometro_actual = Column(Float, default=0.0)
+    horas_mantenimiento = Column(Float, default=250.0) # Cada cuánto toca mant.
+    ultimo_mantenimiento_horometro = Column(Float, default=0.0)
+    
+    # Financiero
+    valor_adquisicion = Column(Float, default=0.0)
+    fecha_adquisicion = Column(Date)
+    tarifa_diaria_referencial = Column(Float, default=0.0)
+    
+    # Multimedia
+    foto_referencia = Column(String(500))
+    
+    fecha_registro = Column(DateTime, default=datetime.now)
+    activo = Column(Boolean, default=True)
+
+    # Relaciones
+    almacen = relationship("Almacen")
+    componentes_kit = relationship("KitComponente", back_populates="equipo_default")
+    detalles_alquiler = relationship("AlquilerDetalle", back_populates="equipo")
+
+# ============================================
+# TABLA: KITS (PLANTILLAS DE ALQUILER)
+# ============================================
+
+class Kit(Base):
+    __tablename__ = 'kits'
+
+    id = Column(Integer, primary_key=True)
+    nombre = Column(String(200), unique=True, nullable=False) # Ej: KIT TERMOFUSIÓN 315
+    descripcion = Column(Text)
+    activo = Column(Boolean, default=True)
+    
+    componentes = relationship("KitComponente", back_populates="kit", cascade="all, delete-orphan")
+
+class KitComponente(Base):
+    __tablename__ = 'kit_componentes'
+
+    id = Column(Integer, primary_key=True)
+    kit_id = Column(Integer, ForeignKey('kits.id'), nullable=False)
+    
+    nombre_componente = Column(String(100), nullable=False) # Ej: "Generador Eléctrico"
+    nivel_requerido = Column(Enum(NivelEquipo), nullable=True)
+    
+    # Equipo por defecto (sugerido)
+    equipo_default_id = Column(Integer, ForeignKey('equipos.id'), nullable=True)
+    
+    cantidad = Column(Integer, default=1)
+    es_opcional = Column(Boolean, default=False)
+    
+    kit = relationship("Kit", back_populates="componentes")
+    equipo_default = relationship("Equipo", back_populates="componentes_kit")
+
+# ============================================
+# TABLA: ALQUILERES (GUÍAS DE SALIDA / CONTRATOS)
+# ============================================
+
+class Alquiler(Base):
+    __tablename__ = 'alquileres'
+
+    id = Column(Integer, primary_key=True)
+    cliente_id = Column(Integer, ForeignKey('clientes.id'), nullable=False)
+    
+    numero_guia = Column(String(20), nullable=True)
+    fecha_inicio = Column(Date, nullable=False)
+    fecha_fin_estimada = Column(Date, nullable=True)
+    fecha_devolucion_real = Column(Date, nullable=True)
+    
+    ubicacion_obra = Column(String(200))
+    estado = Column(Enum(EstadoAlquiler), default=EstadoAlquiler.COTIZACION)
+    
+    observaciones = Column(Text)
+    fecha_registro = Column(DateTime, default=datetime.now)
+    usuario_id = Column(Integer, ForeignKey('usuarios.id'))
+    
+    cliente = relationship("Cliente")
+    usuario = relationship("Usuario")
+    detalles = relationship("AlquilerDetalle", back_populates="alquiler", cascade="all, delete-orphan")
+
+class AlquilerDetalle(Base):
+    __tablename__ = 'alquiler_detalles'
+
+    id = Column(Integer, primary_key=True)
+    alquiler_id = Column(Integer, ForeignKey('alquileres.id'), nullable=False)
+    
+    # Puede ser un Equipo (Nivel A, B, C) o un Producto (Nivel D - Consumible)
+    equipo_id = Column(Integer, ForeignKey('equipos.id'), nullable=True)
+    producto_id = Column(Integer, ForeignKey('productos.id'), nullable=True)
+    
+    cantidad = Column(Float, default=1.0)
+    
+    # Datos de salida
+    horometro_salida = Column(Float, nullable=True)
+    
+    # Datos de retorno
+    cantidad_devuelta = Column(Float, default=0.0)
+    horometro_retorno = Column(Float, nullable=True)
+    estado_retorno = Column(String(100)) # Bueno, Dañado, Perdido
+    
+    # Precios
+    tarifa_diaria = Column(Float, default=0.0) # Para equipos
+    precio_venta = Column(Float, default=0.0) # Para consumibles
+    
+    alquiler = relationship("Alquiler", back_populates="detalles")
+    equipo = relationship("Equipo", back_populates="detalles_alquiler")
+    producto = relationship("Producto")
 
 # ============================================
 # TABLA: CONVERSIONES DE UNIDAD
