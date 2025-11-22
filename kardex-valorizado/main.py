@@ -33,7 +33,10 @@ from views.seguridad_window import SeguridadWindow
 from views.valorizacion_window import ValorizacionWindow
 from views.anio_contable_window import AnioContableWindow
 from views.sistemas_importacion_window import SistemasImportacionWindow
+from views.sistemas_importacion_window import SistemasImportacionWindow
 from views.dashboard_view import DashboardWidget
+from views.module_selector import ModuleSelector
+from views.rental_main_window import RentalMainWindow
 
 # --- Integración para actualización automática ---
 from utils.actualizador_tc import actualizar_tc_desde_excel
@@ -774,12 +777,37 @@ def main():
 
     main_window = None
     login_window = LoginWindow()
+    module_selector = None
 
-    def on_login_successful(user_info):
+    def launch_kardex():
         nonlocal main_window
         main_window = KardexMainWindow()
         main_window.show()
+
+    def launch_rental():
+        nonlocal main_window
+        main_window = RentalMainWindow()
+        main_window.show()
+
+    def on_module_selected(module_name):
+        nonlocal module_selector
+        if module_selector:
+            module_selector.close()
+        
+        if module_name == 'kardex':
+            launch_kardex()
+        elif module_name == 'rental':
+            launch_rental()
+
+    def on_login_successful(user_info):
+        nonlocal module_selector
+        # Cerrar login
         login_window.close()
+        
+        # Mostrar selector de módulo
+        module_selector = ModuleSelector(user_info)
+        module_selector.module_selected.connect(on_module_selected)
+        module_selector.show()
 
     login_window.login_exitoso.connect(on_login_successful)
     login_window.show()
