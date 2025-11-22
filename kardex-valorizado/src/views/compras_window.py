@@ -265,7 +265,16 @@ class CompraDialog(QDialog):
                 almacen = self.session.get(Almacen, det_obj.almacen_id)
                 
                 cantidad_orig = det_obj.cantidad
-                precio_ui = det_obj.precio_unitario
+
+                # Recuperar precio unitario para la UI (desde precio_unitario_sin_igv)
+                precio_base = Decimal(str(det_obj.precio_unitario_sin_igv))
+                if c.incluye_igv:
+                    igv_pct = Decimal(str(c.igv_porcentaje)) if getattr(c, 'igv_porcentaje', None) else Decimal('18.0')
+                    factor = Decimal('1') + (igv_pct / Decimal('100'))
+                    precio_ui = precio_base * factor
+                else:
+                    precio_ui = precio_base
+
                 subtotal_ui = det_obj.subtotal
                 
                 detalle_dict = {
