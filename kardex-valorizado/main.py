@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QLabel, QVBoxLayout,
                              QWidget, QMenuBar, QMenu, QToolBar, QPushButton, QTabWidget, QTabBar, QMessageBox)
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QAction
 
 # Agregar src al path
@@ -353,6 +353,8 @@ def verificar_y_actualizar_db(db_url='sqlite:///kardex.db'):
 
 class KardexMainWindow(QMainWindow):
     """Ventana principal del sistema"""
+    
+    return_to_menu = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -567,6 +569,10 @@ class KardexMainWindow(QMainWindow):
         toolbar.addWidget(btn_valorizacion)
 
         toolbar.addSeparator()
+        
+        btn_volver = QPushButton("🔙 Volver al Menú")
+        btn_volver.clicked.connect(self.return_to_menu.emit)
+        toolbar.addWidget(btn_volver)
 
     def abrir_productos(self):
         """Abre la ventana de gestión de productos en una nueva pestaña"""
@@ -797,14 +803,30 @@ def main():
     login_window = LoginWindow()
     module_selector = None
 
+    def show_selector():
+        nonlocal module_selector
+        if main_window:
+            main_window.close()
+        
+        # Re-crear el selector para asegurar estado fresco o mostrar el existente
+        if not module_selector:
+            # Necesitamos user_info, que ya deberíamos tener en app_context o guardado
+            user_info = app_context.get_user_info()
+            module_selector = ModuleSelector(user_info)
+            module_selector.module_selected.connect(on_module_selected)
+        
+        module_selector.show()
+
     def launch_kardex():
         nonlocal main_window
         main_window = KardexMainWindow()
+        main_window.return_to_menu.connect(show_selector)
         main_window.show()
 
     def launch_rental():
         nonlocal main_window
         main_window = RentalMainWindow()
+        main_window.return_to_menu.connect(show_selector)
         main_window.show()
 
     def on_module_selected(module_name):
