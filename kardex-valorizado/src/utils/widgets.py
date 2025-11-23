@@ -14,6 +14,7 @@ class SearchableComboBox(QComboBox):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setEditable(True)
+        self.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
 
         self.completer = QCompleter(self)
         self.completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
