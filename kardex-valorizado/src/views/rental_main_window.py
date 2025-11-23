@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import (QMainWindow, QLabel, QVBoxLayout, QWidget, QTabWidget, QToolBar, QPushButton, QMessageBox)
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 from utils.app_context import app_context
 from views.equipos_window import EquiposWindow
 from views.kits_window import KitsWindow
@@ -9,6 +9,8 @@ class RentalMainWindow(QMainWindow):
     """
     Ventana principal del módulo de Control de Alquileres.
     """
+    return_to_menu = pyqtSignal()
+
     def __init__(self):
         super().__init__()
         self.user_info = app_context.get_user_info()
@@ -44,9 +46,9 @@ class RentalMainWindow(QMainWindow):
         
         toolbar.addSeparator()
         
-        btn_salir = QPushButton("🚪 Salir del Módulo")
-        btn_salir.clicked.connect(self.close)
-        toolbar.addWidget(btn_salir)
+        btn_volver = QPushButton("🔙 Volver al Menú Principal")
+        btn_volver.clicked.connect(self.return_to_menu.emit)
+        toolbar.addWidget(btn_volver)
 
         # Central Widget
         self.tab_widget = QTabWidget()
