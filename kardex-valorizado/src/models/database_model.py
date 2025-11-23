@@ -323,9 +323,11 @@ class Alquiler(Base):
     fecha_registro = Column(DateTime, default=datetime.now)
     usuario_id = Column(Integer, ForeignKey('usuarios.id'))
     
+
     cliente = relationship("Cliente")
     usuario = relationship("Usuario")
     detalles = relationship("AlquilerDetalle", back_populates="alquiler", cascade="all, delete-orphan")
+    evidencias = relationship("AlquilerEvidencia", back_populates="alquiler", cascade="all, delete-orphan")
 
 class AlquilerDetalle(Base):
     __tablename__ = 'alquiler_detalles'
@@ -355,9 +357,19 @@ class AlquilerDetalle(Base):
     equipo = relationship("Equipo", back_populates="detalles_alquiler")
     producto = relationship("Producto")
 
-# ============================================
-# TABLA: CONVERSIONES DE UNIDAD
-# ============================================
+class AlquilerEvidencia(Base):
+    __tablename__ = 'alquiler_evidencias'
+    
+    id = Column(Integer, primary_key=True)
+    alquiler_id = Column(Integer, ForeignKey('alquileres.id'), nullable=False)
+    
+    ruta_archivo = Column(String(500), nullable=False)
+    tipo = Column(String(50)) # SALIDA, RETORNO
+    comentario = Column(Text)
+    
+    fecha_registro = Column(DateTime, default=datetime.now)
+    
+    alquiler = relationship("Alquiler", back_populates="evidencias")
 
 class ConversionUnidad(Base):
     __tablename__ = 'conversiones_unidad'
