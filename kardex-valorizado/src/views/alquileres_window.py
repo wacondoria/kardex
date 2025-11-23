@@ -1,18 +1,21 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                              QPushButton, QTableWidgetItem, QDialog,
                              QFormLayout, QHeaderView, QGroupBox, QMessageBox,
-                             QComboBox, QDateEdit, QTextEdit, QTableWidget, QSpinBox, QDoubleSpinBox)
-from PyQt6.QtCore import Qt, pyqtSignal, QDate
-from PyQt6.QtGui import QFont, QColor
+                             QComboBox, QDateEdit, QTextEdit, QTableWidget, QSpinBox, QDoubleSpinBox,
+                             QTabWidget, QListWidget, QListWidgetItem, QFileDialog, QRadioButton, QButtonGroup)
+from PyQt6.QtCore import Qt, pyqtSignal, QDate, QSize
+from PyQt6.QtGui import QFont, QColor, QIcon, QPixmap
 import sys
+import os
 from pathlib import Path
 from datetime import date, datetime
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models.database_model import (obtener_session, Alquiler, AlquilerDetalle, Cliente, 
-                                   Equipo, Kit, Producto, EstadoAlquiler, EstadoEquipo, NivelEquipo)
+                                   Equipo, Kit, Producto, EstadoAlquiler, EstadoEquipo, NivelEquipo, AlquilerEvidencia)
 from utils.widgets import SearchableComboBox, UpperLineEdit
+from utils.file_manager import FileManager
 from views.base_crud_view import BaseCRUDView
 
 class SeleccionKitDialog(QDialog):
@@ -197,6 +200,70 @@ class SeleccionKitDialog(QDialog):
         self.kit_confirmado.emit(detalles)
         self.accept()
 
+class EvidenciaDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.ruta_archivo = None
+        self.init_ui()
+        
+    def init_ui(self):
+        self.setWindowTitle("Agregar Evidencia")
+        self.setFixedSize(400, 300)
+        layout = QVBoxLayout()
+        
+        # Tipo
+        grp_tipo = QGroupBox("Tipo")
+        hbox = QHBoxLayout()
+        self.rb_salida = QRadioButton("Salida")
+        self.rb_salida.setChecked(True)
+        self.rb_retorno = QRadioButton("Retorno")
+        hbox.addWidget(self.rb_salida)
+        hbox.addWidget(self.rb_retorno)
+        grp_tipo.setLayout(hbox)
+        layout.addWidget(grp_tipo)
+        
+        # Foto
+        self.lbl_preview = QLabel("Sin archivo seleccionado")
+        self.lbl_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.lbl_preview.setStyleSheet("border: 1px dashed #ccc; height: 100px;")
+        layout.addWidget(self.lbl_preview)
+        
+        btn_foto = QPushButton("Seleccionar Foto/Video...")
+        btn_foto.clicked.connect(self.seleccionar_foto)
+        layout.addWidget(btn_foto)
+        
+        # Comentario
+        layout.addWidget(QLabel("Comentario:"))
+        self.txt_comentario = QTextEdit()
+        self.txt_comentario.setMaximumHeight(60)
+        layout.addWidget(self.txt_comentario)
+        
+        # Botones
+        btn_box = QHBoxLayout()
+        btn_cancel = QPushButton("Cancelar")
+        btn_cancel.clicked.connect(self.reject)
+        btn_ok = QPushButton("Guardar")
+        btn_ok.clicked.connect(self.accept)
+        btn_box.addWidget(btn_cancel)
+        btn_box.addWidget(btn_ok)
+        layout.addLayout(btn_box)
+        
+        self.setLayout(layout)
+        
+    def seleccionar_foto(self):
+        file_name, _ = QFileDialog.getOpenFileName(self, "Seleccionar Archivo", "", "Multimedia (*.png *.jpg *.jpeg *.mp4 *.avi *.mov)")
+        if file_name:
+            self.ruta_archivo = file_name
+            self.lbl_preview.setText(Path(file_name).name)
+            if FileManager.is_video(file_name):
+                self.lbl_preview.setStyleSheet("border: 1px solid blue; color: blue; font-weight: bold;")
+            else:
+                self.lbl_preview.setStyleSheet("border: 1px solid green; color: green;")
+
+    def get_data(self):
+        tipo = "SALIDA" if self.rb_salida.isChecked() else "RETORNO"
+        return self.ruta_archivo, tipo, self.txt_comentario.toPlainText()
+
 class AlquilerDialog(QDialog):
     """Diálogo para crear/editar Alquiler"""
     alquiler_guardado = pyqtSignal()
@@ -216,6 +283,14 @@ class AlquilerDialog(QDialog):
         self.setFixedSize(900, 700)
         
         layout = QVBoxLayout()
+        
+        # --- TABS ---
+        self.tabs = QTabWidget()
+        layout.addWidget(self.tabs)
+        
+        # TAB 1: General y Detalles
+        tab_general = QWidget()
+        layout_general = QVBoxLayout()
         
         # --- CABECERA ---
         grp_header = QGroupBox("Datos Generales")
@@ -241,7 +316,7 @@ class AlquilerDialog(QDialog):
         form.addRow("Fechas:", fechas_layout)
         
         grp_header.setLayout(form)
-        layout.addWidget(grp_header)
+        layout_general.addWidget(grp_header)
         
         # --- DETALLES ---
         grp_detalles = QGroupBox("Equipos y Productos")
@@ -266,7 +341,15 @@ class AlquilerDialog(QDialog):
         det_layout.addWidget(self.tabla_detalles)
         
         grp_detalles.setLayout(det_layout)
-        layout.addWidget(grp_detalles)
+        layout_general.addWidget(grp_detalles)
+        
+        tab_general.setLayout(layout_general)
+        self.tabs.addTab(tab_general, "General")
+        
+        # TAB 2: Evidencias
+        self.tab_evidencias = QWidget()
+        self.init_tab_evidencias()
+        self.tabs.addTab(self.tab_evidencias, "Evidencias / Fotos")
         
         # --- FOOTER ---
         btn_layout = QHBoxLayout()
@@ -279,6 +362,75 @@ class AlquilerDialog(QDialog):
         layout.addLayout(btn_layout)
         
         self.setLayout(layout)
+
+    def init_tab_evidencias(self):
+        layout = QVBoxLayout()
+        
+        # Toolbar
+        toolbar = QHBoxLayout()
+        btn_add_evidencia = QPushButton("📷/🎥 Agregar Evidencia")
+        btn_add_evidencia.clicked.connect(self.agregar_evidencia)
+        toolbar.addWidget(btn_add_evidencia)
+        toolbar.addStretch()
+        layout.addLayout(toolbar)
+        
+        # Lista de fotos
+        self.lista_evidencias = QListWidget()
+        self.lista_evidencias.setViewMode(QListWidget.ViewMode.IconMode)
+        self.lista_evidencias.setIconSize(QSize(150, 150))
+        self.lista_evidencias.setResizeMode(QListWidget.ResizeMode.Adjust)
+        self.lista_evidencias.setSpacing(10)
+        layout.addWidget(self.lista_evidencias)
+        
+        self.tab_evidencias.setLayout(layout)
+
+    def agregar_evidencia(self):
+        if not self.alquiler:
+            QMessageBox.warning(self, "Aviso", "Primero debe guardar el alquiler para agregar evidencias.")
+            return
+
+        dialog = EvidenciaDialog(self)
+        if dialog.exec():
+            ruta, tipo, comentario = dialog.get_data()
+            
+            # Determinar carpeta según tipo
+            carpeta = "salida_equipos" if tipo == "SALIDA" else "devolucion_equipos"
+            
+            # Guardar archivo
+            nueva_ruta = FileManager.save_file(ruta, carpeta, prefix=f"evidencia_{self.alquiler.id}")
+            
+            # Guardar en BD
+            evidencia = AlquilerEvidencia(
+                alquiler_id=self.alquiler.id,
+                ruta_archivo=nueva_ruta,
+                tipo=tipo,
+                comentario=comentario
+            )
+            self.session.add(evidencia)
+            self.session.commit()
+            
+            self.cargar_evidencias()
+
+    def cargar_evidencias(self):
+        self.lista_evidencias.clear()
+        if not self.alquiler: return
+        
+        evidencias = self.session.query(AlquilerEvidencia).filter_by(alquiler_id=self.alquiler.id).all()
+        
+        for ev in evidencias:
+            full_path = FileManager.get_full_path(ev.ruta_archivo)
+            if full_path and os.path.exists(full_path):
+                if FileManager.is_video(full_path):
+                    # Icono de video genérico o texto
+                    icon = self.style().standardIcon(self.style().StandardPixmap.SP_MediaPlay)
+                    texto = f"[VIDEO] {ev.tipo}\n{ev.comentario}"
+                else:
+                    icon = QIcon(full_path)
+                    texto = f"{ev.tipo}\n{ev.comentario}"
+                    
+                item = QListWidgetItem(icon, texto)
+                item.setSizeHint(QSize(160, 200))
+                self.lista_evidencias.addItem(item)
 
     def cargar_clientes(self):
         clientes = self.session.query(Cliente).filter_by(activo=True).all()
@@ -318,8 +470,21 @@ class AlquilerDialog(QDialog):
             total += subtotal
 
     def cargar_datos(self):
-        # Cargar datos del alquiler existente
-        pass
+        if not self.alquiler: return
+        
+        self.date_inicio.setDate(self.alquiler.fecha_inicio)
+        if self.alquiler.fecha_fin_estimada:
+            self.date_fin.setDate(self.alquiler.fecha_fin_estimada)
+            
+        index = self.cmb_cliente.findData(self.alquiler.cliente_id)
+        if index >= 0: self.cmb_cliente.setCurrentIndex(index)
+        
+        self.txt_obra.setText(self.alquiler.ubicacion_obra or "")
+        
+        # Cargar detalles (simplificado: solo lectura por ahora en esta vista rápida)
+        # TODO: Implementar carga completa de detalles para edición
+        
+        self.cargar_evidencias()
 
     def guardar(self):
         cliente_id = self.cmb_cliente.currentData()
