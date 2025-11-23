@@ -2,21 +2,23 @@ import os
 import shutil
 from pathlib import Path
 from datetime import datetime
+from utils.config import Config
 
 class FileManager:
     """Gestor de archivos para el sistema"""
     
-    BASE_DIR = Path("user_data")
-    BASE_DIR = Path("user_data")
-    MEDIA_DIR = BASE_DIR / "media"
+    @staticmethod
+    def get_media_dir():
+        return Path(Config.get_media_root())
     
     @staticmethod
     def ensure_directories():
         """Asegura que existan los directorios necesarios"""
-        FileManager.MEDIA_DIR.mkdir(parents=True, exist_ok=True)
-        (FileManager.MEDIA_DIR / "detalle_equipos").mkdir(exist_ok=True)
-        (FileManager.MEDIA_DIR / "salida_equipos").mkdir(exist_ok=True)
-        (FileManager.MEDIA_DIR / "devolucion_equipos").mkdir(exist_ok=True)
+        media_dir = FileManager.get_media_dir()
+        media_dir.mkdir(parents=True, exist_ok=True)
+        (media_dir / "detalle_equipos").mkdir(exist_ok=True)
+        (media_dir / "salida_equipos").mkdir(exist_ok=True)
+        (media_dir / "devolucion_equipos").mkdir(exist_ok=True)
 
     @staticmethod
     def save_file(source_path, category, prefix="file"):
@@ -35,11 +37,14 @@ class FileManager:
         extension = source.suffix
         new_filename = f"{prefix}_{timestamp}{extension}"
         
-        destination = FileManager.MEDIA_DIR / category / new_filename
+        media_dir = FileManager.get_media_dir()
+        destination = media_dir / category / new_filename
         
         shutil.copy2(source, destination)
         
         # Retornamos la ruta relativa para guardar en BD
+        # OJO: Si usamos ruta compartida, quizás sea mejor guardar ruta absoluta o relativa al root compartido
+        # Por compatibilidad, guardamos relativa al media_root, pero al recuperar reconstruimos
         return str(destination)
 
     @staticmethod
@@ -48,8 +53,8 @@ class FileManager:
         return Path(path).suffix.lower() in ['.mp4', '.avi', '.mov', '.mkv']
 
     @staticmethod
-    def get_full_path(relative_path):
+    def get_full_path(path_str):
         """Obtiene la ruta absoluta de un archivo guardado"""
-        if not relative_path:
+        if not path_str:
             return None
-        return str(Path(relative_path).absolute())
+        return str(Path(path_str).absolute())
