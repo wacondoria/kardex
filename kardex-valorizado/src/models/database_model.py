@@ -188,18 +188,6 @@ class Producto(Base):
     
     # Precio (opcional)
     precio_venta = Column(Float, nullable=True)
-    
-    # Estado
-    activo = Column(Boolean, default=True)
-    fecha_registro = Column(DateTime, default=datetime.now)
-    
-    # Relaciones
-    categoria = relationship("Categoria", back_populates="productos")
-    fotos = relationship("ProductoFoto", back_populates="producto")
-    conversiones = relationship("ConversionUnidad", back_populates="producto")
-    movimientos = relationship("MovimientoStock", back_populates="producto")
-    detalles_orden = relationship("OrdenCompraDetalle", back_populates="producto")
-
 # ============================================
 # TABLA: FOTOS DE PRODUCTOS
 # ============================================
@@ -890,10 +878,6 @@ usuario_empresa = Table('usuario_empresa', Base.metadata,
     Column('empresa_id', Integer, ForeignKey('empresas.id'), primary_key=True)
 )
 
-# ============================================
-# TABLA: AUDITORÍA
-# ============================================
-
 class Auditoria(Base):
     __tablename__ = 'auditoria'
     
@@ -925,27 +909,6 @@ class Licencia(Base):
     fecha_instalacion = Column(DateTime, default=datetime.now)
     fecha_vencimiento = Column(Date, nullable=False)
     activa = Column(Boolean, default=True)
-
-# ============================================
-# FUNCIONES DE INICIALIZACIÓN
-# ============================================
-
-def crear_base_datos(db_url='sqlite:///kardex.db'):
-    """
-    Crea todas las tablas en la base de datos
-    """
-    engine = create_engine(db_url, echo=True)
-    Base.metadata.create_all(engine)
-    print("✓ Base de datos creada exitosamente")
-    return engine
-
-def obtener_session(db_url='sqlite:///kardex.db'):
-    """
-    Obtiene una sesión de SQLAlchemy
-    """
-    engine = create_engine(db_url)
-    Session = sessionmaker(bind=engine)
-    return Session()
 
 def poblar_datos_iniciales(session):
     """
@@ -1020,6 +983,47 @@ def poblar_datos_iniciales(session):
     
     session.commit()
     print("✓ Datos iniciales creados")
+
+# ============================================
+# FUNCIONES DE INICIALIZACIÓN
+# ============================================
+
+# Import Config here if not at top
+try:
+    from utils.config import Config
+except ImportError:
+    pass
+
+def crear_base_datos(db_url=None):
+    """
+    Crea todas las tablas en la base de datos
+    """
+    if db_url is None:
+        try:
+            from utils.config import Config
+            db_url = Config.get_db_url()
+        except ImportError:
+            db_url = 'sqlite:///kardex.db'
+        
+    engine = create_engine(db_url, echo=True)
+    Base.metadata.create_all(engine)
+    print(f"✓ Base de datos creada exitosamente en: {db_url}")
+    return engine
+
+def obtener_session(db_url=None):
+    """
+    Obtiene una sesión de SQLAlchemy
+    """
+    if db_url is None:
+        try:
+            from utils.config import Config
+            db_url = Config.get_db_url()
+        except ImportError:
+            db_url = 'sqlite:///kardex.db'
+        
+    engine = create_engine(db_url)
+    Session = sessionmaker(bind=engine)
+    return Session()
 
 # ============================================
 # SCRIPT PRINCIPAL
