@@ -719,9 +719,20 @@ class EquipoDialog(QDialog):
         
         # Tipo y Capacidad
         index_tipo = self.cmb_tipo.findData(self.equipo.tipo_equipo_id)
-        if index_tipo >= 0: self.cmb_tipo.setCurrentIndex(index_tipo)
-        
-        # Subtipo (debe cargarse despues de tipo)
+
+        # Desconectar señal para evitar recarga prematura de subtipos
+        try:
+            self.cmb_tipo.currentIndexChanged.disconnect(self.cargar_subtipos)
+        except TypeError:
+            pass
+
+        if index_tipo >= 0:
+            self.cmb_tipo.setCurrentIndex(index_tipo)
+
+        # Conectar nuevamente
+        self.cmb_tipo.currentIndexChanged.connect(self.cargar_subtipos)
+
+        # Cargar subtipos manualmente y seleccionar
         self.cargar_subtipos()
         if self.equipo.subtipo_equipo_id:
             idx_sub = self.cmb_subtipo.findData(self.equipo.subtipo_equipo_id)

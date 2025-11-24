@@ -14,7 +14,8 @@ from openpyxl.worksheet.datavalidation import DataValidation
 
 from models.database_model import (obtener_session, Proveedor, Producto, Compra,
                                    Venta, Cliente, Categoria, TipoCambio,
-                                   TipoDocumento, Moneda)
+                                   TipoDocumento, Moneda, Equipo, TipoEquipo,
+                                   SubtipoEquipo, Almacen, NivelEquipo, EstadoEquipo)
 
 # Definición de unidades SUNAT
 UNIDADES_SUNAT = [
@@ -37,6 +38,8 @@ class ImportExportManager:
             self._generar_plantilla_clientes()
         elif modulo == "Productos":
             self._generar_plantilla_productos()
+        elif modulo == "Equipos":
+            self._generar_plantilla_equipos()
         elif modulo == "Compras":
             self._generar_plantilla_compras()
         elif modulo == "Ventas":
@@ -54,6 +57,8 @@ class ImportExportManager:
             self._importar_datos_clientes()
         elif modulo == "Productos":
             self._importar_datos_productos()
+        elif modulo == "Equipos":
+            self._importar_datos_equipos()
         elif modulo == "Compras":
             self._importar_datos_compras()
         elif modulo == "Ventas":
@@ -732,6 +737,255 @@ class ImportExportManager:
                 self.session.add_all(compras_a_crear)
                 self.session.commit()
                 self._mostrar_reporte_importacion(len(compras_a_crear), 0, [])
+        except Exception as e:
+            self.session.rollback()
+            QMessageBox.critical(self.parent, "Error Crítico", f"Ocurrió un error inesperado:\n{str(e)}")
+        finally:
+            self.session.close()
+
+    def _generar_plantilla_equipos(self):
+        """Genera una plantilla Excel para la importación masiva de equipos."""
+        path, _ = QFileDialog.getSaveFileName(
+            self.parent, "Guardar Plantilla de Equipos",
+            "plantilla_equipos.xlsx", "Archivos de Excel (*.xlsx)"
+        )
+        if not path: return
+
+        try:
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Equipos"
+
+            headers = [
+                "CODIGO_PREFIJO", "NOMBRE", "TIPO_EQUIPO", "SUBTIPO_EQUIPO", "MARCA",
+                "MODELO", "SERIE", "CAPACIDAD", "NIVEL", "ALMACEN", "ESTADO",
+                "PROVEEDOR_RUC", "TARIFA_SOLES", "TARIFA_DOLARES", "DESCRIPCION"
+            ]
+            ws.append(headers)
+
+            header_font = Font(bold=True, color="FFFFFF")
+            header_fill = PatternFill(start_color="FF1D6F42", end_color="FF1D6F42", fill_type="solid")
+            header_align = Alignment(horizontal="center")
+            for cell in ws[1]:
+                cell.font, cell.fill, cell.alignment = header_font, header_fill, header_align
+
+            # Validaciones de datos
+
+            # Niveles
+            niveles = [n.value for n in NivelEquipo]
+            dv_nivel = DataValidation(type="list", formula1=f'"{",".join(niveles)}"', allow_blank=False)
+            ws.add_data_validation(dv_nivel)
+            dv_nivel.add('I2:I1000')
+
+            # Estados
+            estados = [e.value for e in EstadoEquipo]
+            dv_estado = DataValidation(type="list", formula1=f'"{",".join(estados)}"', allow_blank=False)
+            ws.add_data_validation(dv_estado)
+            dv_estado.add('K2:K1000')
+
+            # Almacenes
+            almacenes = self.session.query(Almacen).filter_by(activo=True).all()
+            alm_nombres = [a.nombre.replace('"', "''") for a in almacenes]
+            if alm_nombres:
+                dv_alm = DataValidation(type="list", formula1=f'"{",".join(alm_nombres)}"', allow_blank=False)
+                ws.add_data_validation(dv_alm)
+                dv_alm.add('J2:J1000')
+
+            # Tipos de Equipo
+            tipos = self.session.query(TipoEquipo).filter_by(activo=True).all()
+            tipo_nombres = [t.nombre.replace('"', "''") for t in tipos]
+            if tipo_nombres:
+                dv_tipo = DataValidation(type="list", formula1=f'"{",".join(tipo_nombres)}"', allow_blank=False)
+                ws.add_data_validation(dv_tipo)
+                dv_tipo.add('C2:C1000')
+
+            ws.column_dimensions['A'].width = 18
+            ws.column_dimensions['B'].width = 40
+            ws.column_dimensions['C'].width = 25
+            ws.column_dimensions['D'].width = 25
+            ws.column_dimensions['E'].width = 20
+            ws.column_dimensions['F'].width = 20
+            ws.column_dimensions['G'].width = 20
+            ws.column_dimensions['H'].width = 15
+            ws.column_dimensions['I'].width = 15
+            ws.column_dimensions['J'].width = 25
+            ws.column_dimensions['K'].width = 15
+            ws.column_dimensions['L'].width = 15
+            ws.column_dimensions['M'].width = 15
+            ws.column_dimensions['N'].width = 15
+            ws.column_dimensions['O'].width = 40
+
+            ws_inst = wb.create_sheet(title="Instrucciones")
+            ws_inst.append(["Columna", "Descripción", "Obligatorio"])
+            ws_inst.append(["CODIGO_PREFIJO", "Prefijo de 5 caracteres para el código (Ej: GENER).", "Sí"])
+            ws_inst.append(["NOMBRE", "Nombre del equipo.", "Sí"])
+            ws_inst.append(["TIPO_EQUIPO", "Nombre exacto del tipo de equipo.", "Sí"])
+            ws_inst.append(["SUBTIPO_EQUIPO", "Nombre exacto del subtipo (opcional).", "No"])
+            ws_inst.append(["MARCA", "Marca del equipo.", "No"])
+            ws_inst.append(["MODELO", "Modelo del equipo.", "No"])
+            ws_inst.append(["SERIE", "Número de serie.", "No"])
+            ws_inst.append(["CAPACIDAD", "Capacidad (Ej: 5000W).", "No"])
+            ws_inst.append(["NIVEL", "Nivel de jerarquía (NIVEL_A, NIVEL_B, etc).", "Sí"])
+            ws_inst.append(["ALMACEN", "Nombre del almacén donde se ubica.", "No"])
+            ws_inst.append(["ESTADO", "Estado actual (DISPONIBLE, ALQUILADO, etc).", "Sí"])
+            ws_inst.append(["PROVEEDOR_RUC", "RUC del proveedor/propietario.", "No"])
+            ws_inst.append(["TARIFA_SOLES", "Tarifa diaria en Soles.", "No"])
+            ws_inst.append(["TARIFA_DOLARES", "Tarifa diaria en Dólares.", "No"])
+            ws_inst.append(["DESCRIPCION", "Descripción detallada.", "No"])
+
+            wb.save(path)
+            QMessageBox.information(self.parent, "Éxito", f"Plantilla guardada exitosamente en:\n{path}")
+        except Exception as e:
+            QMessageBox.critical(self.parent, "Error", f"No se pudo generar la plantilla:\n{str(e)}")
+
+    def _importar_datos_equipos(self):
+        """Importa equipos desde un archivo Excel."""
+        path, _ = QFileDialog.getOpenFileName(
+            self.parent, "Abrir Plantilla de Equipos", "", "Archivos de Excel (*.xlsx *.xls)"
+        )
+        if not path: return
+
+        try:
+            wb = load_workbook(path, data_only=True)
+            if "Equipos" not in wb.sheetnames:
+                QMessageBox.critical(self.parent, "Error de Hoja", "No se encontró la hoja 'Equipos'.")
+                return
+
+            ws = wb["Equipos"]
+            expected_headers = [
+                "CODIGO_PREFIJO", "NOMBRE", "TIPO_EQUIPO", "SUBTIPO_EQUIPO", "MARCA",
+                "MODELO", "SERIE", "CAPACIDAD", "NIVEL", "ALMACEN", "ESTADO",
+                "PROVEEDOR_RUC", "TARIFA_SOLES", "TARIFA_DOLARES", "DESCRIPCION"
+            ]
+            actual_headers = [str(cell.value).upper().strip() for cell in ws[1]][:len(expected_headers)]
+            if actual_headers != expected_headers:
+                QMessageBox.critical(self.parent, "Error de Formato", "Los encabezados no son correctos.")
+                return
+
+            equipos_a_crear, errores_lectura = [], []
+
+            # Caches para búsquedas rápidas
+            tipos_db = {t.nombre.upper(): t.id for t in self.session.query(TipoEquipo).filter_by(activo=True).all()}
+            # Subtipos requieren búsqueda compuesta por TipoID + Nombre, se hará en el loop o precargada si no son muchos
+            almacenes_db = {a.nombre.upper(): a.id for a in self.session.query(Almacen).filter_by(activo=True).all()}
+            proveedores_db = {p.ruc: p.id for p in self.session.query(Proveedor).filter_by(activo=True).all()}
+
+            # Nombres y Prefijos para validación de duplicados en Excel
+            nombres_prefijos_excel = set()
+
+            for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+                if all(c is None for c in row): break
+                try:
+                    # Extracción de datos
+                    prefijo = str(row[0]).strip().upper() if row[0] else ""
+                    nombre = str(row[1]).strip() if row[1] else ""
+                    tipo_nom = str(row[2]).strip().upper() if row[2] else ""
+                    subtipo_nom = str(row[3]).strip().upper() if row[3] else ""
+                    marca = str(row[4]).strip() if row[4] else None
+                    modelo = str(row[5]).strip() if row[5] else None
+                    serie = str(row[6]).strip() if row[6] else None
+                    capacidad = str(row[7]).strip() if row[7] else None
+                    nivel_str = str(row[8]).strip().upper() if row[8] else ""
+                    almacen_nom = str(row[9]).strip().upper() if row[9] else ""
+                    estado_str = str(row[10]).strip().upper() if row[10] else "DISPONIBLE"
+                    prov_ruc = str(row[11]).strip() if row[11] else None
+                    tarifa_sol = float(str(row[12]).strip() if row[12] else "0")
+                    tarifa_dol = float(str(row[13]).strip() if row[13] else "0")
+                    desc = str(row[14]).strip() if row[14] else None
+
+                    # Validaciones
+                    if not prefijo or len(prefijo) != 5: raise ValueError("Código prefijo debe tener 5 caracteres.")
+                    if not nombre: raise ValueError("Nombre es obligatorio.")
+                    if not tipo_nom: raise ValueError("Tipo de Equipo es obligatorio.")
+                    if not nivel_str: raise ValueError("Nivel es obligatorio.")
+
+                    tipo_id = tipos_db.get(tipo_nom)
+                    if not tipo_id: raise ValueError(f"Tipo de Equipo '{tipo_nom}' no encontrado.")
+
+                    subtipo_id = None
+                    if subtipo_nom:
+                        # Buscar subtipo en BD para este tipo
+                        sub = self.session.query(SubtipoEquipo).filter_by(
+                            activo=True, tipo_equipo_id=tipo_id, nombre=subtipo_nom
+                        ).first()
+                        if sub: subtipo_id = sub.id
+                        else: raise ValueError(f"Subtipo '{subtipo_nom}' no pertenece al Tipo '{tipo_nom}' o no existe.")
+
+                    almacen_id = None
+                    if almacen_nom:
+                        almacen_id = almacenes_db.get(almacen_nom)
+                        if not almacen_id: raise ValueError(f"Almacén '{almacen_nom}' no encontrado.")
+
+                    prov_id = None
+                    if prov_ruc:
+                        prov_id = proveedores_db.get(prov_ruc)
+                        if not prov_id: raise ValueError(f"Proveedor con RUC '{prov_ruc}' no encontrado.")
+
+                    # Validar Enum Nivel y Estado
+                    try:
+                        nivel_enum = NivelEquipo(nivel_str)
+                    except ValueError:
+                        raise ValueError(f"Nivel '{nivel_str}' inválido. Use: {', '.join([n.value for n in NivelEquipo])}")
+
+                    try:
+                        estado_enum = EstadoEquipo(estado_str)
+                    except ValueError:
+                        raise ValueError(f"Estado '{estado_str}' inválido.")
+
+                    if (prefijo, nombre) in nombres_prefijos_excel:
+                        raise ValueError(f"Duplicado en Excel: Prefijo '{prefijo}' y Nombre '{nombre}'.")
+                    nombres_prefijos_excel.add((prefijo, nombre))
+
+                    equipos_a_crear.append({
+                        "prefijo": prefijo, "nombre": nombre, "tipo_id": tipo_id, "subtipo_id": subtipo_id,
+                        "marca": marca, "modelo": modelo, "serie": serie, "capacidad": capacidad,
+                        "nivel": nivel_enum, "almacen_id": almacen_id, "estado": estado_enum,
+                        "proveedor_id": prov_id, "tarifa_sol": tarifa_sol, "tarifa_dol": tarifa_dol,
+                        "desc": desc, "fila": row_idx
+                    })
+
+                except Exception as e:
+                    errores_lectura.append(f"Fila {row_idx}: {str(e)}")
+
+            if not equipos_a_crear and not errores_lectura:
+                QMessageBox.warning(self.parent, "Archivo Vacío", "No se encontraron datos válidos.")
+                return
+
+            creados = 0
+            correlativos_map = {}
+            # Mapa de códigos existentes para evitar duplicados de nombre/prefijo si fuera necesario
+            # Pero la regla es autogenerar código.
+
+            # Función auxiliar local para generar código sin llamar a BD cada vez (optimización)
+            # Pero cuidado con concurrencia. Asumimos usuario único.
+
+            for data in equipos_a_crear:
+                try:
+                    prefijo = data['prefijo']
+
+                    if prefijo not in correlativos_map:
+                        ultimo = self.session.query(Equipo).filter(Equipo.codigo.like(f"{prefijo}-%")).order_by(Equipo.codigo.desc()).first()
+                        correlativos_map[prefijo] = int(ultimo.codigo.split('-')[1]) if ultimo else 0
+
+                    correlativos_map[prefijo] += 1
+                    codigo_completo = f"{prefijo}-{correlativos_map[prefijo]:06d}"
+
+                    equipo = Equipo(
+                        codigo=codigo_completo, nombre=data['nombre'], descripcion=data['desc'],
+                        tipo_equipo_id=data['tipo_id'], subtipo_equipo_id=data['subtipo_id'],
+                        capacidad=data['capacidad'], nivel=data['nivel'], almacen_id=data['almacen_id'],
+                        estado=data['estado'], marca=data['marca'], modelo=data['modelo'],
+                        serie=data['serie'], tarifa_diaria_referencial=data['tarifa_sol'],
+                        tarifa_diaria_dolares=data['tarifa_dol'], proveedor_id=data['proveedor_id']
+                    )
+                    self.session.add(equipo)
+                    creados += 1
+                except Exception as e:
+                    errores_lectura.append(f"Fila {data['fila']} (Procesando): {str(e)}")
+
+            self.session.commit()
+            self._mostrar_reporte_importacion(creados, 0, errores_lectura)
+
         except Exception as e:
             self.session.rollback()
             QMessageBox.critical(self.parent, "Error Crítico", f"Ocurrió un error inesperado:\n{str(e)}")
