@@ -737,14 +737,14 @@ class RequisicionesWindow(QWidget):
         
         selected_year = app_context.get_selected_year()
 
-        lbl_desde = QLabel("Desde:")
+        lbl_desde = QLabel("<b>Desde:</b>")
         self.date_desde = QDateEdit()
         self.date_desde.setCalendarPopup(True)
         self.date_desde.setDate(QDate(selected_year, 1, 1))
         self.date_desde.setDisplayFormat("dd/MM/yyyy")
         self.date_desde.dateChanged.connect(self.cargar_requisiciones)
         
-        lbl_hasta = QLabel("Hasta:")
+        lbl_hasta = QLabel("<b>Hasta:</b>")
         self.date_hasta = QDateEdit()
         self.date_hasta.setCalendarPopup(True)
         self.date_hasta.setDate(QDate(selected_year, 12, 31))
@@ -768,18 +768,7 @@ class RequisicionesWindow(QWidget):
             "Fecha", "Número", "Destino", "Solicitante", "Productos", "Acciones"
         ])
         
-        self.tabla.setStyleSheet("""
-            QTableWidget {
-                border: 1px solid #ddd;
-                border-radius: 5px;
-                background-color: white;
-            }
-            QHeaderView::section {
-                background-color: #f1f3f4;
-                padding: 10px;
-                font-weight: bold;
-            }
-        """)
+        # Se elimina stylesheet explícito para heredar tema global
         
         header = self.tabla.horizontalHeader()
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
