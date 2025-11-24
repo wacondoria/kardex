@@ -15,6 +15,7 @@ from models.database_model import obtener_session, Equipo, Almacen, NivelEquipo,
 from utils.widgets import SearchableComboBox, UpperLineEdit
 from utils.file_manager import FileManager
 from views.base_crud_view import BaseCRUDView
+from utils.styles import STYLE_CUADRADO_VERDE, STYLE_CHECKBOX_CUSTOM
 
 def generar_codigo_equipo(session, prefijo):
     """Genera el código completo con numeración automática para equipos"""
@@ -32,6 +33,53 @@ def generar_codigo_equipo(session, prefijo):
         numero = 1
 
     return f"{prefijo}-{numero:06d}"
+
+class TipoEquipoDialog(QDialog):
+    """Diálogo para crear un nuevo Tipo de Equipo"""
+    tipo_guardado = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.session = obtener_session()
+        self.init_ui()
+
+    def init_ui(self):
+        self.setWindowTitle("Nuevo Tipo de Equipo")
+        self.setFixedSize(400, 200)
+
+        layout = QVBoxLayout()
+        form = QFormLayout()
+
+        self.txt_nombre = UpperLineEdit()
+        self.txt_nombre.setPlaceholderText("Ej: GRUPO ELECTROGENO")
+        form.addRow("Nombre:*", self.txt_nombre)
+
+        self.txt_desc = QLineEdit()
+        form.addRow("Descripción:", self.txt_desc)
+
+        layout.addLayout(form)
+
+        btn_save = QPushButton("Guardar")
+        btn_save.clicked.connect(self.guardar)
+        layout.addWidget(btn_save)
+
+        self.setLayout(layout)
+
+    def guardar(self):
+        nombre = self.txt_nombre.text().strip()
+        if not nombre:
+            QMessageBox.warning(self, "Error", "El nombre es obligatorio.")
+            return
+
+        try:
+            nuevo_tipo = TipoEquipo(nombre=nombre, descripcion=self.txt_desc.text())
+            self.session.add(nuevo_tipo)
+            self.session.commit()
+            self.tipo_guardado.emit()
+            self.accept()
+        except Exception as e:
+            self.session.rollback()
+            QMessageBox.critical(self, "Error", str(e))
 
 class EquipoDialog(QDialog):
     """Diálogo para crear/editar equipos"""
@@ -99,11 +147,20 @@ class EquipoDialog(QDialog):
         self.cmb_tipo.currentIndexChanged.connect(self.actualizar_nombre)
         self.cargar_tipos_equipo()
         
+        self.btn_nuevo_tipo = QPushButton("+")
+        self.btn_nuevo_tipo.setFixedSize(30, 30)
+        self.btn_nuevo_tipo.setStyleSheet(STYLE_CUADRADO_VERDE)
+        self.btn_nuevo_tipo.clicked.connect(self.crear_nuevo_tipo)
+
+        layout_tipo = QHBoxLayout()
+        layout_tipo.addWidget(self.cmb_tipo)
+        layout_tipo.addWidget(self.btn_nuevo_tipo)
+
         self.txt_capacidad = QLineEdit()
         self.txt_capacidad.setPlaceholderText("Ej: 5000W, 300KG")
         self.txt_capacidad.textChanged.connect(self.actualizar_nombre)
         
-        form_ident.addRow("Tipo de Equipo:", self.cmb_tipo)
+        form_ident.addRow("Tipo de Equipo:", layout_tipo)
         form_ident.addRow("Capacidad:", self.txt_capacidad)
         
         grp_ident.setLayout(form_ident)
@@ -184,6 +241,7 @@ class EquipoDialog(QDialog):
         grid_mant = QGridLayout()
         
         self.chk_calibracion = QCheckBox("Requiere Calibración")
+        self.chk_calibracion.setStyleSheet(STYLE_CHECKBOX_CUSTOM)
         self.chk_calibracion.toggled.connect(self.toggle_calibracion)
         
         # Fecha Última Calibración
@@ -210,6 +268,7 @@ class EquipoDialog(QDialog):
         grid_mant.addWidget(self.lbl_dias_vencidos, 2, 2)
         
         self.chk_horometro = QCheckBox("Control por Horómetro")
+        self.chk_horometro.setStyleSheet(STYLE_CHECKBOX_CUSTOM)
         self.chk_horometro.toggled.connect(self.toggle_horometro)
         self.spn_horometro = QDoubleSpinBox()
         self.spn_horometro.setRange(0, 999999)
@@ -266,12 +325,23 @@ class EquipoDialog(QDialog):
             self.cmb_almacen.addItem(alm.nombre, alm.id)
 
     def cargar_tipos_equipo(self):
+        self.cmb_tipo.clear()
         tipos = self.session.query(TipoEquipo).filter_by(activo=True).all()
         for t in tipos:
             self.cmb_tipo.addItem(t.nombre, t.id)
             
         # Cargar prefijos existentes también
         self.cargar_prefijos_existentes()
+
+    def crear_nuevo_tipo(self):
+        dialog = TipoEquipoDialog(self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+             self.cargar_tipos_equipo()
+             ultimo_tipo = self.session.query(TipoEquipo).order_by(TipoEquipo.id.desc()).first()
+             if ultimo_tipo:
+                 index = self.cmb_tipo.findData(ultimo_tipo.id)
+                 if index != -1:
+                     self.cmb_tipo.setCurrentIndex(index)
 
     def cargar_prefijos_existentes(self):
         try:
