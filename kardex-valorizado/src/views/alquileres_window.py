@@ -9,7 +9,15 @@ import sys
 import os
 from pathlib import Path
 from datetime import date, datetime
+from views.base_crud_view import BaseCRUDView
+from views.configuracion_alquiler_window import ConfiguracionAlquilerDialog
+from models.database_model import (obtener_session, Alquiler, AlquilerDetalle,
+                                   EstadoAlquiler, EstadoEquipo, TipoEquipo,
+                                   Equipo, Cliente, AlquilerEvidencia)
+from utils.file_manager import FileManager
+from utils.widgets import SearchableComboBox, UpperLineEdit
 
+class SeleccionKitDialog(QDialog):
     kit_confirmado = pyqtSignal(list) # Emite lista de diccionarios con los detalles
 
     def __init__(self, parent=None):
