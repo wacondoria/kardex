@@ -407,6 +407,24 @@ class EquipoDialog(QDialog):
         layout_tecnico.addWidget(grp_mant)
         
         # 3. Datos Financieros
+        # 3. Datos Financieros
+        grp_fin = QGroupBox("Datos Financieros")
+        form_fin = QFormLayout()
+        
+        self.spn_tarifa = QDoubleSpinBox()
+        self.spn_tarifa.setRange(0, 999999)
+        self.spn_tarifa.setPrefix("S/ ")
+        
+        self.spn_tarifa_dolares = QDoubleSpinBox()
+        self.spn_tarifa_dolares.setRange(0, 999999)
+        self.spn_tarifa_dolares.setPrefix("$ ")
+        
+        form_fin.addRow("Tarifa Diaria (S/):", self.spn_tarifa)
+        form_fin.addRow("Tarifa Diaria ($):", self.spn_tarifa_dolares)
+        
+        grp_fin.setLayout(form_fin)
+        layout_tecnico.addWidget(grp_fin)
+        
         layout_tecnico.addStretch()
         tab_tecnico.setLayout(layout_tecnico)
         self.tabs.addTab(tab_tecnico, "Detalles Técnicos")
@@ -707,7 +725,8 @@ class EquipoDialog(QDialog):
         self.chk_horometro.setChecked(self.equipo.control_horometro)
         self.spn_horometro.setValue(self.equipo.horometro_actual)
         
-
+        self.spn_tarifa.setValue(self.equipo.tarifa_diaria_referencial)
+        self.spn_tarifa_dolares.setValue(self.equipo.tarifa_diaria_dolares or 0.0)
 
         if self.equipo.foto_referencia:
             self.mostrar_multimedia(self.equipo.foto_referencia)
@@ -797,9 +816,8 @@ class EquipoDialog(QDialog):
             self.equipo.control_horometro = self.chk_horometro.isChecked()
             self.equipo.horometro_actual = self.spn_horometro.value()
             
-            # Tarifas movidas a módulo alquileres
-            # self.equipo.tarifa_diaria_referencial = self.spn_tarifa.value()
-            # self.equipo.tarifa_diaria_dolares = self.spn_tarifa_dolares.value()
+            self.equipo.tarifa_diaria_referencial = self.spn_tarifa.value()
+            self.equipo.tarifa_diaria_dolares = self.spn_tarifa_dolares.value()
             
             # Guardar Foto/Video
             if self.ruta_foto_actual and self.ruta_foto_actual != self.equipo.foto_referencia:
