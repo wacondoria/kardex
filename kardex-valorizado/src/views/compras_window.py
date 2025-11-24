@@ -4,26 +4,34 @@ Archivo: src/views/compras_window.py
 (Versión corregida y unificada)
 """
 
+import sys
+from pathlib import Path
+from datetime import datetime, date
+from decimal import Decimal, ROUND_HALF_UP
+
+# Agregar src al path si es necesario (para resolver importaciones locales)
+if str(Path(__file__).parent.parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                              QPushButton, QTableWidget, QTableWidgetItem,
                              QLineEdit, QDateEdit, QComboBox, QDoubleSpinBox,
                              QTextEdit, QCheckBox, QMessageBox, QDialog,
                              QFormLayout, QHeaderView, QGroupBox, QSpinBox,
-                             QSizePolicy, QFileDialog, QCompleter)
+                             QSizePolicy, QFileDialog, QCompleter, QApplication)
 from PyQt6.QtCore import Qt, QDate, pyqtSignal, QEvent, QTimer
 from PyQt6.QtGui import QFont, QKeyEvent, QStandardItemModel, QStandardItem
-import sys
+
 import calendar
 import shutil
-from pathlib import Path
-from datetime import datetime, date
-from decimal import Decimal, ROUND_HALF_UP
+
 from sqlalchemy import func, extract
 from sqlalchemy.orm import joinedload
 
 from models.database_model import obtener_session
-from models.database_model import Compra, CompraDetalle, Proveedor, Producto, Almacen, Moneda
+from models.database_model import Compra, CompraDetalle, Proveedor, Producto, Almacen, Moneda, TipoDocumento
 from utils.kardex_manager import KardexManager, AnioCerradoError
+from utils.compras_manager import ComprasManager
 from utils.button_utils import style_button
 from utils.widgets import MoneyDelegate, SearchableComboBox
 from utils.app_context import app_context
@@ -56,6 +64,7 @@ class CompraDialog(QDialog):
         self.detalles_originales = detalles_originales or []
         self.session = obtener_session()
         self.detalles_compra = [] # Lista de dicts para la tabla
+        self.compras_manager = ComprasManager(self.session)
 
         self.setWindowTitle("Nueva Compra" if not self.compra_a_editar else f"Editar Compra {self.compra_a_editar.numero_documento}")
         self.setMinimumSize(900, 650)
@@ -338,20 +347,7 @@ class CompraDialog(QDialog):
         for i, det in enumerate(self.detalles_compra):
             # Producto (ComboBox para editar)
             cb_prod = QComboBox()
-            # Llenar con algunos productos o el actual (optimización: no llenar todos si son muchos)
-            # Para simplificar, ponemos el texto en un item no editable por ahora, 
-            # o implementamos la logica de edicion completa.
-            # El codigo original tenia logica para editar producto.
-            # Vamos a usar items simples por ahora para restaurar funcionalidad basica,
-            # pero el codigo original usaba un combo.
-            
-            # Restaurando logica de combo si es posible, sino texto.
-            # El original usaba `self.tabla_productos.cellWidget(row, 0)` -> combo
-            
-            cb_prod = QComboBox()
             cb_prod.addItem(det['producto_nombre'], det['producto_id'])
-            # Nota: Si queremos permitir cambiar producto, deberiamos llenar mas items.
-            # Por ahora solo el actual para visualizar.
             self.tabla_productos.setCellWidget(i, 0, cb_prod)
             
             self.tabla_productos.setItem(i, 1, QTableWidgetItem(det['almacen_nombre']))
@@ -421,16 +417,8 @@ class CompraDialog(QDialog):
                 'observaciones': self.txt_observaciones.toPlainText(),
             }
             
-            # 2. Preparar detalles
-            # self.detalles_compra ya es una lista de dicts compatible
-            
             # 3. Llamar al manager
             compra_id = self.compra_a_editar.id if self.compra_a_editar else None
-            
-            # Asegurar que el manager existe
-            if not hasattr(self, 'compras_manager'):
-                 from utils.compras_manager import ComprasManager
-                 self.compras_manager = ComprasManager(self.session)
             
             self.compras_manager.guardar_compra(datos_cabecera, self.detalles_compra, compra_id=compra_id)
             
@@ -441,25 +429,6 @@ class CompraDialog(QDialog):
             import traceback
             traceback.print_exc()
             QMessageBox.critical(self, "Error", f"Error al guardar: {e}")
-
-    def producto_en_detalle_editado(self, combo_index, row):
-        """
-        Maneja el cambio de un producto en el ComboBox de la tabla de detalles.
-        """
-        if 0 <= row < len(self.detalles_compra):
-            combo_box = self.tabla_productos.cellWidget(row, 0)
-            if not combo_box:
-                return
-
-            nuevo_producto_id = combo_box.itemData(combo_index)
-            nuevo_producto_nombre = combo_box.itemText(combo_index)
-
-            if nuevo_producto_id is not None:
-                detalle_actualizado = self.detalles_compra[row]
-                detalle_actualizado['producto_id'] = nuevo_producto_id
-                detalle_actualizado['producto_nombre'] = nuevo_producto_nombre
-            else:
-                print(f"ADVERTENCIA: No se pudo obtener el ID del producto para el índice {combo_index} en la fila {row}")
 
     def detalle_editado(self, row, column):
         if column not in [2, 3]:
@@ -556,70 +525,50 @@ class CompraDialog(QDialog):
         return super().eventFilter(source, event)
 
     def crear_nuevo_proveedor(self):
-        """
-        Abre el diálogo para crear un nuevo proveedor y
-        recarga el ComboBox de proveedores.
-        """
         if ProveedorDialog is None:
             QMessageBox.critical(self, "Error",
-                "El módulo de proveedores ('proveedores_window.py') no se pudo cargar.\n"
-                "Asegúrese de que el archivo existe y que la clase se llama 'ProveedorDialog'.")
+                "El módulo de proveedores ('proveedores_window.py') no se pudo cargar.")
             return
 
         dialog = ProveedorDialog(self)
 
         if dialog.exec() == QDialog.DialogCode.Accepted:
-            print("DEBUG: ProveedorDialog aceptado. Recargando datos iniciales.")
             texto_actual = self.cmb_proveedor.lineEdit().text()
-
-            # Solo recargar proveedores
             self.cmb_proveedor.clear()
             proveedores = self.session.query(Proveedor).filter_by(activo=True).order_by(Proveedor.razon_social).all()
             for prov in proveedores:
                 self.cmb_proveedor.addItem(f"{prov.ruc} - {prov.razon_social}", prov.id)
-
             self.cmb_proveedor.lineEdit().setText(texto_actual)
 
-            # Opcional: Seleccionar el nuevo proveedor si el diálogo lo retorna
             if hasattr(dialog, 'nuevo_proveedor_id') and dialog.nuevo_proveedor_id:
                index = self.cmb_proveedor.findData(dialog.nuevo_proveedor_id)
-               if index != -1:
-                   self.cmb_proveedor.setCurrentIndex(index)
+               if index != -1: self.cmb_proveedor.setCurrentIndex(index)
 
     def crear_nuevo_producto(self):
-        """
-        Abre el diálogo para crear un nuevo producto, recarga el ComboBox
-        y selecciona automáticamente el producto recién creado.
-        """
         dialog = ProductoDialog(self)
-
         if dialog.exec() == QDialog.DialogCode.Accepted:
-            print("DEBUG: ProductoDialog aceptado. Recargando y seleccionando producto.")
-
-            # 1. Guardar el ID del nuevo producto (si se creó)
             nuevo_id = dialog.nuevo_producto_id
-
-            # 2. Recargar la lista de productos
             self.cmb_producto.clear()
             self.lista_completa_productos = self.session.query(Producto).filter_by(activo=True).order_by(Producto.nombre).all()
             for prod in self.lista_completa_productos:
                 self.cmb_producto.addItem(f"{prod.codigo} - {prod.nombre}", prod.id)
-
-            # 3. Seleccionar el nuevo producto si se creó uno
             if nuevo_id:
                 index = self.cmb_producto.findData(nuevo_id)
-                if index != -1:
-                    self.cmb_producto.setCurrentIndex(index)
-                    # Opcional: Mover el foco al siguiente campo relevante
-                    self.cmb_almacen.setFocus()
+                if index != -1: self.cmb_producto.setCurrentIndex(index)
 
     def keyPressEvent(self, event):
-        """Captura la pulsación de teclas en el diálogo."""
         if event.key() == Qt.Key.Key_F4:
             self.guardar_compra()
         else:
             super().keyPressEvent(event)
 
+
+class DetalleCompraDialog(QDialog):
+    """Diálogo de solo lectura para mostrar el detalle de una compra."""
+
+    def __init__(self, compra, detalles, session, parent=None):
+        super().__init__(parent)
+        self.compra = compra
         self.detalles = detalles
         self.session = session
         self.setWindowTitle(f"Detalle: {compra.tipo_documento.value} {compra.numero_documento}")
@@ -684,9 +633,160 @@ class CompraDialog(QDialog):
 
         money_delegate = MoneyDelegate(tabla)
         tabla.setItemDelegateForColumn(2, money_delegate)
-        fecha_hasta = date(anio_sel, mes_sel, num_dias)
+        tabla.setItemDelegateForColumn(3, money_delegate)
+        tabla.setItemDelegateForColumn(4, money_delegate)
 
-        print(f"DEBUG: Cargando periodo contable: {fecha_desde} al {fecha_hasta}")
+        layout.addWidget(tabla)
+
+        # --- Totales ---
+        grupo_totales = QGroupBox("Resumen de Totales (Compra)")
+        form_totales = QFormLayout()
+        simbolo = "$" if self.compra.moneda == Moneda.DOLARES else "S/"
+
+        self.lbl_subtotal_detalle = QLabel(f"{simbolo} --.--")
+        form_totales.addRow(QLabel("<b>Subtotal Compra:</b>"), self.lbl_subtotal_detalle)
+        self.lbl_igv_detalle = QLabel(f"{simbolo} --.--")
+        form_totales.addRow(QLabel("<b>IGV (18%):</b>"), self.lbl_igv_detalle)
+        self.lbl_total_detalle = QLabel(f"{simbolo} --.--")
+        self.lbl_total_detalle.setStyleSheet("font-size: 14px; font-weight: bold; color: #1a73e8;")
+        form_totales.addRow(QLabel("<b>TOTAL COMPRA:</b>"), self.lbl_total_detalle)
+
+        grupo_totales.setLayout(form_totales)
+        grupo_totales.setMaximumWidth(350)
+
+        totales_layout = QHBoxLayout()
+        totales_layout.addStretch()
+        totales_layout.addWidget(grupo_totales)
+        layout.addLayout(totales_layout)
+
+        # --- Boton Cerrar ---
+        btn_cerrar = QPushButton("Cerrar")
+        btn_cerrar.clicked.connect(self.accept)
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+        btn_layout.addWidget(btn_cerrar)
+        layout.addLayout(btn_layout)
+
+    def recalcular_totales_locales(self):
+        """Muestra los totales almacenados en la compra."""
+        subtotal_real = Decimal(str(getattr(self.compra, 'subtotal', '0')))
+        igv_real = Decimal(str(getattr(self.compra, 'igv', '0')))
+        total_real = Decimal(str(getattr(self.compra, 'total', '0')))
+        simbolo = "$" if self.compra.moneda == Moneda.DOLARES else "S/"
+
+        self.lbl_subtotal_detalle.setText(f"{simbolo} {subtotal_real:,.2f}")
+        self.lbl_igv_detalle.setText(f"{simbolo} {igv_real:,.2f}")
+        self.lbl_total_detalle.setText(f"{simbolo} {total_real:,.2f}")
+
+
+class ComprasWindow(QWidget):
+    """Ventana principal de gestión de compras."""
+
+    def __init__(self, user_info=None):
+        super().__init__()
+        self.session = obtener_session()
+        self.user_info = user_info
+        self.compras_mostradas = []
+        self.compras_manager = ComprasManager(self.session)
+
+        self.init_ui()
+        self.cargar_compras()
+
+    def init_ui(self):
+        self.setWindowTitle("Gestión de Compras")
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
+
+        # Header
+        header_layout = QHBoxLayout()
+        titulo = QLabel("🛒 Gestión de Compras")
+        titulo.setFont(QFont("Arial", 18, QFont.Weight.Bold))
+        titulo.setStyleSheet("color: #1a73e8;")
+
+        btn_nueva = QPushButton()
+        style_button(btn_nueva, 'add', "Nueva Compra (F2)")
+        btn_nueva.clicked.connect(self.nueva_compra)
+        if self.user_info and self.user_info.get('licencia_vencida'):
+            btn_nueva.setEnabled(False)
+
+        header_layout.addWidget(titulo)
+        header_layout.addStretch()
+        header_layout.addWidget(btn_nueva)
+        layout.addLayout(header_layout)
+
+        # Filtros
+        filtro_layout = QHBoxLayout()
+        filtro_layout.addWidget(QLabel("<b>Periodo Contable:</b>"))
+
+        self.cmb_mes_filtro = SearchableComboBox()
+        meses_espanol = [
+            "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+        ]
+        mes_actual = datetime.now().month
+        for i, mes in enumerate(meses_espanol):
+            self.cmb_mes_filtro.addItem(mes, i + 1)
+        self.cmb_mes_filtro.setCurrentIndex(mes_actual - 1)
+        self.cmb_mes_filtro.currentIndexChanged.connect(self.cargar_compras)
+
+        self.cmb_proveedor_filtro = SearchableComboBox()
+        self.cmb_proveedor_filtro.addItem("Todos los proveedores", None)
+        self.recargar_filtro_proveedores()
+        self.cmb_proveedor_filtro.currentIndexChanged.connect(self.cargar_compras)
+
+        self.cmb_vista_moneda = QComboBox()
+        self.cmb_vista_moneda.addItem("Ver en Moneda de Origen", "ORIGEN")
+        self.cmb_vista_moneda.addItem("Mostrar Todo en SOLES (S/)", "SOLES")
+        self.cmb_vista_moneda.currentIndexChanged.connect(self.cargar_compras)
+
+        filtro_layout.addWidget(self.cmb_mes_filtro)
+        filtro_layout.addWidget(self.cmb_proveedor_filtro)
+        filtro_layout.addWidget(self.cmb_vista_moneda)
+        filtro_layout.addStretch()
+        layout.addLayout(filtro_layout)
+
+        self.lbl_contador = QLabel("Cargando...")
+        layout.addWidget(self.lbl_contador)
+
+        # Tabla
+        self.tabla = QTableWidget()
+        self.tabla.setColumnCount(10)
+        self.tabla.setHorizontalHeaderLabels([
+            "Nro. Proceso", "F. Contable", "F. Emisión", "Documento", "Proveedor", "Moneda", "Subtotal", "IGV", "Total", "Acciones"
+        ])
+        self.tabla.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.tabla.setAlternatingRowColors(True)
+
+        header = self.tabla.horizontalHeader()
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
+
+        money_delegate = MoneyDelegate(self.tabla)
+        self.tabla.setItemDelegateForColumn(6, money_delegate)
+        self.tabla.setItemDelegateForColumn(7, money_delegate)
+        self.tabla.setItemDelegateForColumn(8, money_delegate)
+
+        layout.addWidget(self.tabla)
+
+    def recargar_filtro_proveedores(self):
+        self.cmb_proveedor_filtro.blockSignals(True)
+        self.cmb_proveedor_filtro.clear()
+        self.cmb_proveedor_filtro.addItem("Todos los proveedores", None)
+
+        proveedores = self.session.query(Proveedor).filter_by(activo=True).order_by(Proveedor.razon_social).all()
+        for p in proveedores:
+            self.cmb_proveedor_filtro.addItem(p.razon_social, p.id)
+
+        self.cmb_proveedor_filtro.blockSignals(False)
+
+    def cargar_compras(self):
+        mes_sel = self.cmb_mes_filtro.currentData()
+        anio_sel = app_context.get_selected_year()
+        if not mes_sel or not anio_sel: return
+
+        primer_dia, num_dias = calendar.monthrange(anio_sel, mes_sel)
+        fecha_desde = date(anio_sel, mes_sel, 1)
+        fecha_hasta = date(anio_sel, mes_sel, num_dias)
 
         prov_id = self.cmb_proveedor_filtro.currentData()
 
@@ -694,10 +794,7 @@ class CompraDialog(QDialog):
         compras = []
         try:
             columna_fecha_filtro = func.coalesce(Compra.fecha_registro_contable, Compra.fecha)
-
-            query = temp_session.query(Compra).options(
-                joinedload(Compra.proveedor)
-            )
+            query = temp_session.query(Compra).options(joinedload(Compra.proveedor))
 
             query = query.filter(
                 columna_fecha_filtro >= fecha_desde,
@@ -709,220 +806,143 @@ class CompraDialog(QDialog):
 
             compras = query.order_by(columna_fecha_filtro.asc(), Compra.id.asc()).all()
 
-            print(f"DEBUG (cargar_compras POST-QUERY): Se leyeron {len(compras)} compras.")
-            for c in compras:
-                print(f"  -> Leyendo Compra ID {c.id}: Total={c.total}, F.Emisión={c.fecha}, F.Contable={c.fecha_registro_contable}")
-
         except Exception as e:
              QMessageBox.critical(self, "Error al Cargar Compras", f"No se pudieron cargar los datos:\n{e}")
-             print(f"ERROR en cargar_compras: {e}")
-             import traceback
-             traceback.print_exc()
         finally:
              temp_session.close()
-             print("DEBUG: Sesión temporal cerrada en cargar_compras.")
 
         self.mostrar_compras(compras)
 
     def mostrar_compras(self, compras):
-        """Muestra compras en la tabla, convirtiendo a Soles si es necesario."""
         self.compras_mostradas = compras
-        self.tabla.setColumnCount(10)
-        self.tabla.setHorizontalHeaderLabels([
-            "Nro. Proceso", "F. Contable", "F. Emisión", "Documento", "Proveedor", "Moneda", "Subtotal", "IGV", "Total", "Acciones"
-        ])
-        header = self.tabla.horizontalHeader()
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch) # Proveedor
-        header.setSectionResizeMode(9, QHeaderView.ResizeMode.Fixed) # Acciones
-        self.tabla.setColumnWidth(0, 100)
-        self.tabla.setColumnWidth(1, 90)
-        self.tabla.setColumnWidth(2, 90)
-        self.tabla.setColumnWidth(9, 160)
-
         self.tabla.setRowCount(len(compras))
 
-        total_soles_calculado = Decimal('0')
-        vista_seleccionada = self.cmb_vista_moneda.currentData()
+        total_soles = Decimal('0')
+        vista_moneda = self.cmb_vista_moneda.currentData()
 
         for row, compra in enumerate(compras):
+            sub = Decimal(str(compra.subtotal or 0))
+            igv = Decimal(str(compra.igv or 0))
+            tot = Decimal(str(compra.total or 0))
+            tc = Decimal(str(compra.tipo_cambio or 1))
 
-            subtotal_orig = Decimal(str(getattr(compra, 'subtotal', '0')))
-            igv_orig = Decimal(str(getattr(compra, 'igv', '0')))
-            total_orig = Decimal(str(getattr(compra, 'total', '0')))
-            tc = Decimal(str(getattr(compra, 'tipo_cambio', '1.0')))
-            DOS_DECIMALES = Decimal('0.01')
-            moneda_simbolo_mostrar = "S/"
-            if vista_seleccionada == 'SOLES':
+            simbolo = "S/"
+            if vista_moneda == 'SOLES':
                 if compra.moneda == Moneda.DOLARES:
-                    subtotal_mostrar = (subtotal_orig * tc).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
-                    igv_mostrar = (igv_orig * tc).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
-                    total_mostrar = (total_orig * tc).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
-                else:
-                    subtotal_mostrar = subtotal_orig
-                    igv_mostrar = igv_orig
-                    total_mostrar = total_orig
-                moneda_simbolo_mostrar = "S/"
+                    sub = sub * tc
+                    igv = igv * tc
+                    tot = tot * tc
             else:
-                subtotal_mostrar = subtotal_orig
-                igv_mostrar = igv_orig
-                total_mostrar = total_orig
-                moneda_simbolo_mostrar = "S/" if compra.moneda == Moneda.SOLES else "$"
-
-            # Col 0: Nro. Proceso
-            self.tabla.setItem(row, 0, QTableWidgetItem(compra.numero_proceso or "N/A"))
-
-            # Col 1: F. Contable
-            f_contable = getattr(compra, 'fecha_registro_contable', None)
-            f_contable_str = f_contable.strftime('%d/%m/%Y') if f_contable else "--"
-            self.tabla.setItem(row, 1, QTableWidgetItem(f_contable_str))
-
-            # Col 2: F. Emisión
-            self.tabla.setItem(row, 2, QTableWidgetItem(compra.fecha.strftime('%d/%m/%Y')))
-
-            # Col 3: Documento
-            self.tabla.setItem(row, 3, QTableWidgetItem(f"{compra.tipo_documento.value} {compra.numero_documento}"))
-
-            # Col 4: Proveedor
-            proveedor_nombre = "Proveedor Desconocido"
-            if compra.proveedor:
-                 try:
-                      proveedor_nombre = compra.proveedor.razon_social
-                 except Exception as prov_err:
-                      print(f"ADVERTENCIA: No se pudo acceder a proveedor.razon_social para Compra ID {compra.id}: {prov_err}")
-            self.tabla.setItem(row, 4, QTableWidgetItem(proveedor_nombre))
-
-            # Col 5: Moneda
-            self.tabla.setItem(row, 5, QTableWidgetItem(moneda_simbolo_mostrar))
-            # Col 6: Subtotal
-            self.tabla.setItem(row, 6, QTableWidgetItem(f"{moneda_simbolo_mostrar} {subtotal_mostrar:,.2f}"))
-            # Col 7: IGV
-            self.tabla.setItem(row, 7, QTableWidgetItem(f"{moneda_simbolo_mostrar} {igv_mostrar:,.2f}"))
-            # Col 8: Total
-            self.tabla.setItem(row, 8, QTableWidgetItem(f"{moneda_simbolo_mostrar} {total_mostrar:,.2f}"))
+                simbolo = "$" if compra.moneda == Moneda.DOLARES else "S/"
 
             if compra.moneda == Moneda.DOLARES:
-                 total_soles_calculado += (total_orig * tc)
+                total_soles += (Decimal(str(compra.total or 0)) * tc)
             else:
-                 total_soles_calculado += total_orig
+                total_soles += Decimal(str(compra.total or 0))
 
-            botones_layout = QHBoxLayout()
-            botones_layout.setContentsMargins(0, 0, 0, 0)
-            botones_layout.setSpacing(5)
+            self.tabla.setItem(row, 0, QTableWidgetItem(compra.numero_proceso or ""))
+
+            f_cont = compra.fecha_registro_contable
+            self.tabla.setItem(row, 1, QTableWidgetItem(f_cont.strftime('%d/%m/%Y') if f_cont else ""))
+            self.tabla.setItem(row, 2, QTableWidgetItem(compra.fecha.strftime('%d/%m/%Y')))
+            self.tabla.setItem(row, 3, QTableWidgetItem(f"{compra.tipo_documento.value} {compra.numero_documento}"))
+
+            prov_nom = compra.proveedor.razon_social if compra.proveedor else "Desconocido"
+            self.tabla.setItem(row, 4, QTableWidgetItem(prov_nom))
+
+            self.tabla.setItem(row, 5, QTableWidgetItem(simbolo))
+            self.tabla.setItem(row, 6, QTableWidgetItem(f"{simbolo} {sub:,.2f}"))
+            self.tabla.setItem(row, 7, QTableWidgetItem(f"{simbolo} {igv:,.2f}"))
+            self.tabla.setItem(row, 8, QTableWidgetItem(f"{simbolo} {tot:,.2f}"))
+
+            # Botones
+            widget_btns = QWidget()
+            layout_btns = QHBoxLayout(widget_btns)
+            layout_btns.setContentsMargins(0, 0, 0, 0)
+            layout_btns.setSpacing(5)
 
             btn_ver = QPushButton()
             style_button(btn_ver, 'view', "Ver")
-            btn_ver.clicked.connect(lambda checked, c=compra: self.ver_detalle(c))
-            botones_layout.addWidget(btn_ver)
+            btn_ver.clicked.connect(lambda ch, c=compra: self.ver_detalle(c))
+            layout_btns.addWidget(btn_ver)
 
-            btn_editar = QPushButton()
-            style_button(btn_editar, 'edit', "Editar")
-            btn_editar.clicked.connect(lambda checked, c=compra: self.editar_compra(c))
+            btn_edit = QPushButton()
+            style_button(btn_edit, 'edit', "Editar")
+            btn_edit.clicked.connect(lambda ch, c=compra: self.editar_compra(c))
             if self.user_info and self.user_info.get('licencia_vencida'):
-                 btn_editar.setEnabled(False)
-            botones_layout.addWidget(btn_editar)
+                 btn_edit.setEnabled(False)
+            layout_btns.addWidget(btn_edit)
 
-            btn_eliminar = QPushButton()
-            style_button(btn_eliminar, 'delete', "Eliminar")
-            btn_eliminar.clicked.connect(lambda checked, c=compra: self.eliminar_compra(c))
+            btn_del = QPushButton()
+            style_button(btn_del, 'delete', "Eliminar")
+            btn_del.clicked.connect(lambda ch, c=compra: self.eliminar_compra(c))
             if self.user_info and self.user_info.get('licencia_vencida'):
-                 btn_eliminar.setEnabled(False)
-            botones_layout.addWidget(btn_eliminar)
+                 btn_del.setEnabled(False)
+            layout_btns.addWidget(btn_del)
 
-            botones_layout.addStretch()
-            botones_widget = QWidget()
-            botones_widget.setLayout(botones_layout)
+            layout_btns.addStretch()
+            self.tabla.setCellWidget(row, 9, widget_btns)
 
-            self.tabla.setCellWidget(row, 9, botones_widget)
-
-        self.lbl_contador.setText(f"📊 Total: {len(compras)} compra(s) | Total en soles: S/ {total_soles_calculado.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP):,.2f}")
+        self.lbl_contador.setText(f"Total: {len(compras)} compras | Total Soles: S/ {total_soles:,.2f}")
 
     def nueva_compra(self):
-        """Abre diálogo para nueva compra"""
         dialog = CompraDialog(self, self.user_info)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.cargar_compras()
 
     def ver_detalle(self, compra_stale):
-        """Muestra el detalle actualizado de la compra en un nuevo diálogo."""
         try:
             self.session.expire_all()
-            print(f"DEBUG: Sesión expirada en ver_detalle para Compra ID {compra_stale.id}")
+            compra = self.session.get(Compra, compra_stale.id)
+            if not compra: return
 
-            compra_actualizada = self.session.get(Compra, compra_stale.id)
-            if not compra_actualizada:
-                 QMessageBox.critical(self, "Error Fatal", f"No se encontró la compra con ID {compra_stale.id} después de refrescar.")
-                 return
-            print(f"DEBUG: Compra ID {compra_actualizada.id} re-obtenida para detalle. Subtotal: {compra_actualizada.subtotal}")
-
-            detalles = self.session.query(CompraDetalle).filter_by(compra_id=compra_actualizada.id).all()
-
-            dialog = DetalleCompraDialog(compra_actualizada, detalles, self.session, self)
+            detalles = self.session.query(CompraDetalle).filter_by(compra_id=compra.id).all()
+            dialog = DetalleCompraDialog(compra, detalles, self.session, self)
             dialog.exec()
-
         except Exception as e:
             self.session.rollback()
-            QMessageBox.critical(self, "Error al ver detalle", f"No se pudo cargar el detalle:\n{e}")
-            import traceback
-            traceback.print_exc()
-
-    def eliminar_compra(self, compra_a_eliminar):
-        confirmar = QMessageBox.warning(self, "Confirmar Eliminación",
-            f"¿Está seguro de que desea eliminar permanentemente la compra:\n\n"
-            f"Documento: {compra_a_eliminar.numero_documento}\n"
-            f"Proveedor: {compra_a_eliminar.proveedor.razon_social}\n"
-            f"Total: {compra_a_eliminar.total:,.2f}\n\n"
-            f"Esta acción eliminará los movimientos de Kardex asociados y recalculará los saldos. Esta acción no se puede deshacer.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
-        )
-        if confirmar == QMessageBox.StandardButton.No: return
-
-        try:
-            self.compras_manager.eliminar_compra(compra_a_eliminar.id)
-
-            QMessageBox.information(self, "Éxito", "Compra eliminada y Kardex recalculado exitosamente.")
-            self.cargar_compras()
-
-        except AnioCerradoError as e:
-            QMessageBox.warning(self, "Operación no permitida", str(e))
-            self.session.rollback()
-        except Exception as e:
-            self.session.rollback()
-            QMessageBox.critical(self, "Error al Eliminar", f"No se pudo eliminar la compra:\n{str(e)}")
-            import traceback
-            traceback.print_exc()
+            QMessageBox.critical(self, "Error", f"Error al cargar detalle: {e}")
 
     def editar_compra(self, compra):
-        """Abre el diálogo para editar una compra existente."""
         try:
-            # Cargar detalles originales (CORREGIDO: permitir lista vacía)
-            detalles_originales = self.session.query(CompraDetalle).filter_by(compra_id=compra.id).all()
-
-            # (Se eliminó el 'if not detalles_originales' que bloqueaba la edición)
-
-            dialog = CompraDialog(parent=self, user_info=self.user_info, compra_a_editar=compra, detalles_originales=detalles_originales)
-
+            detalles = self.session.query(CompraDetalle).filter_by(compra_id=compra.id).all()
+            dialog = CompraDialog(self, self.user_info, compra, detalles)
             if dialog.exec() == QDialog.DialogCode.Accepted:
-                import time
-                print("DEBUG: Pausa de 0.2s antes de recargar...")
-                time.sleep(0.2)
-
                 self.cargar_compras()
-
         except Exception as e:
-            self.session.rollback()
-            QMessageBox.critical(self, "Error al Cargar Edición", f"No se pudo cargar la compra para editar:\n{str(e)}")
-            import traceback
-            traceback.print_exc()
+            QMessageBox.critical(self, "Error", f"Error al editar: {e}")
 
-# PRUEBA STANDALONE
+    def eliminar_compra(self, compra):
+        confirmar = QMessageBox.warning(self, "Confirmar",
+            "¿Eliminar compra? Esto revertirá el stock.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+
+        if confirmar == QMessageBox.StandardButton.Yes:
+            try:
+                self.compras_manager.eliminar_compra(compra.id)
+                QMessageBox.information(self, "Éxito", "Compra eliminada.")
+                self.cargar_compras()
+            except AnioCerradoError as e:
+                QMessageBox.warning(self, "Error", str(e))
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"No se pudo eliminar: {e}")
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_F2:
+            self.nueva_compra()
+        elif event.key() == Qt.Key.Key_F6:
+            row = self.tabla.currentRow()
+            if row >= 0 and row < len(self.compras_mostradas):
+                self.editar_compra(self.compras_mostradas[row])
+        else:
+            super().keyPressEvent(event)
+
 if __name__ == "__main__":
-    from PyQt6.QtWidgets import QApplication
+    app_context.set_selected_year(datetime.now().year)
+    # Mock user info for standalone run
+    user_info = {'username': 'admin', 'rol': 'ADMIN', 'licencia_vencida': False}
 
     app = QApplication(sys.argv)
-    app.setStyle('Fusion')
-
-    ventana = ComprasWindow()
-    ventana.resize(1200, 700)
-    ventana.show()
+    w = ComprasWindow(user_info)
+    w.show()
     sys.exit(app.exec())
