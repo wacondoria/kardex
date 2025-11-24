@@ -789,12 +789,20 @@ class EquipoDialog(QDialog):
             
             # FIX: Asegurar que se guarde el subtipo correctamente
             subtipo_id = self.cmb_subtipo.currentData()
-            if subtipo_id is None and self.cmb_subtipo.currentText():
-                # Si no hay data pero hay texto, intentar buscar por texto
-                idx = self.cmb_subtipo.findText(self.cmb_subtipo.currentText())
-                if idx != -1:
-                    subtipo_id = self.cmb_subtipo.itemData(idx)
             
+            # Si currentData es None, intentar buscar por texto exacto (case insensitive)
+            if subtipo_id is None:
+                text = self.cmb_subtipo.currentText().strip().upper()
+                if text:
+                    for i in range(self.cmb_subtipo.count()):
+                        if self.cmb_subtipo.itemText(i).upper() == text:
+                            subtipo_id = self.cmb_subtipo.itemData(i)
+                            break
+            
+            # Si el texto está vacío, explícitamente None
+            if not self.cmb_subtipo.currentText().strip():
+                subtipo_id = None
+
             self.equipo.subtipo_equipo_id = subtipo_id
             self.equipo.capacidad = self.txt_capacidad.text()
             
