@@ -179,33 +179,33 @@ DARK_THEME_STYLESHEET = """
 
 LIGHT_THEME_STYLESHEET = """
     QWidget {{
-        background-color: #f8f9fa;
+        background-color: #E6E8EA;
         color: #212529;
         font-family: Arial;
     }}
     QMainWindow {{
-        background-color: #f8f9fa;
+        background-color: #E6E8EA;
     }}
     QMenuBar {{
-        background-color: #e9ecef;
+        background-color: #D1D5D9;
         color: #212529;
     }}
     QMenuBar::item {{
-        background-color: #e9ecef;
+        background-color: #D1D5D9;
     }}
     QMenuBar::item:selected {{
-        background-color: #dee2e6;
+        background-color: #B0B5B9;
     }}
     QMenu {{
         background-color: #ffffff;
         color: #212529;
-        border: 1px solid #ced4da;
+        border: 1px solid #A0A5AA;
     }}
     QMenu::item:selected {{
-        background-color: #e9ecef;
+        background-color: #D1D5D9;
     }}
     QToolBar {{
-        background-color: #f1f3f4;
+        background-color: #D1D5D9;
         border: none;
         padding: 5px;
         spacing: 5px;
@@ -215,23 +215,23 @@ LIGHT_THEME_STYLESHEET = """
         color: #212529;
     }}
     QPushButton {{
-        background-color: #ffffff;
-        border: 1px solid #ced4da;
+        background-color: #F0F2F4;
+        border: 1px solid #A0A5AA;
         border-radius: 5px;
         padding: 8px 15px;
         font-weight: bold;
     }}
     QPushButton:hover {{
-        background-color: #e8f0fe;
+        background-color: #E2E6EA;
         border: 1px solid #0078d7;
     }}
     QPushButton:pressed {{
-        background-color: #dbeaff;
+        background-color: #CED2D6;
     }}
     QLineEdit, QTextEdit, QComboBox, QSpinBox, QDoubleSpinBox, QDateEdit {{
         background-color: #ffffff;
         color: #212529;
-        border: 1px solid #ced4da;
+        border: 1px solid #A0A5AA;
         border-radius: 4px;
         padding: 5px;
     }}
@@ -242,7 +242,7 @@ LIGHT_THEME_STYLESHEET = """
         subcontrol-origin: padding;
         subcontrol-position: top right;
         width: 20px;
-        border-left: 1px solid #ced4da;
+        border-left: 1px solid #A0A5AA;
     }}
 
     QComboBox::down-arrow {{
@@ -253,58 +253,58 @@ LIGHT_THEME_STYLESHEET = """
     QComboBox QAbstractItemView {{
         background-color: #ffffff;
         color: #212529;
-        selection-background-color: #e8f0fe;
-        border: 1px solid #ced4da;
+        selection-background-color: #E2E6EA;
+        border: 1px solid #A0A5AA;
     }}
     QTableWidget {{
         background-color: #ffffff;
         color: #212529;
-        gridline-color: #e9ecef;
-        border: 1px solid #ced4da;
+        gridline-color: #D1D5D9;
+        border: 1px solid #A0A5AA;
     }}
     QHeaderView::section {{
-        background-color: #f1f3f4;
+        background-color: #CED2D6;
         color: #212529;
         padding: 4px;
-        border: 1px solid #ced4da;
+        border: 1px solid #A0A5AA;
         font-weight: bold;
     }}
     QTabWidget::pane {{
-        border-top: 2px solid #ced4da;
+        border-top: 2px solid #A0A5AA;
     }}
     QTabBar::tab {{
-        background: #e9ecef;
-        border: 1px solid #ced4da;
+        background: #D1D5D9;
+        border: 1px solid #A0A5AA;
         padding: 10px;
         border-bottom-left-radius: 0;
         border-bottom-right-radius: 0;
     }}
     QTabBar::tab:selected {{
-        background: #f8f9fa;
+        background: #F0F2F4;
         border-top: 2px solid #0078d7;
-        border-bottom: 2px solid #f8f9fa;
+        border-bottom: 2px solid #F0F2F4;
     }}
     QTabBar::tab:!selected {{
         margin-top: 2px;
     }}
     QScrollBar:vertical {{
-        border: 1px solid #dee2e6;
-        background: #f1f3f4;
+        border: 1px solid #A0A5AA;
+        background: #E6E8EA;
         width: 15px;
         margin: 15px 0 15px 0;
     }}
     QScrollBar::handle:vertical {{
-        background: #ced4da;
+        background: #A0A5AA;
         min-height: 20px;
     }}
     QScrollBar:horizontal {{
-        border: 1px solid #dee2e6;
-        background: #f1f3f4;
+        border: 1px solid #A0A5AA;
+        background: #E6E8EA;
         height: 15px;
         margin: 0 15px 0 15px;
     }}
     QScrollBar::handle:horizontal {{
-        background: #ced4da;
+        background: #A0A5AA;
         min-width: 20px;
     }}
 
@@ -317,22 +317,22 @@ LIGHT_THEME_STYLESHEET = """
         subcontrol-origin: border;
         subcontrol-position: top right;
         width: 20px;
-        border-left: 1px solid #ced4da;
-        background-color: #f8f9fa;
+        border-left: 1px solid #A0A5AA;
+        background-color: #F0F2F4;
     }}
     QSpinBox::up-button:hover, QDoubleSpinBox::up-button:hover, QDateEdit::up-button:hover {{
-        background-color: #e9ecef;
+        background-color: #E2E6EA;
     }}
     QSpinBox::down-button, QDoubleSpinBox::down-button, QDateEdit::down-button {{
         subcontrol-origin: border;
         subcontrol-position: bottom right;
         width: 20px;
-        border-left: 1px solid #ced4da;
-        border-top: 1px solid #ced4da;
-        background-color: #f8f9fa;
+        border-left: 1px solid #A0A5AA;
+        border-top: 1px solid #A0A5AA;
+        background-color: #F0F2F4;
     }}
     QSpinBox::down-button:hover, QDoubleSpinBox::down-button:hover, QDateEdit::down-button:hover {{
-        background-color: #e9ecef;
+        background-color: #E2E6EA;
     }}
     QSpinBox::up-arrow, QDoubleSpinBox::up-arrow, QDateEdit::up-arrow {{
         width: 10px;
