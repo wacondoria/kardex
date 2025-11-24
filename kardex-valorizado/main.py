@@ -266,6 +266,24 @@ def verificar_y_actualizar_db(db_url='sqlite:///kardex.db'):
 
     # 12. Verificar nuevas tablas del módulo de Rental (Equipos y Kits)
     try:
+        # --- Migración PREVIA: Renombrar 'kits' a 'tipos_equipo' ANTES de verificar creación ---
+        if inspector.has_table('kits') and not inspector.has_table('tipos_equipo'):
+            print("⚠️  Detectada tabla antigua 'kits'. Renombrando a 'tipos_equipo'...")
+            with engine.connect() as connection:
+                connection.execute(text("ALTER TABLE kits RENAME TO tipos_equipo"))
+                connection.commit()
+            print("✓  Tabla renombrada exitosamente.")
+
+        # --- Migración PREVIA: Renombrar columna 'kit_id' a 'tipo_equipo_id' en 'kit_componentes' ---
+        if inspector.has_table('kit_componentes'):
+            columns = [col['name'] for col in inspector.get_columns('kit_componentes')]
+            if 'kit_id' in columns and 'tipo_equipo_id' not in columns:
+                print("⚠️  Detectada columna antigua 'kit_id' en 'kit_componentes'. Renombrando...")
+                with engine.connect() as connection:
+                    connection.execute(text("ALTER TABLE kit_componentes RENAME COLUMN kit_id TO tipo_equipo_id"))
+                    connection.commit()
+                print("✓  Columna renombrada exitosamente.")
+
         from models.database_model import Equipo, TipoEquipo, KitComponente, Alquiler, AlquilerDetalle
         tablas_rental = {
             'equipos': Equipo,
@@ -279,8 +297,9 @@ def verificar_y_actualizar_db(db_url='sqlite:///kardex.db'):
                 print(f"⚠️  Tabla '{nombre_tabla}' del módulo de rental no encontrada. Creándola...")
                 modelo_tabla.__table__.create(engine)
                 print(f"✓  Tabla '{nombre_tabla}' creada exitosamente.")
+
     except Exception as e:
-        print(f"❌ Error al crear las tablas del módulo de rental: {e}")
+        print(f"❌ Error al crear o migrar las tablas del módulo de rental: {e}")
 
     # 13. Lógica de Siembra y Migración de Datos
     try:
