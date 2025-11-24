@@ -44,7 +44,7 @@ class ValorizacionWindow(QWidget):
         
         titulo = QLabel("💰 Valorización de Inventario")
         titulo.setFont(QFont("Arial", 18, QFont.Weight.Bold))
-        titulo.setStyleSheet("color: #1a73e8;")
+        # titulo.setStyleSheet("color: #1a73e8;") # Removed for standardization
         
         header_layout.addWidget(titulo)
         header_layout.addStretch()
@@ -98,30 +98,11 @@ class ValorizacionWindow(QWidget):
         btn_layout = QHBoxLayout()
         
         btn_generar = QPushButton("🔍 Generar Reporte")
-        btn_generar.setStyleSheet("""
-            QPushButton {
-                background-color: #1a73e8;
-                color: white;
-                padding: 10px 30px;
-                border-radius: 5px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #1557b0;
-            }
-        """)
+        # Estilo eliminado para usar tema global
         btn_generar.clicked.connect(self.generar_valorizacion)
         
         btn_exportar = QPushButton("📥 Exportar Excel")
-        btn_exportar.setStyleSheet("""
-            QPushButton {
-                background-color: #34a853;
-                color: white;
-                padding: 10px 30px;
-                border-radius: 5px;
-                font-weight: bold;
-            }
-        """)
+        # Estilo eliminado para usar tema global
         btn_exportar.clicked.connect(self.exportar_excel)
         
         btn_layout.addWidget(btn_generar)
@@ -135,14 +116,7 @@ class ValorizacionWindow(QWidget):
         
         # === RESUMEN ===
         self.lbl_resumen = QLabel()
-        self.lbl_resumen.setStyleSheet("""
-            background-color: #e8f0fe;
-            padding: 15px;
-            border-radius: 5px;
-            color: #1a73e8;
-            font-weight: bold;
-            font-size: 14px;
-        """)
+        # Estilo eliminado para usar tema global
         layout.addWidget(self.lbl_resumen)
         
         # === TABLA ===
@@ -153,20 +127,7 @@ class ValorizacionWindow(QWidget):
             "Cantidad", "Costo Unit.", "Valor Total"
         ])
         
-        self.tabla.setStyleSheet("""
-            QTableWidget {
-                border: 1px solid #ddd;
-                border-radius: 5px;
-                background-color: white;
-            }
-            QHeaderView::section {
-                background-color: #1a73e8;
-                color: white;
-                padding: 10px;
-                font-weight: bold;
-                border: none;
-            }
-        """)
+        self.tabla.setStyleSheet("") # Reset style to use global theme
         
         header = self.tabla.horizontalHeader()
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
@@ -182,12 +143,7 @@ class ValorizacionWindow(QWidget):
         
         # Totales por categoría
         self.lbl_totales = QLabel()
-        self.lbl_totales.setStyleSheet("""
-            background-color: #f1f3f4;
-            padding: 15px;
-            border-radius: 5px;
-            font-size: 12px;
-        """)
+        # Estilo eliminado para usar tema global
         layout.addWidget(self.lbl_totales)
         
         self.setLayout(layout)
@@ -353,8 +309,8 @@ class ValorizacionWindow(QWidget):
             
             # Categoría
             item_cat = QTableWidgetItem(dato['categoria'])
-            if self.chk_agrupar_categoria.isChecked():
-                item_cat.setBackground(QColor("#e8f0fe"))
+            # if self.chk_agrupar_categoria.isChecked():
+            #    item_cat.setBackground(QColor("#e8f0fe")) # Removed for standardization
             self.tabla.setItem(row, 2, item_cat)
             
             # Unidad
