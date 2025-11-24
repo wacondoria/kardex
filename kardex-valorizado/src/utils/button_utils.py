@@ -75,24 +75,9 @@ def style_button(button: QPushButton, button_type: str, text: str = ""):
     button.setToolTip(tooltips.get(button_type, text or 'Acción'))
 
     # --- Hoja de Estilo (Stylesheet) ---
-    color = COLORS[button_type]
-    hover_color = COLORS[f"{button_type}_hover"]
-    stylesheet = f"""
-        QPushButton {{
-            background-color: {color};
-            color: white;
-            padding: 5px 8px;
-            border-radius: 4px;
-            border: none;
-            font-weight: bold;
-        }}
-        QPushButton:hover {{
-            background-color: {hover_color};
-        }}
-        QPushButton:disabled {{
-            background-color: #cccccc;
-            color: #666666;
-        }}
-    """
-    button.setStyleSheet(stylesheet)
+    # Eliminado para permitir que el tema global controle el estilo
+    # color = COLORS[button_type]
+    # hover_color = COLORS[f"{button_type}_hover"]
+    # stylesheet = ...
+    # button.setStyleSheet(stylesheet)
     button.setMinimumHeight(28) # Altura mínima estándar
