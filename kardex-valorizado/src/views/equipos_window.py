@@ -506,6 +506,7 @@ class EquiposWindow(BaseCRUDView):
         ])
         header = self.tabla.horizontalHeader()
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        self.tabla.setColumnWidth(7, 180)
         
     def fill_row(self, row, item):
         self.tabla.setItem(row, 0, QTableWidgetItem(item.codigo))

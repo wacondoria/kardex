@@ -773,7 +773,7 @@ class RequisicionesWindow(QWidget):
         header = self.tabla.horizontalHeader()
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(5, QHeaderView.ResizeMode.Fixed)
-        self.tabla.setColumnWidth(5, 100)
+        self.tabla.setColumnWidth(5, 250)
         
         self.tabla.setAlternatingRowColors(True)
         
