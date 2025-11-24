@@ -10,16 +10,6 @@ import os
 from pathlib import Path
 from datetime import date, datetime
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from models.database_model import (obtener_session, Alquiler, AlquilerDetalle, Cliente, 
-                                   Equipo, TipoEquipo, Producto, EstadoAlquiler, EstadoEquipo, NivelEquipo, AlquilerEvidencia)
-from utils.widgets import SearchableComboBox, UpperLineEdit
-from utils.file_manager import FileManager
-from views.base_crud_view import BaseCRUDView
-
-class SeleccionKitDialog(QDialog):
-    """Diálogo para 'Explotar' un Kit y asignar equipos"""
     kit_confirmado = pyqtSignal(list) # Emite lista de diccionarios con los detalles
 
     def __init__(self, parent=None):
@@ -531,6 +521,26 @@ class AlquileresWindow(BaseCRUDView):
     
     def __init__(self):
         super().__init__("Gestión de Alquileres", Alquiler, AlquilerDialog)
+        self.agregar_boton_configuracion()
+
+    def agregar_boton_configuracion(self):
+        # Intentar obtener el layout del header (primer item del main layout)
+        try:
+            header_layout = self.layout().itemAt(0).layout()
+            if header_layout:
+                self.btn_config = QPushButton("⚙️ Configuración")
+                self.btn_config.setStyleSheet("background-color: #7f8c8d; color: white; font-weight: bold; padding: 6px 12px;")
+                self.btn_config.clicked.connect(self.abrir_configuracion)
+                
+                # Insertar antes del botón "Nuevo" (que es el último widget)
+                # O simplemente agregar al layout, aparecerá al lado
+                header_layout.insertWidget(header_layout.count() - 1, self.btn_config)
+        except Exception as e:
+            print(f"Error al agregar botón configuración: {e}")
+
+    def abrir_configuracion(self):
+        dialog = ConfiguracionAlquilerDialog(self)
+        dialog.exec()
         
     def setup_table_columns(self):
         self.tabla.setColumnCount(7)
