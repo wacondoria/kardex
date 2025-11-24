@@ -206,13 +206,19 @@ class ProductoFoto(Base):
     id = Column(Integer, primary_key=True)
     producto_id = Column(Integer, ForeignKey('productos.id'), nullable=False)
     
-    ruta_archivo = Column(String(500), nullable=False)  # Ruta en OneDrive
-    es_principal = Column(Boolean, default=False)
-    orden = Column(Integer, default=0)
-    fecha_registro = Column(DateTime, default=datetime.now)
-    
     # Relaciones
     producto = relationship("Producto", back_populates="fotos")
+
+class TipoEquipo(Base):
+    __tablename__ = 'tipos_equipo'
+    
+    id = Column(Integer, primary_key=True)
+    nombre = Column(String(200), unique=True, nullable=False) # Ej: KIT TERMOFUSIÓN 315
+    descripcion = Column(Text)
+    activo = Column(Boolean, default=True)
+    
+    equipos = relationship("Equipo", back_populates="tipo_equipo")
+    componentes = relationship("KitComponente", back_populates="tipo_equipo", cascade="all, delete-orphan")
 
 class Equipo(Base):
     __tablename__ = 'equipos'
@@ -225,6 +231,10 @@ class Equipo(Base):
     descripcion = Column(Text)
     nivel = Column(Enum(NivelEquipo), nullable=False)
     
+    # Clasificación
+    tipo_equipo_id = Column(Integer, ForeignKey('tipos_equipo.id'), nullable=True)
+    capacidad = Column(String(100)) # Ej: 5000W, 300KG
+    
     # Estado y Ubicación
     estado = Column(Enum(EstadoEquipo), default=EstadoEquipo.DISPONIBLE)
     almacen_id = Column(Integer, ForeignKey('almacenes.id'), nullable=True) # Ubicación actual
@@ -232,6 +242,7 @@ class Equipo(Base):
     # Control Técnico
     marca = Column(String(100))
     modelo = Column(String(100))
+    serie_modelo = Column(String(100)) # Nueva columna
     serie = Column(String(100))
     anio_fabricacion = Column(Integer)
     
@@ -248,7 +259,8 @@ class Equipo(Base):
     # Financiero
     valor_adquisicion = Column(Float, default=0.0)
     fecha_adquisicion = Column(Date)
-    tarifa_diaria_referencial = Column(Float, default=0.0)
+    tarifa_diaria_referencial = Column(Float, default=0.0) # Soles
+    tarifa_diaria_dolares = Column(Float, default=0.0) # Dólares
     
     # Multimedia
     foto_referencia = Column(String(500))
@@ -258,28 +270,15 @@ class Equipo(Base):
 
     # Relaciones
     almacen = relationship("Almacen")
+    tipo_equipo = relationship("TipoEquipo", back_populates="equipos")
     componentes_kit = relationship("KitComponente", back_populates="equipo_default")
     detalles_alquiler = relationship("AlquilerDetalle", back_populates="equipo")
-
-# ============================================
-# TABLA: KITS (PLANTILLAS DE ALQUILER)
-# ============================================
-
-class Kit(Base):
-    __tablename__ = 'kits'
-
-    id = Column(Integer, primary_key=True)
-    nombre = Column(String(200), unique=True, nullable=False) # Ej: KIT TERMOFUSIÓN 315
-    descripcion = Column(Text)
-    activo = Column(Boolean, default=True)
-    
-    componentes = relationship("KitComponente", back_populates="kit", cascade="all, delete-orphan")
 
 class KitComponente(Base):
     __tablename__ = 'kit_componentes'
 
     id = Column(Integer, primary_key=True)
-    kit_id = Column(Integer, ForeignKey('kits.id'), nullable=False)
+    tipo_equipo_id = Column(Integer, ForeignKey('tipos_equipo.id'), nullable=False)
     
     nombre_componente = Column(String(100), nullable=False) # Ej: "Generador Eléctrico"
     nivel_requerido = Column(Enum(NivelEquipo), nullable=True)
@@ -290,7 +289,7 @@ class KitComponente(Base):
     cantidad = Column(Integer, default=1)
     es_opcional = Column(Boolean, default=False)
     
-    kit = relationship("Kit", back_populates="componentes")
+    tipo_equipo = relationship("TipoEquipo", back_populates="componentes")
     equipo_default = relationship("Equipo", back_populates="componentes_kit")
 
 # ============================================
