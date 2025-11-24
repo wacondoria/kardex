@@ -13,7 +13,7 @@ from datetime import date, datetime
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models.database_model import (obtener_session, Alquiler, AlquilerDetalle, Cliente, 
-                                   Equipo, Kit, Producto, EstadoAlquiler, EstadoEquipo, NivelEquipo, AlquilerEvidencia)
+                                   Equipo, TipoEquipo, Producto, EstadoAlquiler, EstadoEquipo, NivelEquipo, AlquilerEvidencia)
 from utils.widgets import SearchableComboBox, UpperLineEdit
 from utils.file_manager import FileManager
 from views.base_crud_view import BaseCRUDView
@@ -67,7 +67,7 @@ class SeleccionKitDialog(QDialog):
         self.setLayout(layout)
 
     def cargar_kits(self):
-        kits = self.session.query(Kit).filter_by(activo=True).all()
+        kits = self.session.query(TipoEquipo).filter_by(activo=True).all()
         self.cmb_kit.addItem("Seleccione...", None)
         for k in kits:
             self.cmb_kit.addItem(k.nombre, k.id)
@@ -77,7 +77,7 @@ class SeleccionKitDialog(QDialog):
         kit_id = self.cmb_kit.currentData()
         if not kit_id: return
         
-        kit = self.session.query(Kit).get(kit_id)
+        kit = self.session.query(TipoEquipo).get(kit_id)
         
         for comp in kit.componentes:
             row = self.tabla.rowCount()

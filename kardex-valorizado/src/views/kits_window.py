@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from models.database_model import obtener_session, Kit, KitComponente, Equipo, NivelEquipo
+from models.database_model import obtener_session, TipoEquipo, KitComponente, Equipo, NivelEquipo
 from utils.widgets import UpperLineEdit, SearchableComboBox
 
 class KitDialog(QDialog):
@@ -54,7 +54,7 @@ class KitDialog(QDialog):
         
         try:
             if not self.kit:
-                self.kit = Kit(nombre=nombre, descripcion=self.txt_desc.text())
+                self.kit = TipoEquipo(nombre=nombre, descripcion=self.txt_desc.text())
                 self.session.add(self.kit)
             else:
                 self.kit.nombre = nombre
@@ -123,7 +123,7 @@ class ComponenteDialog(QDialog):
         
         try:
             comp = KitComponente(
-                kit_id=self.kit_id,
+                tipo_equipo_id=self.kit_id,
                 nombre_componente=nombre,
                 nivel_requerido=self.cmb_nivel.currentData(),
                 equipo_default_id=self.cmb_equipo.currentData(),
@@ -195,7 +195,7 @@ class KitsWindow(QWidget):
 
     def cargar_kits(self):
         self.list_kits.clear()
-        kits = self.session.query(Kit).filter_by(activo=True).all()
+        kits = self.session.query(TipoEquipo).filter_by(activo=True).all()
         for kit in kits:
             item = QTableWidgetItem(kit.nombre) # QListWidget usa QListWidgetItem, pero bueno
             self.list_kits.addItem(f"{kit.id} - {kit.nombre}")
@@ -210,7 +210,7 @@ class KitsWindow(QWidget):
         kit_id = int(text.split(' - ')[0])
         self.current_kit_id = kit_id
         
-        kit = self.session.query(Kit).get(kit_id)
+        kit = self.session.query(TipoEquipo).get(kit_id)
         self.lbl_kit_selected.setText(f"Componentes de: {kit.nombre}")
         
         self.table_comp.setRowCount(0)
