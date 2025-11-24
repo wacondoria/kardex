@@ -47,7 +47,7 @@ class SistemasImportacionWindow(QWidget):
         selection_layout = QFormLayout()
 
         self.cmb_modulos = QComboBox()
-        self.cmb_modulos.addItems(["", "Proveedores", "Clientes", "Productos", "Compras", "Ventas", "Tipo de Cambio"])
+        self.cmb_modulos.addItems(["", "Proveedores", "Clientes", "Productos", "Equipos", "Compras", "Ventas", "Tipo de Cambio"])
         self.cmb_modulos.setPlaceholderText("Seleccione un tipo de dato...")
 
         selection_layout.addRow(QLabel("Módulo a procesar:"), self.cmb_modulos)
