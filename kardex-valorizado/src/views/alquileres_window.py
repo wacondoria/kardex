@@ -533,11 +533,12 @@ class AlquileresWindow(BaseCRUDView):
         super().__init__("Gestión de Alquileres", Alquiler, AlquilerDialog)
         
     def setup_table_columns(self):
-        self.tabla.setColumnCount(6)
+        self.tabla.setColumnCount(7)
         self.tabla.setHorizontalHeaderLabels([
-            "ID", "Cliente", "Obra", "Inicio", "Fin Est.", "Estado"
+            "ID", "Cliente", "Obra", "Inicio", "Fin Est.", "Estado", "Acciones"
         ])
         self.tabla.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        self.tabla.setColumnWidth(6, 180)
         
     def fill_row(self, row, item):
         self.tabla.setItem(row, 0, QTableWidgetItem(str(item.id)))

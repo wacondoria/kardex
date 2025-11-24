@@ -1037,7 +1037,7 @@ class VentasWindow(QWidget):
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(9, QHeaderView.ResizeMode.Fixed)
         self.tabla.setColumnWidth(0, 100); self.tabla.setColumnWidth(1, 90)
-        self.tabla.setColumnWidth(2, 90); self.tabla.setColumnWidth(9, 160)
+        self.tabla.setColumnWidth(2, 90); self.tabla.setColumnWidth(9, 250)
         self.tabla.setAlternatingRowColors(True)
         self.tabla.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
 

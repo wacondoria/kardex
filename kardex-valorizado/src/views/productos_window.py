@@ -513,7 +513,7 @@ class ProductosWindow(BaseCRUDView):
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(7, QHeaderView.ResizeMode.Fixed)
-        self.tabla.setColumnWidth(7, 150)
+        self.tabla.setColumnWidth(7, 180)
 
     def get_base_query(self):
         """Override to eager load category."""

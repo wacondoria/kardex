@@ -228,7 +228,7 @@ class ClientesWindow(BaseCRUDView):
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(7, QHeaderView.ResizeMode.Fixed)
-        self.tabla.setColumnWidth(7, 150)
+        self.tabla.setColumnWidth(7, 180)
 
     def apply_ordering(self, query):
         return query.order_by(Cliente.razon_social_o_nombre)

@@ -760,6 +760,8 @@ class ComprasWindow(QWidget):
 
         header = self.tabla.horizontalHeader()
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(9, QHeaderView.ResizeMode.Fixed)
+        self.tabla.setColumnWidth(9, 250)
 
         money_delegate = MoneyDelegate(self.tabla)
         self.tabla.setItemDelegateForColumn(6, money_delegate)

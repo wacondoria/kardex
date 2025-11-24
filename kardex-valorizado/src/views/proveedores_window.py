@@ -326,7 +326,7 @@ class ProveedoresWindow(BaseCRUDView):
         header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(7, QHeaderView.ResizeMode.Fixed)
-        self.tabla.setColumnWidth(7, 150)
+        self.tabla.setColumnWidth(7, 180)
 
     def apply_ordering(self, query):
         return query.order_by(Proveedor.razon_social)
