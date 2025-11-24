@@ -33,6 +33,8 @@ class ImportExportManager:
         """Dispara el método de generación de plantilla según el módulo."""
         if modulo == "Proveedores":
             self._generar_plantilla_proveedores()
+        elif modulo == "Clientes":
+            self._generar_plantilla_clientes()
         elif modulo == "Productos":
             self._generar_plantilla_productos()
         elif modulo == "Compras":
@@ -48,6 +50,8 @@ class ImportExportManager:
         """Dispara el método de importación de datos según el módulo."""
         if modulo == "Proveedores":
             self._importar_datos_proveedores()
+        elif modulo == "Clientes":
+            self._importar_datos_clientes()
         elif modulo == "Productos":
             self._importar_datos_productos()
         elif modulo == "Compras":
@@ -171,6 +175,137 @@ class ImportExportManager:
                     prov = Proveedor(**{k: v for k, v in data.items() if k != 'fila'})
                     self.session.add(prov)
                     mapa_existentes[ruc] = prov
+                    creados += 1
+
+            self.session.commit()
+            self._mostrar_reporte_importacion(creados, actualizados, errores_lectura)
+
+        except Exception as e:
+            self.session.rollback()
+            QMessageBox.critical(self.parent, "Error Crítico", f"Ocurrió un error inesperado:\n{str(e)}")
+        finally:
+            self.session.close()
+
+    def _generar_plantilla_clientes(self):
+        """Crea y guarda una plantilla de Excel para la importación de clientes."""
+        file_path, _ = QFileDialog.getSaveFileName(
+            self.parent, "Guardar Plantilla de Clientes",
+            "plantilla_clientes.xlsx", "Archivos de Excel (*.xlsx)"
+        )
+
+        if not file_path:
+            return
+
+        try:
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Clientes"
+            headers = ["RUC_DNI", "RAZON_SOCIAL_NOMBRE", "DIRECCION", "TELEFONO", "EMAIL", "CONTACTO"]
+            ws.append(headers)
+
+            header_font = Font(bold=True, color="FFFFFF")
+            header_fill = PatternFill(start_color="FF1D6F42", end_color="FF1D6F42", fill_type="solid")
+            header_align = Alignment(horizontal="center")
+
+            for cell in ws[1]:
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.alignment = header_align
+
+            ws.column_dimensions['A'].width = 15
+            ws.column_dimensions['B'].width = 40
+            ws.column_dimensions['C'].width = 40
+            ws.column_dimensions['D'].width = 20
+            ws.column_dimensions['E'].width = 30
+            ws.column_dimensions['F'].width = 30
+
+            ws_inst = wb.create_sheet(title="Instrucciones")
+            ws_inst.append(["Columna", "Descripción", "Obligatorio"])
+            ws_inst.append(["RUC_DNI", "RUC (11 dígitos) o DNI (8 dígitos).", "Sí"])
+            ws_inst.append(["RAZON_SOCIAL_NOMBRE", "Nombre o Razón Social del cliente.", "Sí"])
+            ws_inst.append(["DIRECCION", "Dirección fiscal o de residencia.", "No"])
+            ws_inst.append(["TELEFONO", "Teléfono de contacto.", "No"])
+            ws_inst.append(["EMAIL", "Correo electrónico.", "No"])
+            ws_inst.append(["CONTACTO", "Nombre de la persona de contacto.", "No"])
+
+            wb.save(file_path)
+            QMessageBox.information(self.parent, "Éxito", f"Plantilla guardada en:\n{file_path}")
+        except Exception as e:
+            QMessageBox.critical(self.parent, "Error", f"No se pudo guardar la plantilla:\n{str(e)}")
+
+    def _importar_datos_clientes(self):
+        """Importa clientes desde un archivo Excel."""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self.parent, "Importar Clientes", "", "Archivos de Excel (*.xlsx)"
+        )
+        if not file_path:
+            return
+
+        try:
+            wb = load_workbook(file_path, data_only=True)
+            if "Clientes" not in wb.sheetnames:
+                QMessageBox.critical(self.parent, "Error de Hoja", "No se encontró la hoja 'Clientes'.")
+                return
+
+            ws = wb["Clientes"]
+            expected_headers = ["RUC_DNI", "RAZON_SOCIAL_NOMBRE", "DIRECCION", "TELEFONO", "EMAIL", "CONTACTO"]
+            actual_headers = [str(cell.value).upper().strip() for cell in ws[1]]
+            if actual_headers != expected_headers:
+                QMessageBox.critical(self.parent, "Error de Formato", f"Encabezados incorrectos.")
+                return
+
+            clientes_excel, errores_lectura = [], []
+            for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+                if all(c is None for c in row): break
+                ruc_dni, razon_social = (str(row[0]).strip() if row[0] else ""), (str(row[1]).strip() if row[1] else "")
+
+                if not ruc_dni and not razon_social: continue
+                if not ruc_dni or not razon_social:
+                    errores_lectura.append(f"Fila {row_idx}: RUC/DNI y Nombre son obligatorios.")
+                    continue
+
+                # Validación de RUC o DNI
+                if not (len(ruc_dni) == 11 or len(ruc_dni) == 8) or not ruc_dni.isdigit():
+                    errores_lectura.append(f"Fila {row_idx}: RUC/DNI '{ruc_dni}' inválido (debe ser 8 u 11 dígitos).")
+                    continue
+
+                email = str(row[4]).strip() if row[4] else None
+                if email and not re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', email):
+                    errores_lectura.append(f"Fila {row_idx}: Email '{email}' inválido.")
+                    continue
+
+                clientes_excel.append({
+                    "ruc_o_dni": ruc_dni, "razon_social_o_nombre": razon_social,
+                    "direccion": str(row[2]).strip() if row[2] else None,
+                    "telefono": str(row[3]).strip() if row[3] else None,
+                    "email": email, "contacto": str(row[5]).strip() if row[5] else None,
+                    "fila": row_idx
+                })
+
+            if not clientes_excel and not errores_lectura:
+                QMessageBox.warning(self.parent, "Archivo Vacío", "No se encontraron datos válidos.")
+                return
+
+            rucs_excel = {c['ruc_o_dni'] for c in clientes_excel}
+            existentes_db = self.session.query(Cliente).filter(Cliente.ruc_o_dni.in_(rucs_excel)).all()
+            mapa_existentes = {c.ruc_o_dni: c for c in existentes_db}
+            creados, actualizados = 0, 0
+
+            for data in clientes_excel:
+                ruc = data['ruc_o_dni']
+                if ruc in mapa_existentes:
+                    cliente = mapa_existentes[ruc]
+                    cliente.razon_social_o_nombre = data['razon_social_o_nombre']
+                    cliente.direccion = data['direccion']
+                    cliente.telefono = data['telefono']
+                    cliente.email = data['email']
+                    cliente.contacto = data['contacto']
+                    cliente.activo = True
+                    actualizados += 1
+                else:
+                    cliente = Cliente(**{k: v for k, v in data.items() if k != 'fila'})
+                    self.session.add(cliente)
+                    mapa_existentes[ruc] = cliente
                     creados += 1
 
             self.session.commit()
