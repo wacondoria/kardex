@@ -407,63 +407,15 @@ class EquipoDialog(QDialog):
         layout_tecnico.addWidget(grp_mant)
         
         # 3. Datos Financieros
-        grp_fin = QGroupBox("Datos Financieros")
-        form_fin = QFormLayout()
-        
-        self.spn_tarifa = QDoubleSpinBox()
-        self.spn_tarifa.setRange(0, 999999)
-        self.spn_tarifa.setPrefix("S/ ")
-        
-        self.spn_tarifa_dolares = QDoubleSpinBox()
-        self.spn_tarifa_dolares.setRange(0, 999999)
-        self.spn_tarifa_dolares.setPrefix("$ ")
-        
-        form_fin.addRow("Tarifa Diaria (S/):", self.spn_tarifa)
-        form_fin.addRow("Tarifa Diaria ($):", self.spn_tarifa_dolares)
-        
-        grp_fin.setLayout(form_fin)
-        layout_tecnico.addWidget(grp_fin)
+        layout_tecnico.addStretch()
+        tab_tecnico.setLayout(layout_tecnico)
+        self.tabs.addTab(tab_tecnico, "Detalles Técnicos")
         
         layout_tecnico.addStretch()
         tab_tecnico.setLayout(layout_tecnico)
         self.tabs.addTab(tab_tecnico, "Detalles Técnicos")
         
-        # === TAB 3: DATOS ALQUILER (PROVEEDOR/PROPIETARIO) ===
-        tab_alquiler = QWidget()
-        layout_alquiler = QVBoxLayout()
 
-        grp_prov = QGroupBox("Datos del Propietario/Proveedor")
-        form_prov = QFormLayout()
-
-        self.cmb_ruc_proveedor = SearchableComboBox()
-        self.cmb_ruc_proveedor.setPlaceholderText("RUC")
-        self.cmb_ruc_proveedor.currentIndexChanged.connect(self.sincronizar_por_ruc)
-
-        self.cmb_nombre_proveedor = SearchableComboBox()
-        self.cmb_nombre_proveedor.setPlaceholderText("Razón Social")
-        self.cmb_nombre_proveedor.currentIndexChanged.connect(self.sincronizar_por_nombre)
-
-        self.btn_nuevo_proveedor = QPushButton("+")
-        self.btn_nuevo_proveedor.setFixedSize(30, 30)
-        self.btn_nuevo_proveedor.setStyleSheet(STYLE_CUADRADO_VERDE)
-        self.btn_nuevo_proveedor.clicked.connect(self.crear_nuevo_proveedor)
-
-        h_prov = QHBoxLayout()
-        h_prov.addWidget(self.cmb_ruc_proveedor, 1)
-        h_prov.addWidget(self.cmb_nombre_proveedor, 3)
-        h_prov.addWidget(self.btn_nuevo_proveedor)
-
-        form_prov.addRow("Propietario:", h_prov)
-        grp_prov.setLayout(form_prov)
-
-        layout_alquiler.addWidget(grp_prov)
-        layout_alquiler.addStretch()
-
-        tab_alquiler.setLayout(layout_alquiler)
-        self.tabs.addTab(tab_alquiler, "Datos Alquiler")
-
-        # Cargar proveedores
-        self.cargar_proveedores()
 
         # --- FOOTER ---
         btn_box = QHBoxLayout()
@@ -755,12 +707,7 @@ class EquipoDialog(QDialog):
         self.chk_horometro.setChecked(self.equipo.control_horometro)
         self.spn_horometro.setValue(self.equipo.horometro_actual)
         
-        self.spn_tarifa.setValue(self.equipo.tarifa_diaria_referencial)
-        self.spn_tarifa_dolares.setValue(self.equipo.tarifa_diaria_dolares or 0.0)
 
-        if self.equipo.proveedor_id:
-            idx_prov = self.cmb_ruc_proveedor.findData(self.equipo.proveedor_id)
-            if idx_prov != -1: self.cmb_ruc_proveedor.setCurrentIndex(idx_prov)
 
         if self.equipo.foto_referencia:
             self.mostrar_multimedia(self.equipo.foto_referencia)
@@ -820,10 +767,19 @@ class EquipoDialog(QDialog):
             self.equipo.almacen_id = self.cmb_almacen.currentData()
             
             self.equipo.tipo_equipo_id = self.cmb_tipo.currentData()
-            self.equipo.subtipo_equipo_id = self.cmb_subtipo.currentData()
+            
+            # FIX: Asegurar que se guarde el subtipo correctamente
+            subtipo_id = self.cmb_subtipo.currentData()
+            if subtipo_id is None and self.cmb_subtipo.currentText():
+                # Si no hay data pero hay texto, intentar buscar por texto
+                idx = self.cmb_subtipo.findText(self.cmb_subtipo.currentText())
+                if idx != -1:
+                    subtipo_id = self.cmb_subtipo.itemData(idx)
+            
+            self.equipo.subtipo_equipo_id = subtipo_id
             self.equipo.capacidad = self.txt_capacidad.text()
             
-            self.equipo.proveedor_id = self.cmb_ruc_proveedor.currentData()
+            # self.equipo.proveedor_id = self.cmb_ruc_proveedor.currentData() # MOVIDO A MODULO ALQUILERES
 
             self.equipo.marca = self.txt_marca.text()
             self.equipo.modelo = self.txt_modelo.text()
@@ -841,8 +797,9 @@ class EquipoDialog(QDialog):
             self.equipo.control_horometro = self.chk_horometro.isChecked()
             self.equipo.horometro_actual = self.spn_horometro.value()
             
-            self.equipo.tarifa_diaria_referencial = self.spn_tarifa.value()
-            self.equipo.tarifa_diaria_dolares = self.spn_tarifa_dolares.value()
+            # Tarifas movidas a módulo alquileres
+            # self.equipo.tarifa_diaria_referencial = self.spn_tarifa.value()
+            # self.equipo.tarifa_diaria_dolares = self.spn_tarifa_dolares.value()
             
             # Guardar Foto/Video
             if self.ruta_foto_actual and self.ruta_foto_actual != self.equipo.foto_referencia:
