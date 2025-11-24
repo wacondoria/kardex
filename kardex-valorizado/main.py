@@ -310,22 +310,15 @@ def verificar_y_actualizar_db(db_url='sqlite:///kardex.db'):
                     connection.commit()
                 print("✓  Columna 'subtipo_equipo_id' añadida.")
 
+            if 'proveedor_id' not in columns:
+                print("⚠️  Actualizando 'equipos': Agregando 'proveedor_id'...")
+                with engine.connect() as connection:
+                    connection.execute(text("ALTER TABLE equipos ADD COLUMN proveedor_id INTEGER REFERENCES proveedores(id)"))
+                    connection.commit()
+                print("✓  Columna 'proveedor_id' añadida.")
+
         except Exception as e:
             print(f"❌ Error al migrar columnas de equipos: {e}")
-
-        # --- Migración: Columnas nuevas en Alquileres (proveedor_id) ---
-        try:
-            columns = [col['name'] for col in inspector.get_columns('alquileres')]
-
-            if 'proveedor_id' not in columns:
-                print("⚠️  Actualizando 'alquileres': Agregando 'proveedor_id'...")
-                with engine.connect() as connection:
-                    connection.execute(text("ALTER TABLE alquileres ADD COLUMN proveedor_id INTEGER REFERENCES proveedores(id)"))
-                    connection.commit()
-                print("✓  Columna 'proveedor_id' añadida a 'alquileres'.")
-
-        except Exception as e:
-            print(f"❌ Error al migrar columnas de alquileres: {e}")
 
     except Exception as e:
         print(f"❌ Error al crear o migrar las tablas del módulo de rental: {e}")
