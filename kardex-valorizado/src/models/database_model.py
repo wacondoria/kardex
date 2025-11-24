@@ -253,9 +253,6 @@ class Equipo(Base):
     estado = Column(Enum(EstadoEquipo), default=EstadoEquipo.DISPONIBLE)
     almacen_id = Column(Integer, ForeignKey('almacenes.id'), nullable=True) # Ubicación actual
     
-    # Proveedor / Propietario (Datos Alquiler)
-    proveedor_id = Column(Integer, ForeignKey('proveedores.id'), nullable=True)
-
     # Control Técnico
     marca = Column(String(100))
     modelo = Column(String(100))
@@ -335,6 +332,8 @@ class Alquiler(Base):
     
 
     cliente = relationship("Cliente")
+    proveedor_id = Column(Integer, ForeignKey('proveedores.id'), nullable=True) # Proveedor asociado al alquiler (si aplica)
+    proveedor = relationship("Proveedor")
     usuario = relationship("Usuario")
     detalles = relationship("AlquilerDetalle", back_populates="alquiler", cascade="all, delete-orphan")
     evidencias = relationship("AlquilerEvidencia", back_populates="alquiler", cascade="all, delete-orphan")

@@ -13,8 +13,16 @@ from datetime import date, datetime
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models.database_model import (obtener_session, Alquiler, AlquilerDetalle, Cliente, 
-                                   Equipo, TipoEquipo, Producto, EstadoAlquiler, EstadoEquipo, NivelEquipo, AlquilerEvidencia)
+                                   Equipo, TipoEquipo, Producto, EstadoAlquiler, EstadoEquipo, NivelEquipo, AlquilerEvidencia,
+                                   Proveedor)
 from utils.widgets import SearchableComboBox, UpperLineEdit
+from utils.styles import STYLE_CUADRADO_VERDE
+
+# Try import ProveedorDialog from proveedores_window
+try:
+    from views.proveedores_window import ProveedorDialog
+except ImportError:
+    ProveedorDialog = None
 from utils.file_manager import FileManager
 from views.base_crud_view import BaseCRUDView
 
@@ -299,6 +307,32 @@ class AlquilerDialog(QDialog):
         self.cmb_cliente = SearchableComboBox()
         self.cargar_clientes()
         form.addRow("Cliente:*", self.cmb_cliente)
+
+        # --- PROVEEDOR/PROPIETARIO (Nueva sección) ---
+        # Se añade aquí como solicitado, aunque conceptualmente sea "Alquiler de Proveedor"
+        # Usamos layout horizontal para RUC y Nombre
+        h_prov = QHBoxLayout()
+
+        self.cmb_ruc_proveedor = SearchableComboBox()
+        self.cmb_ruc_proveedor.setPlaceholderText("RUC Proveedor")
+        self.cmb_ruc_proveedor.currentIndexChanged.connect(self.sincronizar_por_ruc)
+
+        self.cmb_nombre_proveedor = SearchableComboBox()
+        self.cmb_nombre_proveedor.setPlaceholderText("Razón Social Proveedor")
+        self.cmb_nombre_proveedor.currentIndexChanged.connect(self.sincronizar_por_nombre)
+
+        self.btn_nuevo_proveedor = QPushButton("+")
+        self.btn_nuevo_proveedor.setFixedSize(30, 30)
+        self.btn_nuevo_proveedor.setStyleSheet(STYLE_CUADRADO_VERDE)
+        self.btn_nuevo_proveedor.clicked.connect(self.crear_nuevo_proveedor)
+
+        h_prov.addWidget(self.cmb_ruc_proveedor, 1)
+        h_prov.addWidget(self.cmb_nombre_proveedor, 3)
+        h_prov.addWidget(self.btn_nuevo_proveedor)
+
+        form.addRow("Proveedor:", h_prov)
+        self.cargar_proveedores()
+        # ---------------------------------------------
         
         self.txt_obra = UpperLineEdit()
         form.addRow("Ubicación Obra:", self.txt_obra)
@@ -437,6 +471,55 @@ class AlquilerDialog(QDialog):
         for c in clientes:
             self.cmb_cliente.addItem(c.razon_social_o_nombre, c.id)
 
+    def cargar_proveedores(self):
+        self.cmb_ruc_proveedor.blockSignals(True)
+        self.cmb_nombre_proveedor.blockSignals(True)
+        self.cmb_ruc_proveedor.clear()
+        self.cmb_nombre_proveedor.clear()
+        self.cmb_ruc_proveedor.addItem("Ninguno", None)
+        self.cmb_nombre_proveedor.addItem("Ninguno", None)
+
+        provs = self.session.query(Proveedor).filter_by(activo=True).order_by(Proveedor.razon_social).all()
+        for p in provs:
+            self.cmb_ruc_proveedor.addItem(p.ruc, p.id)
+            self.cmb_nombre_proveedor.addItem(p.razon_social, p.id)
+
+        self.cmb_ruc_proveedor.setCurrentIndex(0)
+        self.cmb_nombre_proveedor.setCurrentIndex(0)
+        self.cmb_ruc_proveedor.blockSignals(False)
+        self.cmb_nombre_proveedor.blockSignals(False)
+
+    def sincronizar_por_ruc(self, index):
+        if index <= 0:
+            self.cmb_nombre_proveedor.setCurrentIndex(0)
+            return
+        pid = self.cmb_ruc_proveedor.currentData()
+        self.cmb_nombre_proveedor.blockSignals(True)
+        idx = self.cmb_nombre_proveedor.findData(pid)
+        if idx != -1: self.cmb_nombre_proveedor.setCurrentIndex(idx)
+        self.cmb_nombre_proveedor.blockSignals(False)
+
+    def sincronizar_por_nombre(self, index):
+        if index <= 0:
+            self.cmb_ruc_proveedor.setCurrentIndex(0)
+            return
+        pid = self.cmb_nombre_proveedor.currentData()
+        self.cmb_ruc_proveedor.blockSignals(True)
+        idx = self.cmb_ruc_proveedor.findData(pid)
+        if idx != -1: self.cmb_ruc_proveedor.setCurrentIndex(idx)
+        self.cmb_ruc_proveedor.blockSignals(False)
+
+    def crear_nuevo_proveedor(self):
+        if ProveedorDialog:
+            dlg = ProveedorDialog(self)
+            if dlg.exec() == QDialog.DialogCode.Accepted:
+                self.cargar_proveedores()
+                if hasattr(dlg, 'nuevo_proveedor_id'):
+                    idx = self.cmb_ruc_proveedor.findData(dlg.nuevo_proveedor_id)
+                    if idx != -1: self.cmb_ruc_proveedor.setCurrentIndex(idx)
+        else:
+            QMessageBox.warning(self, "Error", "Módulo de proveedores no disponible")
+
     def agregar_kit(self):
         dialog = SeleccionKitDialog(self)
         dialog.kit_confirmado.connect(self.recibir_detalles_kit)
@@ -479,6 +562,10 @@ class AlquilerDialog(QDialog):
         index = self.cmb_cliente.findData(self.alquiler.cliente_id)
         if index >= 0: self.cmb_cliente.setCurrentIndex(index)
         
+        if self.alquiler.proveedor_id:
+            idx_prov = self.cmb_ruc_proveedor.findData(self.alquiler.proveedor_id)
+            if idx_prov >= 0: self.cmb_ruc_proveedor.setCurrentIndex(idx_prov)
+
         self.txt_obra.setText(self.alquiler.ubicacion_obra or "")
         
         # Cargar detalles (simplificado: solo lectura por ahora en esta vista rápida)
@@ -496,6 +583,7 @@ class AlquilerDialog(QDialog):
             if not self.alquiler:
                 self.alquiler = Alquiler(
                     cliente_id=cliente_id,
+                    proveedor_id=self.cmb_ruc_proveedor.currentData(), # Puede ser None
                     fecha_inicio=self.date_inicio.date().toPyDate(),
                     fecha_fin_estimada=self.date_fin.date().toPyDate(),
                     ubicacion_obra=self.txt_obra.text(),

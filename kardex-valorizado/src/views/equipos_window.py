@@ -11,17 +11,11 @@ from datetime import date
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from models.database_model import obtener_session, Equipo, Almacen, NivelEquipo, EstadoEquipo, TipoEquipo, SubtipoEquipo, Proveedor
+from models.database_model import obtener_session, Equipo, Almacen, NivelEquipo, EstadoEquipo, TipoEquipo, SubtipoEquipo
 from utils.widgets import SearchableComboBox, UpperLineEdit
 from utils.file_manager import FileManager
 from views.base_crud_view import BaseCRUDView
 from utils.styles import STYLE_CUADRADO_VERDE, STYLE_CHECKBOX_CUSTOM
-
-# Try import ProveedorDialog from proveedores_window
-try:
-    from views.proveedores_window import ProveedorDialog
-except ImportError:
-    ProveedorDialog = None
 
 def generar_codigo_equipo(session, prefijo):
     """Genera el código completo con numeración automática para equipos"""
@@ -428,43 +422,6 @@ class EquipoDialog(QDialog):
         tab_tecnico.setLayout(layout_tecnico)
         self.tabs.addTab(tab_tecnico, "Detalles Técnicos")
         
-        # === TAB 3: DATOS ALQUILER (PROVEEDOR/PROPIETARIO) ===
-        tab_alquiler = QWidget()
-        layout_alquiler = QVBoxLayout()
-
-        grp_prov = QGroupBox("Datos del Propietario/Proveedor")
-        form_prov = QFormLayout()
-
-        self.cmb_ruc_proveedor = SearchableComboBox()
-        self.cmb_ruc_proveedor.setPlaceholderText("RUC")
-        self.cmb_ruc_proveedor.currentIndexChanged.connect(self.sincronizar_por_ruc)
-
-        self.cmb_nombre_proveedor = SearchableComboBox()
-        self.cmb_nombre_proveedor.setPlaceholderText("Razón Social")
-        self.cmb_nombre_proveedor.currentIndexChanged.connect(self.sincronizar_por_nombre)
-
-        self.btn_nuevo_proveedor = QPushButton("+")
-        self.btn_nuevo_proveedor.setFixedSize(30, 30)
-        self.btn_nuevo_proveedor.setStyleSheet(STYLE_CUADRADO_VERDE)
-        self.btn_nuevo_proveedor.clicked.connect(self.crear_nuevo_proveedor)
-
-        h_prov = QHBoxLayout()
-        h_prov.addWidget(self.cmb_ruc_proveedor, 1)
-        h_prov.addWidget(self.cmb_nombre_proveedor, 3)
-        h_prov.addWidget(self.btn_nuevo_proveedor)
-
-        form_prov.addRow("Propietario:", h_prov)
-        grp_prov.setLayout(form_prov)
-
-        layout_alquiler.addWidget(grp_prov)
-        layout_alquiler.addStretch()
-
-        tab_alquiler.setLayout(layout_alquiler)
-        self.tabs.addTab(tab_alquiler, "Datos Alquiler")
-
-        # Cargar proveedores
-        self.cargar_proveedores()
-
         # --- FOOTER ---
         btn_box = QHBoxLayout()
         btn_cancel = QPushButton("Cancelar")
@@ -569,49 +526,6 @@ class EquipoDialog(QDialog):
             self.cargar_subtipos()
             idx = self.cmb_subtipo.findData(sub_id)
             if idx != -1: self.cmb_subtipo.setCurrentIndex(idx)
-
-    def cargar_proveedores(self):
-        self.cmb_ruc_proveedor.blockSignals(True)
-        self.cmb_nombre_proveedor.blockSignals(True)
-        self.cmb_ruc_proveedor.clear()
-        self.cmb_nombre_proveedor.clear()
-
-        provs = self.session.query(Proveedor).filter_by(activo=True).order_by(Proveedor.razon_social).all()
-        for p in provs:
-            self.cmb_ruc_proveedor.addItem(p.ruc, p.id)
-            self.cmb_nombre_proveedor.addItem(p.razon_social, p.id)
-
-        self.cmb_ruc_proveedor.setCurrentIndex(-1)
-        self.cmb_nombre_proveedor.setCurrentIndex(-1)
-        self.cmb_ruc_proveedor.blockSignals(False)
-        self.cmb_nombre_proveedor.blockSignals(False)
-
-    def sincronizar_por_ruc(self, index):
-        if index == -1: return
-        pid = self.cmb_ruc_proveedor.currentData()
-        self.cmb_nombre_proveedor.blockSignals(True)
-        idx = self.cmb_nombre_proveedor.findData(pid)
-        if idx != -1: self.cmb_nombre_proveedor.setCurrentIndex(idx)
-        self.cmb_nombre_proveedor.blockSignals(False)
-
-    def sincronizar_por_nombre(self, index):
-        if index == -1: return
-        pid = self.cmb_nombre_proveedor.currentData()
-        self.cmb_ruc_proveedor.blockSignals(True)
-        idx = self.cmb_ruc_proveedor.findData(pid)
-        if idx != -1: self.cmb_ruc_proveedor.setCurrentIndex(idx)
-        self.cmb_ruc_proveedor.blockSignals(False)
-
-    def crear_nuevo_proveedor(self):
-        if ProveedorDialog:
-            dlg = ProveedorDialog(self)
-            if dlg.exec() == QDialog.DialogCode.Accepted:
-                self.cargar_proveedores()
-                if hasattr(dlg, 'nuevo_proveedor_id'):
-                    idx = self.cmb_ruc_proveedor.findData(dlg.nuevo_proveedor_id)
-                    if idx != -1: self.cmb_ruc_proveedor.setCurrentIndex(idx)
-        else:
-            QMessageBox.warning(self, "Error", "Módulo de proveedores no disponible")
 
     def cargar_prefijos_existentes(self):
         try:
@@ -758,10 +672,6 @@ class EquipoDialog(QDialog):
         self.spn_tarifa.setValue(self.equipo.tarifa_diaria_referencial)
         self.spn_tarifa_dolares.setValue(self.equipo.tarifa_diaria_dolares or 0.0)
 
-        if self.equipo.proveedor_id:
-            idx_prov = self.cmb_ruc_proveedor.findData(self.equipo.proveedor_id)
-            if idx_prov != -1: self.cmb_ruc_proveedor.setCurrentIndex(idx_prov)
-
         if self.equipo.foto_referencia:
             self.mostrar_multimedia(self.equipo.foto_referencia)
             self.ruta_foto_actual = self.equipo.foto_referencia
@@ -823,8 +733,6 @@ class EquipoDialog(QDialog):
             self.equipo.subtipo_equipo_id = self.cmb_subtipo.currentData()
             self.equipo.capacidad = self.txt_capacidad.text()
             
-            self.equipo.proveedor_id = self.cmb_ruc_proveedor.currentData()
-
             self.equipo.marca = self.txt_marca.text()
             self.equipo.modelo = self.txt_modelo.text()
             self.equipo.serie_modelo = self.txt_serie_modelo.text()
