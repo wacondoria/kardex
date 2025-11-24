@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 from datetime import date, datetime
 from views.base_crud_view import BaseCRUDView
-from views.configuracion_alquiler_window import ConfiguracionAlquilerDialog
+
 from models.database_model import (obtener_session, Alquiler, AlquilerDetalle,
                                    EstadoAlquiler, EstadoEquipo, TipoEquipo,
                                    Equipo, Cliente, AlquilerEvidencia)
@@ -39,6 +39,15 @@ class SeleccionKitDialog(QDialog):
         self.cargar_kits()
         self.cmb_kit.currentIndexChanged.connect(self.cargar_componentes_kit)
         top_layout.addWidget(self.cmb_kit)
+        
+        # Precio del Kit
+        top_layout.addWidget(QLabel("Precio Total Kit (S/):"))
+        self.spn_precio_kit = QDoubleSpinBox()
+        self.spn_precio_kit.setRange(0, 999999)
+        self.spn_precio_kit.setPrefix("S/ ")
+        self.spn_precio_kit.valueChanged.connect(self.distribuir_precio_kit)
+        top_layout.addWidget(self.spn_precio_kit)
+        
         layout.addLayout(top_layout)
         
         # Tabla de Asignación
@@ -107,6 +116,33 @@ class SeleccionKitDialog(QDialog):
             # Usamos lambda con captura de argumentos por defecto para evitar problemas de closure
             cmb_equipos.currentIndexChanged.connect(lambda idx, r=row, c=cmb_equipos, l_est=lbl_estado, l_val=lbl_valid: 
                                                     self.validar_seleccion(r, c, l_est, l_val))
+
+    def distribuir_precio_kit(self):
+        """Distribuye el precio total del kit proporcionalmente entre los componentes seleccionados"""
+        precio_total = self.spn_precio_kit.value()
+        if precio_total <= 0: return
+
+        # 1. Calcular suma de tarifas referenciales actuales
+        suma_tarifas = 0.0
+        componentes_validos = []
+
+        for row in range(self.tabla.rowCount()):
+            cmb = self.tabla.cellWidget(row, 2)
+            equipo_id = cmb.currentData()
+            if equipo_id:
+                equipo = self.session.query(Equipo).get(equipo_id)
+                if equipo:
+                    suma_tarifas += equipo.tarifa_diaria_referencial
+                    componentes_validos.append((row, equipo.tarifa_diaria_referencial))
+
+        if suma_tarifas == 0: return
+
+        # 2. Distribuir
+        # Guardamos los nuevos precios en una propiedad temporal del widget de la fila o en una lista
+        # Para simplificar, asumiremos que al confirmar se recalcula o se usa este valor.
+        # Pero el diálogo retorna una lista de dicts.
+        # Vamos a almacenar el factor de ajuste.
+        self.factor_ajuste = precio_total / suma_tarifas
 
     def llenar_combo_equipos(self, combo, nivel_requerido, default_id):
         combo.addItem("Seleccionar...", None)
@@ -185,10 +221,16 @@ class SeleccionKitDialog(QDialog):
                 break
                 
             equipo = self.session.query(Equipo).get(equipo_id)
+            
+            # Aplicar precio ajustado si hay un precio de kit definido
+            tarifa_final = equipo.tarifa_diaria_referencial
+            if hasattr(self, 'factor_ajuste') and self.spn_precio_kit.value() > 0:
+                tarifa_final = equipo.tarifa_diaria_referencial * self.factor_ajuste
+            
             detalles.append({
                 'equipo_id': equipo_id,
                 'cantidad': 1,
-                'tarifa': equipo.tarifa_diaria_referencial
+                'tarifa': tarifa_final
             })
             
         if errores:
@@ -529,26 +571,9 @@ class AlquileresWindow(BaseCRUDView):
     
     def __init__(self):
         super().__init__("Gestión de Alquileres", Alquiler, AlquilerDialog)
-        self.agregar_boton_configuracion()
 
-    def agregar_boton_configuracion(self):
-        # Intentar obtener el layout del header (primer item del main layout)
-        try:
-            header_layout = self.layout().itemAt(0).layout()
-            if header_layout:
-                self.btn_config = QPushButton("⚙️ Configuración")
-                self.btn_config.setStyleSheet("background-color: #7f8c8d; color: white; font-weight: bold; padding: 6px 12px;")
-                self.btn_config.clicked.connect(self.abrir_configuracion)
-                
-                # Insertar antes del botón "Nuevo" (que es el último widget)
-                # O simplemente agregar al layout, aparecerá al lado
-                header_layout.insertWidget(header_layout.count() - 1, self.btn_config)
-        except Exception as e:
-            print(f"Error al agregar botón configuración: {e}")
 
-    def abrir_configuracion(self):
-        dialog = ConfiguracionAlquilerDialog(self)
-        dialog.exec()
+
         
     def setup_table_columns(self):
         self.tabla.setColumnCount(7)
