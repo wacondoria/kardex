@@ -284,10 +284,11 @@ def verificar_y_actualizar_db(db_url='sqlite:///kardex.db'):
                     connection.commit()
                 print("✓  Columna renombrada exitosamente.")
 
-        from models.database_model import Equipo, TipoEquipo, KitComponente, Alquiler, AlquilerDetalle
+        from models.database_model import Equipo, TipoEquipo, KitComponente, Alquiler, AlquilerDetalle, SubtipoEquipo
         tablas_rental = {
             'equipos': Equipo,
             'tipos_equipo': TipoEquipo,
+            'subtipos_equipo': SubtipoEquipo,
             'kit_componentes': KitComponente,
             'alquileres': Alquiler,
             'alquiler_detalles': AlquilerDetalle
@@ -297,6 +298,27 @@ def verificar_y_actualizar_db(db_url='sqlite:///kardex.db'):
                 print(f"⚠️  Tabla '{nombre_tabla}' del módulo de rental no encontrada. Creándola...")
                 modelo_tabla.__table__.create(engine)
                 print(f"✓  Tabla '{nombre_tabla}' creada exitosamente.")
+
+        # --- Migración: Columnas nuevas en Equipos (subtipo_equipo_id, proveedor_id) ---
+        try:
+            columns = [col['name'] for col in inspector.get_columns('equipos')]
+
+            if 'subtipo_equipo_id' not in columns:
+                print("⚠️  Actualizando 'equipos': Agregando 'subtipo_equipo_id'...")
+                with engine.connect() as connection:
+                    connection.execute(text("ALTER TABLE equipos ADD COLUMN subtipo_equipo_id INTEGER REFERENCES subtipos_equipo(id)"))
+                    connection.commit()
+                print("✓  Columna 'subtipo_equipo_id' añadida.")
+
+            if 'proveedor_id' not in columns:
+                print("⚠️  Actualizando 'equipos': Agregando 'proveedor_id'...")
+                with engine.connect() as connection:
+                    connection.execute(text("ALTER TABLE equipos ADD COLUMN proveedor_id INTEGER REFERENCES proveedores(id)"))
+                    connection.commit()
+                print("✓  Columna 'proveedor_id' añadida.")
+
+        except Exception as e:
+            print(f"❌ Error al migrar columnas de equipos: {e}")
 
     except Exception as e:
         print(f"❌ Error al crear o migrar las tablas del módulo de rental: {e}")

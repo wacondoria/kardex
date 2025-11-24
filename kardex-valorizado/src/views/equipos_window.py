@@ -11,11 +11,17 @@ from datetime import date
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from models.database_model import obtener_session, Equipo, Almacen, NivelEquipo, EstadoEquipo, TipoEquipo
+from models.database_model import obtener_session, Equipo, Almacen, NivelEquipo, EstadoEquipo, TipoEquipo, SubtipoEquipo, Proveedor
 from utils.widgets import SearchableComboBox, UpperLineEdit
 from utils.file_manager import FileManager
 from views.base_crud_view import BaseCRUDView
 from utils.styles import STYLE_CUADRADO_VERDE, STYLE_CHECKBOX_CUSTOM
+
+# Try import ProveedorDialog from proveedores_window
+try:
+    from views.proveedores_window import ProveedorDialog
+except ImportError:
+    ProveedorDialog = None
 
 def generar_codigo_equipo(session, prefijo):
     """Genera el código completo con numeración automática para equipos"""
@@ -82,7 +88,6 @@ class TipoEquipoDialog(QDialog):
         try:
             if self.tipo_equipo:
                 # Editar existente
-                # Re-asociar a esta sesión si es necesario
                 tipo = self.session.get(TipoEquipo, self.tipo_equipo.id)
                 if tipo:
                     tipo.nombre = nombre
@@ -97,6 +102,71 @@ class TipoEquipoDialog(QDialog):
 
             self.session.commit()
             self.tipo_guardado.emit()
+            self.accept()
+        except Exception as e:
+            self.session.rollback()
+            QMessageBox.critical(self, "Error", str(e))
+
+class SubtipoEquipoDialog(QDialog):
+    """Diálogo para crear o editar un Subtipo de Equipo"""
+    subtipo_guardado = pyqtSignal()
+
+    def __init__(self, parent=None, subtipo=None, tipo_equipo_id=None):
+        super().__init__(parent)
+        self.session = obtener_session()
+        self.subtipo = subtipo
+        self.tipo_equipo_id = tipo_equipo_id
+        self.init_ui()
+        if self.subtipo:
+            self.cargar_datos()
+
+    def init_ui(self):
+        self.setWindowTitle("Nuevo Subtipo" if not self.subtipo else "Editar Subtipo")
+        self.setFixedSize(400, 200)
+
+        layout = QVBoxLayout()
+        form = QFormLayout()
+
+        self.txt_nombre = UpperLineEdit()
+        self.txt_nombre.setPlaceholderText("Ej: DIESEL")
+        form.addRow("Nombre:*", self.txt_nombre)
+
+        self.txt_desc = QLineEdit()
+        form.addRow("Descripción:", self.txt_desc)
+
+        layout.addLayout(form)
+
+        btn_save = QPushButton("Guardar")
+        btn_save.clicked.connect(self.guardar)
+        layout.addWidget(btn_save)
+
+        self.setLayout(layout)
+
+    def cargar_datos(self):
+        self.txt_nombre.setText(self.subtipo.nombre)
+        self.txt_desc.setText(self.subtipo.descripcion or "")
+
+    def guardar(self):
+        nombre = self.txt_nombre.text().strip()
+        if not nombre:
+            QMessageBox.warning(self, "Error", "El nombre es obligatorio.")
+            return
+
+        try:
+            if self.subtipo:
+                sub = self.session.get(SubtipoEquipo, self.subtipo.id)
+                if sub:
+                    sub.nombre = nombre
+                    sub.descripcion = self.txt_desc.text()
+            else:
+                if not self.tipo_equipo_id:
+                    QMessageBox.warning(self, "Error", "No se ha seleccionado un Tipo de Equipo padre.")
+                    return
+                nuevo = SubtipoEquipo(nombre=nombre, descripcion=self.txt_desc.text(), tipo_equipo_id=self.tipo_equipo_id)
+                self.session.add(nuevo)
+
+            self.session.commit()
+            self.subtipo_guardado.emit()
             self.accept()
         except Exception as e:
             self.session.rollback()
@@ -190,11 +260,31 @@ class EquipoDialog(QDialog):
         layout_tipo.addWidget(self.btn_nuevo_tipo)
         layout_tipo.addWidget(self.btn_editar_tipo)
 
+        # Subtipo
+        self.cmb_subtipo = SearchableComboBox()
+        self.cmb_subtipo.currentIndexChanged.connect(self.actualizar_nombre)
+
+        self.btn_nuevo_subtipo = QPushButton("+")
+        self.btn_nuevo_subtipo.setFixedSize(30, 30)
+        self.btn_nuevo_subtipo.setStyleSheet(STYLE_CUADRADO_VERDE)
+        self.btn_nuevo_subtipo.clicked.connect(self.crear_nuevo_subtipo)
+
+        self.btn_editar_subtipo = QPushButton("E")
+        self.btn_editar_subtipo.setFixedSize(30, 30)
+        self.btn_editar_subtipo.setStyleSheet(STYLE_CUADRADO_VERDE.replace("#34a853", "#f1c40f"))
+        self.btn_editar_subtipo.clicked.connect(self.editar_subtipo_seleccionado)
+
+        layout_subtipo = QHBoxLayout()
+        layout_subtipo.addWidget(self.cmb_subtipo)
+        layout_subtipo.addWidget(self.btn_nuevo_subtipo)
+        layout_subtipo.addWidget(self.btn_editar_subtipo)
+
         self.txt_capacidad = QLineEdit()
         self.txt_capacidad.setPlaceholderText("Ej: 5000W, 300KG")
         self.txt_capacidad.textChanged.connect(self.actualizar_nombre)
         
         form_ident.addRow("Tipo de Equipo:", layout_tipo)
+        form_ident.addRow("Subtipo:", layout_subtipo)
         form_ident.addRow("Capacidad:", self.txt_capacidad)
         
         grp_ident.setLayout(form_ident)
@@ -338,6 +428,43 @@ class EquipoDialog(QDialog):
         tab_tecnico.setLayout(layout_tecnico)
         self.tabs.addTab(tab_tecnico, "Detalles Técnicos")
         
+        # === TAB 3: DATOS ALQUILER (PROVEEDOR/PROPIETARIO) ===
+        tab_alquiler = QWidget()
+        layout_alquiler = QVBoxLayout()
+
+        grp_prov = QGroupBox("Datos del Propietario/Proveedor")
+        form_prov = QFormLayout()
+
+        self.cmb_ruc_proveedor = SearchableComboBox()
+        self.cmb_ruc_proveedor.setPlaceholderText("RUC")
+        self.cmb_ruc_proveedor.currentIndexChanged.connect(self.sincronizar_por_ruc)
+
+        self.cmb_nombre_proveedor = SearchableComboBox()
+        self.cmb_nombre_proveedor.setPlaceholderText("Razón Social")
+        self.cmb_nombre_proveedor.currentIndexChanged.connect(self.sincronizar_por_nombre)
+
+        self.btn_nuevo_proveedor = QPushButton("+")
+        self.btn_nuevo_proveedor.setFixedSize(30, 30)
+        self.btn_nuevo_proveedor.setStyleSheet(STYLE_CUADRADO_VERDE)
+        self.btn_nuevo_proveedor.clicked.connect(self.crear_nuevo_proveedor)
+
+        h_prov = QHBoxLayout()
+        h_prov.addWidget(self.cmb_ruc_proveedor, 1)
+        h_prov.addWidget(self.cmb_nombre_proveedor, 3)
+        h_prov.addWidget(self.btn_nuevo_proveedor)
+
+        form_prov.addRow("Propietario:", h_prov)
+        grp_prov.setLayout(form_prov)
+
+        layout_alquiler.addWidget(grp_prov)
+        layout_alquiler.addStretch()
+
+        tab_alquiler.setLayout(layout_alquiler)
+        self.tabs.addTab(tab_alquiler, "Datos Alquiler")
+
+        # Cargar proveedores
+        self.cargar_proveedores()
+
         # --- FOOTER ---
         btn_box = QHBoxLayout()
         btn_cancel = QPushButton("Cancelar")
@@ -359,13 +486,30 @@ class EquipoDialog(QDialog):
             self.cmb_almacen.addItem(alm.nombre, alm.id)
 
     def cargar_tipos_equipo(self):
+        self.cmb_tipo.blockSignals(True)
         self.cmb_tipo.clear()
         tipos = self.session.query(TipoEquipo).filter_by(activo=True).all()
         for t in tipos:
             self.cmb_tipo.addItem(t.nombre, t.id)
-            
+        self.cmb_tipo.blockSignals(False)
+        self.cmb_tipo.currentIndexChanged.disconnect(self.cargar_subtipos) if hasattr(self.cmb_tipo, 'currentIndexChanged') and self.cargar_subtipos in self.cmb_tipo.currentIndexChanged else None
+        self.cmb_tipo.currentIndexChanged.connect(self.cargar_subtipos)
+
         # Cargar prefijos existentes también
         self.cargar_prefijos_existentes()
+
+    def cargar_subtipos(self):
+        self.cmb_subtipo.blockSignals(True)
+        self.cmb_subtipo.clear()
+        tipo_id = self.cmb_tipo.currentData()
+
+        if tipo_id:
+            subtipos = self.session.query(SubtipoEquipo).filter_by(activo=True, tipo_equipo_id=tipo_id).all()
+            for s in subtipos:
+                self.cmb_subtipo.addItem(s.nombre, s.id)
+
+        self.cmb_subtipo.blockSignals(False)
+        self.actualizar_nombre()
 
     def crear_nuevo_tipo(self):
         dialog = TipoEquipoDialog(self)
@@ -394,6 +538,76 @@ class EquipoDialog(QDialog):
             index = self.cmb_tipo.findData(tipo_id)
             if index != -1:
                 self.cmb_tipo.setCurrentIndex(index)
+
+    def crear_nuevo_subtipo(self):
+        tipo_id = self.cmb_tipo.currentData()
+        if not tipo_id:
+            QMessageBox.warning(self, "Aviso", "Seleccione un Tipo de Equipo primero.")
+            return
+
+        dialog = SubtipoEquipoDialog(self, tipo_equipo_id=tipo_id)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.cargar_subtipos()
+            ultimo = self.session.query(SubtipoEquipo).filter_by(tipo_equipo_id=tipo_id).order_by(SubtipoEquipo.id.desc()).first()
+            if ultimo:
+                idx = self.cmb_subtipo.findData(ultimo.id)
+                if idx != -1: self.cmb_subtipo.setCurrentIndex(idx)
+
+    def editar_subtipo_seleccionado(self):
+        sub_id = self.cmb_subtipo.currentData()
+        if not sub_id: return
+
+        sub_obj = self.session.get(SubtipoEquipo, sub_id)
+        if not sub_obj: return
+
+        dialog = SubtipoEquipoDialog(self, subtipo=sub_obj)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.cargar_subtipos()
+            idx = self.cmb_subtipo.findData(sub_id)
+            if idx != -1: self.cmb_subtipo.setCurrentIndex(idx)
+
+    def cargar_proveedores(self):
+        self.cmb_ruc_proveedor.blockSignals(True)
+        self.cmb_nombre_proveedor.blockSignals(True)
+        self.cmb_ruc_proveedor.clear()
+        self.cmb_nombre_proveedor.clear()
+
+        provs = self.session.query(Proveedor).filter_by(activo=True).order_by(Proveedor.razon_social).all()
+        for p in provs:
+            self.cmb_ruc_proveedor.addItem(p.ruc, p.id)
+            self.cmb_nombre_proveedor.addItem(p.razon_social, p.id)
+
+        self.cmb_ruc_proveedor.setCurrentIndex(-1)
+        self.cmb_nombre_proveedor.setCurrentIndex(-1)
+        self.cmb_ruc_proveedor.blockSignals(False)
+        self.cmb_nombre_proveedor.blockSignals(False)
+
+    def sincronizar_por_ruc(self, index):
+        if index == -1: return
+        pid = self.cmb_ruc_proveedor.currentData()
+        self.cmb_nombre_proveedor.blockSignals(True)
+        idx = self.cmb_nombre_proveedor.findData(pid)
+        if idx != -1: self.cmb_nombre_proveedor.setCurrentIndex(idx)
+        self.cmb_nombre_proveedor.blockSignals(False)
+
+    def sincronizar_por_nombre(self, index):
+        if index == -1: return
+        pid = self.cmb_nombre_proveedor.currentData()
+        self.cmb_ruc_proveedor.blockSignals(True)
+        idx = self.cmb_ruc_proveedor.findData(pid)
+        if idx != -1: self.cmb_ruc_proveedor.setCurrentIndex(idx)
+        self.cmb_ruc_proveedor.blockSignals(False)
+
+    def crear_nuevo_proveedor(self):
+        if ProveedorDialog:
+            dlg = ProveedorDialog(self)
+            if dlg.exec() == QDialog.DialogCode.Accepted:
+                self.cargar_proveedores()
+                if hasattr(dlg, 'nuevo_proveedor_id'):
+                    idx = self.cmb_ruc_proveedor.findData(dlg.nuevo_proveedor_id)
+                    if idx != -1: self.cmb_ruc_proveedor.setCurrentIndex(idx)
+        else:
+            QMessageBox.warning(self, "Error", "Módulo de proveedores no disponible")
 
     def cargar_prefijos_existentes(self):
         try:
@@ -432,6 +646,7 @@ class EquipoDialog(QDialog):
             return
 
         tipo = self.cmb_tipo.currentText()
+        subtipo = self.cmb_subtipo.currentText()
         capacidad = self.txt_capacidad.text().strip()
         marca = self.txt_marca.text().strip()
         modelo = self.txt_modelo.text().strip()
@@ -439,6 +654,7 @@ class EquipoDialog(QDialog):
         serie = self.txt_serie.text().strip()
         
         partes = [tipo]
+        if subtipo: partes.append(subtipo)
         if capacidad: partes.append(capacidad)
         if marca: partes.append(marca)
         if modelo: partes.append(modelo)
@@ -501,6 +717,12 @@ class EquipoDialog(QDialog):
         index_tipo = self.cmb_tipo.findData(self.equipo.tipo_equipo_id)
         if index_tipo >= 0: self.cmb_tipo.setCurrentIndex(index_tipo)
         
+        # Subtipo (debe cargarse despues de tipo)
+        self.cargar_subtipos()
+        if self.equipo.subtipo_equipo_id:
+            idx_sub = self.cmb_subtipo.findData(self.equipo.subtipo_equipo_id)
+            if idx_sub != -1: self.cmb_subtipo.setCurrentIndex(idx_sub)
+
         self.txt_capacidad.setText(self.equipo.capacidad or "")
         
         self.txt_marca.setText(self.equipo.marca or "")
@@ -520,6 +742,10 @@ class EquipoDialog(QDialog):
         
         self.spn_tarifa.setValue(self.equipo.tarifa_diaria_referencial)
         self.spn_tarifa_dolares.setValue(self.equipo.tarifa_diaria_dolares or 0.0)
+
+        if self.equipo.proveedor_id:
+            idx_prov = self.cmb_ruc_proveedor.findData(self.equipo.proveedor_id)
+            if idx_prov != -1: self.cmb_ruc_proveedor.setCurrentIndex(idx_prov)
 
         if self.equipo.foto_referencia:
             self.mostrar_multimedia(self.equipo.foto_referencia)
@@ -579,8 +805,11 @@ class EquipoDialog(QDialog):
             self.equipo.almacen_id = self.cmb_almacen.currentData()
             
             self.equipo.tipo_equipo_id = self.cmb_tipo.currentData()
+            self.equipo.subtipo_equipo_id = self.cmb_subtipo.currentData()
             self.equipo.capacidad = self.txt_capacidad.text()
             
+            self.equipo.proveedor_id = self.cmb_ruc_proveedor.currentData()
+
             self.equipo.marca = self.txt_marca.text()
             self.equipo.modelo = self.txt_modelo.text()
             self.equipo.serie_modelo = self.txt_serie_modelo.text()
