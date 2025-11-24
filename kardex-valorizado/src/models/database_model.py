@@ -144,11 +144,7 @@ class Almacen(Base):
     # Relaciones
     empresa = relationship("Empresa", back_populates="almacenes")
     movimientos = relationship("MovimientoStock", back_populates="almacen")
-
-# ============================================
-# TABLA: CATEGORIAS
-# ============================================
-
+    
 class Categoria(Base):
     __tablename__ = 'categorias'
     
@@ -188,6 +184,18 @@ class Producto(Base):
     
     # Precio (opcional)
     precio_venta = Column(Float, nullable=True)
+    
+    # Estado
+    activo = Column(Boolean, default=True)
+    fecha_registro = Column(DateTime, default=datetime.now)
+    
+    # Relaciones
+    categoria = relationship("Categoria", back_populates="productos")
+    fotos = relationship("ProductoFoto", back_populates="producto")
+    conversiones = relationship("ConversionUnidad", back_populates="producto")
+    movimientos = relationship("MovimientoStock", back_populates="producto")
+    detalles_orden = relationship("OrdenCompraDetalle", back_populates="producto")
+
 # ============================================
 # TABLA: FOTOS DE PRODUCTOS
 # ============================================
@@ -205,10 +213,6 @@ class ProductoFoto(Base):
     
     # Relaciones
     producto = relationship("Producto", back_populates="fotos")
-
-# ============================================
-# TABLA: EQUIPOS (ACTIVOS DE ALQUILER)
-# ============================================
 
 class Equipo(Base):
     __tablename__ = 'equipos'
@@ -373,11 +377,6 @@ class ConversionUnidad(Base):
     
     # Relaciones
     producto = relationship("Producto", back_populates="conversiones")
-
-# ============================================
-# TABLA: PROVEEDORES
-# ============================================
-
 class Proveedor(Base):
     __tablename__ = 'proveedores'
     
@@ -423,7 +422,6 @@ class Cliente(Base):
     # Estado
     activo = Column(Boolean, default=True)
     fecha_registro = Column(DateTime, default=datetime.now)
-
     # Relaciones
     ventas = relationship("Venta", back_populates="cliente")
 
@@ -915,74 +913,106 @@ def poblar_datos_iniciales(session):
     Crea datos iniciales necesarios
     """
     # Categorías predefinidas
-    categorias = [
-        Categoria(nombre="MATERIA PRIMA", descripcion="Materiales para producción"),
-        Categoria(nombre="SUMINISTRO", descripcion="Suministros diversos"),
-        Categoria(nombre="MATERIAL AUXILIAR", descripcion="Materiales auxiliares")
+    categorias_data = [
+        {"nombre": "MATERIA PRIMA", "descripcion": "Materiales para producción"},
+        {"nombre": "SUMINISTRO", "descripcion": "Suministros diversos"},
+        {"nombre": "MATERIAL AUXILIAR", "descripcion": "Materiales auxiliares"}
     ]
     
-    for cat in categorias:
-        session.add(cat)
+    for cat_data in categorias_data:
+        existe = session.query(Categoria).filter_by(nombre=cat_data["nombre"]).first()
+        if not existe:
+            cat = Categoria(**cat_data)
+            session.add(cat)
     
     # Usuario administrador por defecto
     from werkzeug.security import generate_password_hash
 
     # Crear Permisos
-    permisos = {
-        'acceso_total': Permiso(clave='acceso_total', descripcion='Acceso sin restricciones a todas las funcionalidades.'),
-        'ver_dashboard': Permiso(clave='ver_dashboard', descripcion='Ver el panel principal.'),
-        'gestionar_compras': Permiso(clave='gestionar_compras', descripcion='Crear, ver y editar compras.'),
-        'gestionar_ventas': Permiso(clave='gestionar_ventas', descripcion='Crear, ver y editar ventas.'),
-        'gestionar_requisiciones': Permiso(clave='gestionar_requisiciones', descripcion='Crear, ver y editar requisiciones.'),
-        'gestionar_inventario': Permiso(clave='gestionar_inventario', descripcion='Gestionar productos, categorías y ajustes.'),
-        'ver_reportes': Permiso(clave='ver_reportes', descripcion='Acceder y generar reportes.'),
-        'gestionar_usuarios': Permiso(clave='gestionar_usuarios', descripcion='Crear, editar y eliminar usuarios y roles.'),
-        'configuracion_sistema': Permiso(clave='configuracion_sistema', descripcion='Acceder a la configuración del sistema.')
+    permisos_data = {
+        'acceso_total': {'clave': 'acceso_total', 'descripcion': 'Acceso sin restricciones a todas las funcionalidades.'},
+        'ver_dashboard': {'clave': 'ver_dashboard', 'descripcion': 'Ver el panel principal.'},
+        'gestionar_compras': {'clave': 'gestionar_compras', 'descripcion': 'Crear, ver y editar compras.'},
+        'gestionar_ventas': {'clave': 'gestionar_ventas', 'descripcion': 'Crear, ver y editar ventas.'},
+        'gestionar_requisiciones': {'clave': 'gestionar_requisiciones', 'descripcion': 'Crear, ver y editar requisiciones.'},
+        'gestionar_inventario': {'clave': 'gestionar_inventario', 'descripcion': 'Gestionar productos, categorías y ajustes.'},
+        'ver_reportes': {'clave': 'ver_reportes', 'descripcion': 'Acceder y generar reportes.'},
+        'gestionar_usuarios': {'clave': 'gestionar_usuarios', 'descripcion': 'Crear, editar y eliminar usuarios y roles.'},
+        'configuracion_sistema': {'clave': 'configuracion_sistema', 'descripcion': 'Acceder a la configuración del sistema.'}
     }
-    for permiso in permisos.values():
-        session.add(permiso)
+    
+    permisos_objs = {}
+    for key, p_data in permisos_data.items():
+        permiso = session.query(Permiso).filter_by(clave=p_data['clave']).first()
+        if not permiso:
+            permiso = Permiso(**p_data)
+            session.add(permiso)
+            session.flush() # Para tener ID
+        permisos_objs[key] = permiso
 
     # Crear Roles y Asignar Permisos
-    rol_admin = Rol(nombre='Administrador', descripcion='Acceso total al sistema.')
-    rol_admin.permisos = list(permisos.values())
-
-    rol_supervisor = Rol(nombre='Supervisor', descripcion='Acceso a módulos de gestión y reportes.')
-    rol_supervisor.permisos = [
-        permisos['ver_dashboard'],
-        permisos['gestionar_compras'],
-        permisos['gestionar_ventas'],
-        permisos['gestionar_requisiciones'],
-        permisos['ver_reportes']
+    roles_data = [
+        {
+            'nombre': 'Administrador', 
+            'descripcion': 'Acceso total al sistema.',
+            'permisos': list(permisos_objs.values())
+        },
+        {
+            'nombre': 'Supervisor', 
+            'descripcion': 'Acceso a módulos de gestión y reportes.',
+            'permisos': [
+                permisos_objs['ver_dashboard'],
+                permisos_objs['gestionar_compras'],
+                permisos_objs['gestionar_ventas'],
+                permisos_objs['gestionar_requisiciones'],
+                permisos_objs['ver_reportes']
+            ]
+        },
+        {
+            'nombre': 'Operador', 
+            'descripcion': 'Acceso limitado a operaciones diarias.',
+            'permisos': [
+                permisos_objs['ver_dashboard'],
+                permisos_objs['gestionar_compras'],
+                permisos_objs['gestionar_ventas'],
+                permisos_objs['gestionar_requisiciones']
+            ]
+        }
     ]
 
-    rol_operador = Rol(nombre='Operador', descripcion='Acceso limitado a operaciones diarias.')
-    rol_operador.permisos = [
-        permisos['ver_dashboard'],
-        permisos['gestionar_compras'],
-        permisos['gestionar_ventas'],
-        permisos['gestionar_requisiciones']
-    ]
+    rol_admin_obj = None
+    for r_data in roles_data:
+        rol = session.query(Rol).filter_by(nombre=r_data['nombre']).first()
+        if not rol:
+            rol = Rol(nombre=r_data['nombre'], descripcion=r_data['descripcion'])
+            session.add(rol)
+            session.flush()
+            rol.permisos = r_data['permisos']
+        
+        if r_data['nombre'] == 'Administrador':
+            rol_admin_obj = rol
 
-    session.add_all([rol_admin, rol_supervisor, rol_operador])
-    session.flush() # Para obtener los IDs de los roles
+    session.commit() # Commit roles and permissions first
 
     # Crear Usuario Administrador y Asignar Rol
-    admin = Usuario(
-        username="admin",
-        password_hash=generate_password_hash("admin123"),
-        nombre_completo="Administrador del Sistema",
-        rol_id=rol_admin.id
-    )
-
-    # Asignar empresa al admin si existe alguna
-    primera_empresa = session.query(Empresa).first()
-    if primera_empresa:
-        admin.empresas.append(primera_empresa)
-
-    session.add(admin)
+    admin_user = session.query(Usuario).filter_by(username="admin").first()
+    if not admin_user and rol_admin_obj:
+        admin = Usuario(
+            username="admin",
+            password_hash=generate_password_hash("admin123"),
+            nombre_completo="Administrador del Sistema",
+            rol_id=rol_admin_obj.id
+        )
+        
+        # Asignar empresa al admin si existe alguna
+        primera_empresa = session.query(Empresa).first()
+        if primera_empresa:
+            admin.empresas.append(primera_empresa)
+            
+        session.add(admin)
     
     session.commit()
-    print("✓ Datos iniciales creados")
+    print("[OK] Datos iniciales verificados/creados")
 
 # ============================================
 # FUNCIONES DE INICIALIZACIÓN
@@ -1007,7 +1037,7 @@ def crear_base_datos(db_url=None):
         
     engine = create_engine(db_url, echo=True)
     Base.metadata.create_all(engine)
-    print(f"✓ Base de datos creada exitosamente en: {db_url}")
+    print(f"[OK] Base de datos creada exitosamente en: {db_url}")
     return engine
 
 def obtener_session(db_url=None):
@@ -1043,7 +1073,7 @@ if __name__ == "__main__":
     session.close()
     
     print("\n" + "=" * 60)
-    print("✓ Base de datos lista para usar")
+    print("[OK] Base de datos lista para usar")
     print("  Usuario: admin")
     print("  Password: admin123")
     print("=" * 60)
