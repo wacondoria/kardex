@@ -35,6 +35,7 @@ from utils.compras_manager import ComprasManager
 from utils.button_utils import style_button
 from utils.widgets import MoneyDelegate, SearchableComboBox
 from utils.app_context import app_context
+from utils.styles import STYLE_CUADRADO_VERDE
 
 try:
     from openpyxl import Workbook, load_workbook
@@ -82,20 +83,30 @@ class CompraDialog(QDialog):
         layout_datos = QFormLayout()
         
         # Proveedor
-        self.cmb_proveedor = SearchableComboBox()
+        self.cmb_ruc_proveedor = SearchableComboBox()
+        self.cmb_ruc_proveedor.setPlaceholderText("RUC")
+        self.cmb_ruc_proveedor.currentIndexChanged.connect(self.sincronizar_por_ruc)
+
+        self.cmb_nombre_proveedor = SearchableComboBox()
+        self.cmb_nombre_proveedor.setPlaceholderText("Razón Social")
+        self.cmb_nombre_proveedor.currentIndexChanged.connect(self.sincronizar_por_nombre)
+
         self.btn_nuevo_proveedor = QPushButton("+")
-        self.btn_nuevo_proveedor.setFixedWidth(30)
+        self.btn_nuevo_proveedor.setFixedSize(30, 30)
+        self.btn_nuevo_proveedor.setStyleSheet(STYLE_CUADRADO_VERDE)
         self.btn_nuevo_proveedor.clicked.connect(self.crear_nuevo_proveedor)
         
         h_prov = QHBoxLayout()
-        h_prov.addWidget(self.cmb_proveedor)
+        h_prov.addWidget(self.cmb_ruc_proveedor, 1)
+        h_prov.addWidget(self.cmb_nombre_proveedor, 3)
         h_prov.addWidget(self.btn_nuevo_proveedor)
         layout_datos.addRow("Proveedor:", h_prov)
         
         # Cargar proveedores
         provs = self.session.query(Proveedor).filter_by(activo=True).order_by(Proveedor.razon_social).all()
         for p in provs:
-            self.cmb_proveedor.addItem(f"{p.ruc} - {p.razon_social}", p.id)
+            self.cmb_ruc_proveedor.addItem(p.ruc, p.id)
+            self.cmb_nombre_proveedor.addItem(p.razon_social, p.id)
             
         # Fechas
         self.date_fecha = QDateEdit(QDate.currentDate())
@@ -155,7 +166,8 @@ class CompraDialog(QDialog):
         
         self.cmb_producto = SearchableComboBox()
         self.btn_nuevo_producto = QPushButton("+")
-        self.btn_nuevo_producto.setFixedWidth(30)
+        self.btn_nuevo_producto.setFixedSize(30, 30)
+        self.btn_nuevo_producto.setStyleSheet(STYLE_CUADRADO_VERDE)
         self.btn_nuevo_producto.clicked.connect(self.crear_nuevo_producto)
         
         # Cargar productos
@@ -239,13 +251,18 @@ class CompraDialog(QDialog):
     def cargar_datos(self):
         """Carga los datos de la compra a editar."""
         if not self.compra_a_editar:
+            self.cmb_ruc_proveedor.setCurrentIndex(-1)
+            self.cmb_nombre_proveedor.setCurrentIndex(-1)
             return
             
         c = self.compra_a_editar
         
         # Set fields
-        index = self.cmb_proveedor.findData(c.proveedor_id)
-        if index >= 0: self.cmb_proveedor.setCurrentIndex(index)
+        index = self.cmb_ruc_proveedor.findData(c.proveedor_id)
+        if index >= 0:
+            self.cmb_ruc_proveedor.setCurrentIndex(index)
+            # El nombre se sincroniza automáticamente, pero por seguridad:
+            self.cmb_nombre_proveedor.setCurrentIndex(self.cmb_nombre_proveedor.findData(c.proveedor_id))
         
         self.date_fecha.setDate(c.fecha)
         if c.fecha_registro_contable:
@@ -402,11 +419,16 @@ class CompraDialog(QDialog):
         if not self.detalles_compra:
             QMessageBox.warning(self, "Error", "Debe agregar al menos un producto.")
             return
+
+        proveedor_id = self.cmb_ruc_proveedor.currentData()
+        if not proveedor_id:
+            QMessageBox.warning(self, "Error", "Debe seleccionar un proveedor.")
+            return
             
         try:
             # 1. Preparar datos de cabecera
             datos_cabecera = {
-                'proveedor_id': self.cmb_proveedor.currentData(),
+                'proveedor_id': proveedor_id,
                 'fecha': self.date_fecha.date().toPyDate(),
                 'fecha_registro_contable': self.date_fecha_contable.date().toPyDate(),
                 'tipo_documento': self.cmb_tipo_doc.currentText(),
@@ -533,16 +555,39 @@ class CompraDialog(QDialog):
         dialog = ProveedorDialog(self)
 
         if dialog.exec() == QDialog.DialogCode.Accepted:
-            texto_actual = self.cmb_proveedor.lineEdit().text()
-            self.cmb_proveedor.clear()
+            self.cmb_ruc_proveedor.clear()
+            self.cmb_nombre_proveedor.clear()
+
             proveedores = self.session.query(Proveedor).filter_by(activo=True).order_by(Proveedor.razon_social).all()
             for prov in proveedores:
-                self.cmb_proveedor.addItem(f"{prov.ruc} - {prov.razon_social}", prov.id)
-            self.cmb_proveedor.lineEdit().setText(texto_actual)
+                self.cmb_ruc_proveedor.addItem(prov.ruc, prov.id)
+                self.cmb_nombre_proveedor.addItem(prov.razon_social, prov.id)
 
             if hasattr(dialog, 'nuevo_proveedor_id') and dialog.nuevo_proveedor_id:
-               index = self.cmb_proveedor.findData(dialog.nuevo_proveedor_id)
-               if index != -1: self.cmb_proveedor.setCurrentIndex(index)
+               index = self.cmb_ruc_proveedor.findData(dialog.nuevo_proveedor_id)
+               if index != -1: self.cmb_ruc_proveedor.setCurrentIndex(index)
+
+    def sincronizar_por_ruc(self, index):
+        """Sincroniza el combo de nombre al cambiar el RUC."""
+        if index == -1: return
+        prov_id = self.cmb_ruc_proveedor.currentData()
+
+        self.cmb_nombre_proveedor.blockSignals(True)
+        idx_nombre = self.cmb_nombre_proveedor.findData(prov_id)
+        if idx_nombre != -1:
+            self.cmb_nombre_proveedor.setCurrentIndex(idx_nombre)
+        self.cmb_nombre_proveedor.blockSignals(False)
+
+    def sincronizar_por_nombre(self, index):
+        """Sincroniza el combo de RUC al cambiar el nombre."""
+        if index == -1: return
+        prov_id = self.cmb_nombre_proveedor.currentData()
+
+        self.cmb_ruc_proveedor.blockSignals(True)
+        idx_ruc = self.cmb_ruc_proveedor.findData(prov_id)
+        if idx_ruc != -1:
+            self.cmb_ruc_proveedor.setCurrentIndex(idx_ruc)
+        self.cmb_ruc_proveedor.blockSignals(False)
 
     def crear_nuevo_producto(self):
         dialog = ProductoDialog(self)

@@ -118,9 +118,16 @@ class VentaDialog(QDialog):
         
         fila_cliente_proceso.addWidget(QLabel("Cliente:*"))
         
-        self.cmb_cliente = SearchableComboBox()
-        self.cmb_cliente.currentIndexChanged.connect(self.cliente_seleccionado)
-        fila_cliente_proceso.addWidget(self.cmb_cliente, 2)
+        self.cmb_doc_cliente = SearchableComboBox()
+        self.cmb_doc_cliente.setPlaceholderText("RUC/DNI")
+        self.cmb_doc_cliente.currentIndexChanged.connect(self.sincronizar_por_doc)
+
+        self.cmb_nombre_cliente = SearchableComboBox()
+        self.cmb_nombre_cliente.setPlaceholderText("Nombre/Razón Social")
+        self.cmb_nombre_cliente.currentIndexChanged.connect(self.sincronizar_por_nombre)
+
+        fila_cliente_proceso.addWidget(self.cmb_doc_cliente, 1)
+        fila_cliente_proceso.addWidget(self.cmb_nombre_cliente, 2)
         
         self.btn_nuevo_cliente = QPushButton("+")
         self.btn_nuevo_cliente.setToolTip("Crear nuevo cliente")
@@ -347,13 +354,18 @@ class VentaDialog(QDialog):
     def cargar_datos_iniciales(self):
         """Carga clientes, productos y almacenes"""
         # Clientes
-        self.cmb_cliente.clear()
+        self.cmb_doc_cliente.clear()
+        self.cmb_nombre_cliente.clear()
+
         clientes = self.session.query(Cliente).filter_by(activo=True).order_by(Cliente.razon_social_o_nombre).all()
         if not clientes:
             QMessageBox.warning(self, "Sin clientes", "No hay clientes registrados.")
         for cli in clientes:
-            self.cmb_cliente.addItem(f"{cli.ruc} - {cli.razon_social_o_nombre}", cli.id)
-        self.cmb_cliente.setCurrentIndex(-1)
+            self.cmb_doc_cliente.addItem(cli.ruc_o_dni, cli.id)
+            self.cmb_nombre_cliente.addItem(cli.razon_social_o_nombre, cli.id)
+
+        self.cmb_doc_cliente.setCurrentIndex(-1)
+        self.cmb_nombre_cliente.setCurrentIndex(-1)
 
         # Productos
         self.cmb_producto.clear()
@@ -394,9 +406,37 @@ class VentaDialog(QDialog):
         else:
             self.cmb_almacen.setCurrentIndex(-1)
 
-    def cliente_seleccionado(self):
-        """Muestra info del cliente seleccionado"""
-        cli_id = self.cmb_cliente.currentData()
+    def sincronizar_por_doc(self, index):
+        """Sincroniza el combo de nombre al cambiar el Documento."""
+        if index == -1:
+            self.lbl_cliente_info.setText("")
+            return
+        cli_id = self.cmb_doc_cliente.currentData()
+
+        self.cmb_nombre_cliente.blockSignals(True)
+        idx_nombre = self.cmb_nombre_cliente.findData(cli_id)
+        if idx_nombre != -1:
+            self.cmb_nombre_cliente.setCurrentIndex(idx_nombre)
+        self.cmb_nombre_cliente.blockSignals(False)
+
+        self.mostrar_info_cliente(cli_id)
+
+    def sincronizar_por_nombre(self, index):
+        """Sincroniza el combo de documento al cambiar el nombre."""
+        if index == -1:
+            self.lbl_cliente_info.setText("")
+            return
+        cli_id = self.cmb_nombre_cliente.currentData()
+
+        self.cmb_doc_cliente.blockSignals(True)
+        idx_doc = self.cmb_doc_cliente.findData(cli_id)
+        if idx_doc != -1:
+            self.cmb_doc_cliente.setCurrentIndex(idx_doc)
+        self.cmb_doc_cliente.blockSignals(False)
+
+        self.mostrar_info_cliente(cli_id)
+
+    def mostrar_info_cliente(self, cli_id):
         if cli_id:
             cli = self.session.query(Cliente).get(cli_id)
             if cli:
@@ -570,7 +610,8 @@ class VentaDialog(QDialog):
 
     def guardar_venta(self):
         try:
-            if not self.cmb_cliente.currentData():
+            cliente_id = self.cmb_doc_cliente.currentData()
+            if not cliente_id:
                 QMessageBox.warning(self, "Error", "Seleccione un cliente")
                 return
 
@@ -604,7 +645,7 @@ class VentaDialog(QDialog):
             # Preparar datos para el manager
             datos_cabecera = {
                 'numero_proceso': numero_proceso_completo,
-                'cliente_id': self.cmb_cliente.currentData(),
+                'cliente_id': cliente_id,
                 'fecha': self.date_fecha.date().toPyDate(),
                 'fecha_registro_contable': self.date_fecha_contable.date().toPyDate(),
                 'tipo_documento': TipoDocumento(self.cmb_tipo_doc.currentData()),
@@ -644,7 +685,7 @@ class VentaDialog(QDialog):
 
         # Bloquear señales para evitar recálculos
         widgets_a_bloquear = [
-            self.cmb_cliente, self.date_fecha, self.date_fecha_contable,
+            self.cmb_doc_cliente, self.cmb_nombre_cliente, self.date_fecha, self.date_fecha_contable,
             self.cmb_tipo_doc, self.txt_serie_doc, self.txt_numero_doc,
             self.cmb_moneda, self.spn_tipo_cambio, self.chk_incluye_igv,
             self.txt_observaciones, self.tabla_productos
@@ -662,8 +703,13 @@ class VentaDialog(QDialog):
             else:
                 self.txt_numero_proceso.setText("")
 
-            index_cli = self.cmb_cliente.findData(self.venta_original.cliente_id)
-            if index_cli != -1: self.cmb_cliente.setCurrentIndex(index_cli)
+            # Cargar datos cliente
+            index_doc = self.cmb_doc_cliente.findData(self.venta_original.cliente_id)
+            if index_doc != -1: self.cmb_doc_cliente.setCurrentIndex(index_doc)
+
+            # Sincronizar nombre manualmente ya que las señales están bloqueadas
+            index_nom = self.cmb_nombre_cliente.findData(self.venta_original.cliente_id)
+            if index_nom != -1: self.cmb_nombre_cliente.setCurrentIndex(index_nom)
             
             self.date_fecha.setDate(QDate(self.venta_original.fecha.year, self.venta_original.fecha.month, self.venta_original.fecha.day))
             
@@ -808,16 +854,17 @@ class VentaDialog(QDialog):
         
         dialog = ClienteDialog(self)
         if dialog.exec() == QDialog.DialogCode.Accepted:
-            texto_actual = self.cmb_cliente.lineEdit().text()
-            self.cmb_cliente.clear()
-            clientes = self.session.query(Cliente).filter_by(activo=True).order_by(Cliente.razon_social).all()
+            self.cmb_doc_cliente.clear()
+            self.cmb_nombre_cliente.clear()
+
+            clientes = self.session.query(Cliente).filter_by(activo=True).order_by(Cliente.razon_social_o_nombre).all()
             for cli in clientes:
-                self.cmb_cliente.addItem(f"{cli.ruc} - {cli.razon_social}", cli.id)
-            self.cmb_cliente.lineEdit().setText(texto_actual)
+                self.cmb_doc_cliente.addItem(cli.ruc_o_dni, cli.id)
+                self.cmb_nombre_cliente.addItem(cli.razon_social_o_nombre, cli.id)
             
             if hasattr(dialog, 'nuevo_cliente_id') and dialog.nuevo_cliente_id:
-                index = self.cmb_cliente.findData(dialog.nuevo_cliente_id)
-                if index != -1: self.cmb_cliente.setCurrentIndex(index)
+                index = self.cmb_doc_cliente.findData(dialog.nuevo_cliente_id)
+                if index != -1: self.cmb_doc_cliente.setCurrentIndex(index)
 
     def crear_nuevo_producto(self):
         dialog = ProductoDialog(self)
