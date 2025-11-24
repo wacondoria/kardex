@@ -4,6 +4,7 @@ from utils.app_context import app_context
 from views.equipos_window import EquiposWindow
 from views.kits_window import KitsWindow
 from views.alquileres_window import AlquileresWindow
+from views.configuracion_alquiler_window import ConfiguracionAlquilerDialog
 
 class RentalMainWindow(QMainWindow):
     """
@@ -43,6 +44,12 @@ class RentalMainWindow(QMainWindow):
         btn_alquileres = QPushButton("📄 Alquileres")
         btn_alquileres.clicked.connect(self.abrir_alquileres)
         toolbar.addWidget(btn_alquileres)
+
+        toolbar.addSeparator()
+
+        btn_config = QPushButton("⚙️ Configuración")
+        btn_config.clicked.connect(self.abrir_configuracion)
+        toolbar.addWidget(btn_config)
         
         toolbar.addSeparator()
         
@@ -100,3 +107,7 @@ class RentalMainWindow(QMainWindow):
         alquileres_widget = AlquileresWindow()
         self.tab_widget.addTab(alquileres_widget, nombre_pestana)
         self.tab_widget.setCurrentWidget(alquileres_widget)
+
+    def abrir_configuracion(self):
+        dialog = ConfiguracionAlquilerDialog(self)
+        dialog.exec()
