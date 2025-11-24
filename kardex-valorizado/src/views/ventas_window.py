@@ -1032,10 +1032,7 @@ class VentasWindow(QWidget):
         self.tabla.setHorizontalHeaderLabels(
             ["Nro. Proceso", "F. Contable", "F. Emisión", "Documento", "Cliente", "Moneda", "Subtotal", "IGV", "Total", "Acciones"]
         )
-        self.tabla.setStyleSheet(
-            "QTableWidget { border: 1px solid #ddd; border-radius: 5px; background-color: white; }"
-            "QHeaderView::section { background-color: #f1f3f4; padding: 10px; border: none; font-weight: bold; }"
-        )
+        # Se elimina el stylesheet explícito para que herede el tema global (gris/plomo) igual que Compras
         header = self.tabla.horizontalHeader()
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(9, QHeaderView.ResizeMode.Fixed)

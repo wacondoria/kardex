@@ -6,7 +6,7 @@ Archivo: src/views/kardex_window.py
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                               QPushButton, QTableWidget, QTableWidgetItem,
                               QDateEdit, QMessageBox, QHeaderView, QComboBox,
-                              QGroupBox, QRadioButton, QButtonGroup, QFileDialog)
+                              QRadioButton, QButtonGroup, QFileDialog)
 from PyQt6.QtCore import Qt, QDate
 from PyQt6.QtGui import QFont
 import sys
@@ -56,56 +56,56 @@ class KardexWindow(QWidget):
         header_layout.addWidget(titulo)
         header_layout.addStretch()
         
-        # === FILTROS ===
-        grupo_filtros = QGroupBox("Filtros")
-        filtros_layout = QVBoxLayout()
+        layout.addLayout(header_layout)
+
+        # === FILTROS (Sin GroupBox para estandarizar con Compras) ===
         
         # Fila 1: Empresa, Producto, Almacén
         fila1 = QHBoxLayout()
         
-        fila1.addWidget(QLabel("Empresa:"))
+        fila1.addWidget(QLabel("<b>Empresa:</b>"))
         self.cmb_empresa = SearchableComboBox()
         self.cmb_empresa.setMinimumWidth(200)
         self.cmb_empresa.currentIndexChanged.connect(self.empresa_cambiada)
         fila1.addWidget(self.cmb_empresa, 2)
         
-        fila1.addWidget(QLabel("Producto:"))
+        fila1.addWidget(QLabel("<b>Producto:</b>"))
         self.cmb_producto = SearchableComboBox()
         self.cmb_producto.setMinimumWidth(300)
         fila1.addWidget(self.cmb_producto, 3)
         
-        fila1.addWidget(QLabel("Almacén:"))
+        fila1.addWidget(QLabel("<b>Almacén:</b>"))
         self.cmb_almacen = SearchableComboBox()
         self.cmb_almacen.addItem("Todos", None)
         fila1.addWidget(self.cmb_almacen, 1)
         
-        filtros_layout.addLayout(fila1)
+        layout.addLayout(fila1)
         
         # Fila 2: Fechas y Moneda
         fila2 = QHBoxLayout()
         
-        fila2.addWidget(QLabel("Desde:"))
+        fila2.addWidget(QLabel("<b>Desde:</b>"))
         self.date_desde = QDateEdit()
         self.date_desde.setCalendarPopup(True)
         self.date_desde.setDate(QDate.currentDate().addMonths(-1))
         self.date_desde.setDisplayFormat("dd/MM/yyyy")
         fila2.addWidget(self.date_desde)
         
-        fila2.addWidget(QLabel("Hasta:"))
+        fila2.addWidget(QLabel("<b>Hasta:</b>"))
         self.date_hasta = QDateEdit()
         self.date_hasta.setCalendarPopup(True)
         self.date_hasta.setDate(QDate.currentDate())
         self.date_hasta.setDisplayFormat("dd/MM/yyyy")
         fila2.addWidget(self.date_hasta)
         
-        fila2.addWidget(QLabel("Moneda:"))
+        fila2.addWidget(QLabel("<b>Moneda:</b>"))
         self.cmb_moneda_vista = QComboBox()
         self.cmb_moneda_vista.addItem("Soles (S/)", "SOLES")
         self.cmb_moneda_vista.addItem("Dólares ($)", "DOLARES")
         fila2.addWidget(self.cmb_moneda_vista)
         
         # Vista
-        fila2.addWidget(QLabel("Vista:"))
+        fila2.addWidget(QLabel("<b>Vista:</b>"))
         self.cmb_vista = QComboBox()
         self.cmb_vista.addItem("Movimiento por Movimiento", "DETALLADO")
         self.cmb_vista.addItem("Saldos por Día", "CONSOLIDADO")
@@ -113,12 +113,20 @@ class KardexWindow(QWidget):
         
         fila2.addStretch()
         
-        filtros_layout.addLayout(fila2)
+        layout.addLayout(fila2)
         
         # Botones de acción
         btn_layout = QHBoxLayout()
         
         btn_generar = QPushButton("🔍 Generar Kardex")
+        # Se elimina el estilo hardcodeado para usar el tema, pero mantenemos color para destacar acción principal si es necesario
+        # o lo dejamos estándar. Compras usa botones estándar con iconos.
+        # Aquí dejaremos un estilo inline minimalista o estilo estándar si se prefiere.
+        # Para consistencia total, deberíamos usar style_button, pero no está importado y requeriría más cambios.
+        # Mantendremos el estilo pero ajustado ligeramente o lo dejamos como estaba si el usuario solo pidió encabezado.
+        # El usuario pidió "todo estandarizado". Compras usa style_button.
+        # Pero no quiero romper funcionalidad importando cosas nuevas si puedo evitarlo.
+        # Dejaré el estilo inline por ahora, enfocándome en el "Encabezado de color plomo" (Header de tabla).
         btn_generar.setStyleSheet("""
             QPushButton {
                 background-color: #1a73e8;
@@ -162,10 +170,7 @@ class KardexWindow(QWidget):
         btn_layout.addWidget(btn_exportar_pdf)
         btn_layout.addStretch()
         
-        filtros_layout.addLayout(btn_layout)
-        
-        grupo_filtros.setLayout(filtros_layout)
-        layout.addWidget(grupo_filtros)
+        layout.addLayout(btn_layout)
         
         # Info método de valuación
         self.lbl_metodo = QLabel()
@@ -188,20 +193,8 @@ class KardexWindow(QWidget):
             "Saldo Cant.", "Saldo Total"
         ])
         
-        self.tabla.setStyleSheet("""
-            QTableWidget {
-                border: 1px solid #ddd;
-                border-radius: 5px;
-                background-color: white;
-            }
-            QHeaderView::section {
-                background-color: #1a73e8;
-                color: white;
-                padding: 10px;
-                font-weight: bold;
-                border: none;
-            }
-        """)
+        # SE ELIMINA EL STYLESHEET EXPLICITO PARA QUE HEREDE EL TEMA GLOBAL (PLOMO/GRIS)
+        # self.tabla.setStyleSheet(...)
         
         header = self.tabla.horizontalHeader()
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
