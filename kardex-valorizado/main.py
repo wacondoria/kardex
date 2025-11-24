@@ -45,7 +45,7 @@ from utils.themes import get_theme_stylesheet
 
 # --- MODIFICADO: Añadida función de migración de BD ---
 from sqlalchemy import create_engine, inspect, text
-from models.database_model import AnioContable, EstadoAnio, Compra
+from models.database_model import AnioContable, EstadoAnio, Compra, TipoEquipo
 from datetime import datetime
 from collections import defaultdict
 
@@ -266,10 +266,10 @@ def verificar_y_actualizar_db(db_url='sqlite:///kardex.db'):
 
     # 12. Verificar nuevas tablas del módulo de Rental (Equipos y Kits)
     try:
-        from models.database_model import Equipo, Kit, KitComponente, Alquiler, AlquilerDetalle
+        from models.database_model import Equipo, TipoEquipo, KitComponente, Alquiler, AlquilerDetalle
         tablas_rental = {
             'equipos': Equipo,
-            'kits': Kit,
+            'tipos_equipo': TipoEquipo,
             'kit_componentes': KitComponente,
             'alquileres': Alquiler,
             'alquiler_detalles': AlquilerDetalle
