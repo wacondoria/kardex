@@ -40,27 +40,6 @@ class OrdenCompraDialog(QDialog):
     def init_ui(self):
         self.setWindowTitle("Nueva Orden de Compra" if not self.orden else "Ver Orden de Compra")
         self.setMinimumSize(900, 650)
-        self.setStyleSheet("""
-            QDialog {
-                background-color: #f5f5f5;
-            }
-            QLabel {
-                color: #333;
-            }
-            QLineEdit, QDateEdit, QComboBox, QDoubleSpinBox, QTextEdit {
-                padding: 8px;
-                border: 2px solid #ddd;
-                border-radius: 4px;
-                background-color: white;
-                color: black;
-            }
-            QComboBox QAbstractItemView {
-                background-color: white;
-                color: black;
-                selection-background-color: #1a73e8;
-                selection-color: white;
-            }
-        """)
         
         layout = QVBoxLayout()
         layout.setContentsMargins(20, 20, 20, 20)
@@ -563,18 +542,7 @@ class OrdenesCompraWindow(QWidget):
             "Número", "Fecha", "Empresa", "Proveedor", "Estado", "Total", "Recibido", "Acciones"
         ])
         
-        self.tabla.setStyleSheet("""
-            QTableWidget {
-                border: 1px solid #ddd;
-                border-radius: 5px;
-                background-color: white;
-            }
-            QHeaderView::section {
-                background-color: #f1f3f4;
-                padding: 10px;
-                font-weight: bold;
-            }
-        """)
+        # Se elimina stylesheet explícito para heredar tema global
         
         header = self.tabla.horizontalHeader()
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
