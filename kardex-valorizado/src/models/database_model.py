@@ -219,6 +219,19 @@ class TipoEquipo(Base):
     
     equipos = relationship("Equipo", back_populates="tipo_equipo")
     componentes = relationship("KitComponente", back_populates="tipo_equipo", cascade="all, delete-orphan")
+    subtipos = relationship("SubtipoEquipo", back_populates="tipo_equipo", cascade="all, delete-orphan")
+
+class SubtipoEquipo(Base):
+    __tablename__ = 'subtipos_equipo'
+
+    id = Column(Integer, primary_key=True)
+    tipo_equipo_id = Column(Integer, ForeignKey('tipos_equipo.id'), nullable=False)
+    nombre = Column(String(200), nullable=False)
+    descripcion = Column(Text)
+    activo = Column(Boolean, default=True)
+
+    tipo_equipo = relationship("TipoEquipo", back_populates="subtipos")
+    equipos = relationship("Equipo", back_populates="subtipo_equipo")
 
 class Equipo(Base):
     __tablename__ = 'equipos'
@@ -233,12 +246,16 @@ class Equipo(Base):
     
     # Clasificación
     tipo_equipo_id = Column(Integer, ForeignKey('tipos_equipo.id'), nullable=True)
+    subtipo_equipo_id = Column(Integer, ForeignKey('subtipos_equipo.id'), nullable=True)
     capacidad = Column(String(100)) # Ej: 5000W, 300KG
     
     # Estado y Ubicación
     estado = Column(Enum(EstadoEquipo), default=EstadoEquipo.DISPONIBLE)
     almacen_id = Column(Integer, ForeignKey('almacenes.id'), nullable=True) # Ubicación actual
     
+    # Proveedor / Propietario (Datos Alquiler)
+    proveedor_id = Column(Integer, ForeignKey('proveedores.id'), nullable=True)
+
     # Control Técnico
     marca = Column(String(100))
     modelo = Column(String(100))
@@ -271,6 +288,8 @@ class Equipo(Base):
     # Relaciones
     almacen = relationship("Almacen")
     tipo_equipo = relationship("TipoEquipo", back_populates="equipos")
+    subtipo_equipo = relationship("SubtipoEquipo", back_populates="equipos")
+    proveedor = relationship("Proveedor")
     componentes_kit = relationship("KitComponente", back_populates="equipo_default")
     detalles_alquiler = relationship("AlquilerDetalle", back_populates="equipo")
 
