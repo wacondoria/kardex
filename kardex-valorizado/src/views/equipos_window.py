@@ -35,16 +35,20 @@ def generar_codigo_equipo(session, prefijo):
     return f"{prefijo}-{numero:06d}"
 
 class TipoEquipoDialog(QDialog):
-    """Diálogo para crear un nuevo Tipo de Equipo"""
+    """Diálogo para crear o editar un Tipo de Equipo"""
     tipo_guardado = pyqtSignal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, tipo_equipo=None):
         super().__init__(parent)
         self.session = obtener_session()
+        self.tipo_equipo = tipo_equipo
         self.init_ui()
 
+        if self.tipo_equipo:
+            self.cargar_datos()
+
     def init_ui(self):
-        self.setWindowTitle("Nuevo Tipo de Equipo")
+        self.setWindowTitle("Nuevo Tipo de Equipo" if not self.tipo_equipo else "Editar Tipo de Equipo")
         self.setFixedSize(400, 200)
 
         layout = QVBoxLayout()
@@ -65,6 +69,10 @@ class TipoEquipoDialog(QDialog):
 
         self.setLayout(layout)
 
+    def cargar_datos(self):
+        self.txt_nombre.setText(self.tipo_equipo.nombre)
+        self.txt_desc.setText(self.tipo_equipo.descripcion or "")
+
     def guardar(self):
         nombre = self.txt_nombre.text().strip()
         if not nombre:
@@ -72,8 +80,21 @@ class TipoEquipoDialog(QDialog):
             return
 
         try:
-            nuevo_tipo = TipoEquipo(nombre=nombre, descripcion=self.txt_desc.text())
-            self.session.add(nuevo_tipo)
+            if self.tipo_equipo:
+                # Editar existente
+                # Re-asociar a esta sesión si es necesario
+                tipo = self.session.get(TipoEquipo, self.tipo_equipo.id)
+                if tipo:
+                    tipo.nombre = nombre
+                    tipo.descripcion = self.txt_desc.text()
+                else:
+                    QMessageBox.warning(self, "Error", "No se encontró el tipo de equipo para editar.")
+                    return
+            else:
+                # Nuevo
+                nuevo_tipo = TipoEquipo(nombre=nombre, descripcion=self.txt_desc.text())
+                self.session.add(nuevo_tipo)
+
             self.session.commit()
             self.tipo_guardado.emit()
             self.accept()
@@ -89,7 +110,10 @@ class EquipoDialog(QDialog):
     def __init__(self, parent=None, equipo=None):
         super().__init__(parent)
         self.session = obtener_session()
-        self.equipo = equipo
+        # Si se pasa un equipo (desde la ventana principal), lo recargamos en esta sesión
+        # para asegurar que esté adjunto y se puedan guardar los cambios.
+        self.equipo = self.session.get(Equipo, equipo.id) if equipo else None
+
         self.ruta_foto_actual = None
         self.init_ui()
         
@@ -149,12 +173,22 @@ class EquipoDialog(QDialog):
         
         self.btn_nuevo_tipo = QPushButton("+")
         self.btn_nuevo_tipo.setFixedSize(30, 30)
+        self.btn_nuevo_tipo.setToolTip("Crear nuevo Tipo")
         self.btn_nuevo_tipo.setStyleSheet(STYLE_CUADRADO_VERDE)
         self.btn_nuevo_tipo.clicked.connect(self.crear_nuevo_tipo)
+
+        self.btn_editar_tipo = QPushButton("E")
+        self.btn_editar_tipo.setFixedSize(30, 30)
+        self.btn_editar_tipo.setToolTip("Editar Tipo seleccionado")
+        # Reutilizamos estilo verde o definimos uno nuevo si se desea,
+        # por simplicidad usaremos el mismo estilo de botón cuadrado
+        self.btn_editar_tipo.setStyleSheet(STYLE_CUADRADO_VERDE.replace("#34a853", "#f1c40f")) # Amarillo/Naranja
+        self.btn_editar_tipo.clicked.connect(self.editar_tipo_seleccionado)
 
         layout_tipo = QHBoxLayout()
         layout_tipo.addWidget(self.cmb_tipo)
         layout_tipo.addWidget(self.btn_nuevo_tipo)
+        layout_tipo.addWidget(self.btn_editar_tipo)
 
         self.txt_capacidad = QLineEdit()
         self.txt_capacidad.setPlaceholderText("Ej: 5000W, 300KG")
@@ -342,6 +376,24 @@ class EquipoDialog(QDialog):
                  index = self.cmb_tipo.findData(ultimo_tipo.id)
                  if index != -1:
                      self.cmb_tipo.setCurrentIndex(index)
+
+    def editar_tipo_seleccionado(self):
+        tipo_id = self.cmb_tipo.currentData()
+        if not tipo_id:
+            QMessageBox.warning(self, "Aviso", "Seleccione un tipo de equipo para editar.")
+            return
+
+        tipo_obj = self.session.get(TipoEquipo, tipo_id)
+        if not tipo_obj:
+            return
+
+        dialog = TipoEquipoDialog(self, tipo_equipo=tipo_obj)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.cargar_tipos_equipo()
+            # Restaurar selección
+            index = self.cmb_tipo.findData(tipo_id)
+            if index != -1:
+                self.cmb_tipo.setCurrentIndex(index)
 
     def cargar_prefijos_existentes(self):
         try:
