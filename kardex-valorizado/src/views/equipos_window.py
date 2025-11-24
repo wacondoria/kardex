@@ -492,7 +492,11 @@ class EquipoDialog(QDialog):
         for t in tipos:
             self.cmb_tipo.addItem(t.nombre, t.id)
         self.cmb_tipo.blockSignals(False)
-        self.cmb_tipo.currentIndexChanged.disconnect(self.cargar_subtipos) if hasattr(self.cmb_tipo, 'currentIndexChanged') and self.cargar_subtipos in self.cmb_tipo.currentIndexChanged else None
+
+        try:
+            self.cmb_tipo.currentIndexChanged.disconnect(self.cargar_subtipos)
+        except TypeError:
+            pass
         self.cmb_tipo.currentIndexChanged.connect(self.cargar_subtipos)
 
         # Cargar prefijos existentes también
