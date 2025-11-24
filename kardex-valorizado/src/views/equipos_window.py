@@ -306,6 +306,9 @@ class EquipoDialog(QDialog):
 
     def actualizar_nombre(self):
         """Autogenera el nombre del equipo"""
+        if not hasattr(self, 'txt_capacidad') or not hasattr(self, 'txt_marca'):
+            return
+
         tipo = self.cmb_tipo.currentText()
         capacidad = self.txt_capacidad.text().strip()
         marca = self.txt_marca.text().strip()
