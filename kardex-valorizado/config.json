@@ -1,0 +1,4 @@
+{
+    "DB_URL": "sqlite:///kardex.db",
+    "MEDIA_ROOT": "user_data/media"
+}
