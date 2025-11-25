@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from models.database_model import obtener_session
 from utils.widgets import UpperLineEdit
 from utils.button_utils import style_button
+from views.dialogs.delete_range_dialog import DeleteRangeDialog
 
 class BaseCRUDView(QWidget):
     """
@@ -54,6 +55,12 @@ class BaseCRUDView(QWidget):
 
         header_layout.addWidget(titulo)
         header_layout.addStretch()
+        
+        self.btn_eliminar_rango = QPushButton()
+        style_button(self.btn_eliminar_rango, 'delete', "Eliminar Rango")
+        self.btn_eliminar_rango.clicked.connect(self.eliminar_rango)
+        header_layout.addWidget(self.btn_eliminar_rango)
+        
         header_layout.addWidget(self.btn_nuevo)
 
         # Filter/Search Layout
@@ -228,6 +235,55 @@ class BaseCRUDView(QWidget):
             except Exception as e:
                 self.session.rollback()
                 QMessageBox.critical(self, "Error", f"Error al eliminar:\n{str(e)}")
+
+    def eliminar_rango(self):
+        """Elimina un rango de elementos por ID."""
+        dialog = DeleteRangeDialog(self, title=f"Eliminar Rango - {self.title}", label_text="Ingrese el rango de IDs a eliminar:")
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            desde, hasta = dialog.get_range()
+            
+            if not desde.isdigit() or not hasta.isdigit():
+                QMessageBox.warning(self, "Error", "Para este módulo, los rangos deben ser numéricos (IDs).")
+                return
+                
+            id_desde = int(desde)
+            id_hasta = int(hasta)
+            
+            if id_desde > id_hasta:
+                QMessageBox.warning(self, "Error", "El valor 'Desde' no puede ser mayor que 'Hasta'.")
+                return
+                
+            confirm = QMessageBox.question(self, "Confirmar Eliminación Masiva", 
+                                         f"¿Está SEGURO de eliminar los registros con ID del {id_desde} al {id_hasta}?\n\nEsta acción no se puede deshacer.",
+                                         QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            
+            if confirm == QMessageBox.StandardButton.Yes:
+                try:
+                    query = self.session.query(self.model_class).filter(
+                        self.model_class.id >= id_desde,
+                        self.model_class.id <= id_hasta
+                    )
+                    
+                    items = query.all()
+                    count = len(items)
+                    
+                    if count == 0:
+                        QMessageBox.information(self, "Aviso", "No se encontraron registros en ese rango.")
+                        return
+                        
+                    for item in items:
+                        if hasattr(item, 'activo'):
+                            item.activo = False
+                        else:
+                            self.session.delete(item)
+                            
+                    self.session.commit()
+                    QMessageBox.information(self, "Éxito", f"Se han eliminado {count} registros correctamente.")
+                    self.load_data()
+                    
+                except Exception as e:
+                    self.session.rollback()
+                    QMessageBox.critical(self, "Error", f"Error al eliminar rango:\n{str(e)}")
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_F2:
