@@ -29,6 +29,7 @@ try:
 except ImportError:
     print("ADVERTENCIA: No se encontró 'clientes_window.py'. El botón 'Nuevo Cliente' no funcionará.")
     ClienteDialog = None
+from .dialogs.delete_range_dialog import DeleteRangeDialog
 # --- FIN DE IMPORTACIONES ---
 
 from models.database_model import (obtener_session, Venta, VentaDetalle,
@@ -788,6 +789,201 @@ class VentaDialog(QDialog):
                 detalle_actualizado = self.detalles_venta[row]
                 detalle_actualizado['producto_id'] = nuevo_producto_id
                 detalle_actualizado['producto_nombre'] = nuevo_producto_nombre
+        for row, det in enumerate(self.detalles_venta):
+            subtotal_item = self.tabla_productos.item(row, 4)
+            if not subtotal_item:
+                subtotal_item = QTableWidgetItem()
+                subtotal_item.setFlags(subtotal_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                self.tabla_productos.setItem(row, 4, subtotal_item)
+            subtotal_item.setText(f"{det['subtotal']:,.2f}")
+        self.tabla_productos.blockSignals(False)
+
+        # Actualizar etiquetas de totales
+        moneda_simbolo = "S/" if self.cmb_moneda.currentData() == Moneda.SOLES.value else "$"
+        self.lbl_subtotal.setText(f"{moneda_simbolo} {subtotal:,.2f}")
+        self.lbl_igv.setText(f"{moneda_simbolo} {igv:,.2f}")
+        self.lbl_total.setText(f"{moneda_simbolo} {total:,.2f}")
+
+    def guardar_venta(self):
+        try:
+            cliente_id = self.cmb_doc_cliente.currentData()
+            if not cliente_id:
+                QMessageBox.warning(self, "Error", "Seleccione un cliente")
+                return
+
+            numero_proceso_correlativo = self.txt_numero_proceso.text().strip()
+            if not numero_proceso_correlativo.isdigit():
+                QMessageBox.warning(self, "Error", "El Número de Proceso debe ser un número (correlativo).")
+                return
+
+            serie = self.txt_serie_doc.text().strip()
+            numero = self.txt_numero_doc.text().strip()
+            if not serie or not numero:
+                QMessageBox.warning(self, "Error", "Debe ingresar la serie y el número del documento")
+                return
+            numero_documento_completo = f"{serie}-{numero}"
+
+            if not self.detalles_venta:
+                QMessageBox.warning(self, "Error", "Agregue al menos un producto")
+                return
+            
+            mes_contable = self.date_fecha_contable.date().month()
+            numero_proceso_completo = f"05{mes_contable:02d}{int(numero_proceso_correlativo):06d}"
+
+            # Calcular totales nuevamente por seguridad
+            subtotal, igv, total = self.ventas_manager.calcular_totales(
+                self.detalles_venta,
+                self.chk_incluye_igv.isChecked(),
+                self.cmb_moneda.currentData(),
+                self.spn_tipo_cambio.value()
+            )
+            
+            # Preparar datos para el manager
+            datos_cabecera = {
+                'numero_proceso': numero_proceso_completo,
+                'cliente_id': cliente_id,
+                'fecha': self.date_fecha.date().toPyDate(),
+                'fecha_registro_contable': self.date_fecha_contable.date().toPyDate(),
+                'tipo_documento': TipoDocumento(self.cmb_tipo_doc.currentData()),
+                'numero_documento': numero_documento_completo,
+                'moneda': Moneda(self.cmb_moneda.currentData()),
+                'tipo_cambio': Decimal(str(self.spn_tipo_cambio.value())),
+                'incluye_igv': self.chk_incluye_igv.isChecked(),
+                'igv_porcentaje': Decimal('18.0'),
+                'subtotal': subtotal,
+                'igv': igv,
+                'total': total,
+                'observaciones': self.txt_observaciones.toPlainText().strip() or None
+            }
+
+            es_edicion = self.venta_original is not None
+            venta_id = self.venta_original.id if es_edicion else None
+
+            # Delegar guardado al manager
+            self.ventas_manager.guardar_venta(datos_cabecera, self.detalles_venta, venta_id)
+            
+            QMessageBox.information(self, "Éxito", f"Venta {'actualizada' if es_edicion else 'registrada'} exitosamente.")
+            self.accept()
+
+        except ValueError as e:
+            # Errores de validación de negocio (stock, etc)
+            QMessageBox.warning(self, "Advertencia", str(e))
+        except AnioCerradoError as e:
+            QMessageBox.warning(self, "Operación no permitida", str(e))
+        except Exception as e:
+            self.session.rollback()
+            QMessageBox.critical(self, "Error", f"Error al {'actualizar' if self.venta_original else 'guardar'} venta:\n{str(e)}")
+            import traceback
+            traceback.print_exc()
+
+    def cargar_datos_para_edicion(self):
+        if not self.venta_original: return
+
+        # Bloquear señales para evitar recálculos
+        widgets_a_bloquear = [
+            self.cmb_doc_cliente, self.cmb_nombre_cliente, self.date_fecha, self.date_fecha_contable,
+            self.cmb_tipo_doc, self.txt_serie_doc, self.txt_numero_doc,
+            self.cmb_moneda, self.spn_tipo_cambio, self.chk_incluye_igv,
+            self.txt_observaciones, self.tabla_productos
+        ]
+        signal_states = {widget: widget.signalsBlocked() for widget in widgets_a_bloquear}
+        for widget in widgets_a_bloquear: widget.blockSignals(True)
+
+        try:
+            self.setWindowTitle(f"✏️ Editando Venta: {self.venta_original.numero_documento}")
+            self.btn_guardar.setText("Guardar Cambios")
+
+            if self.venta_original.numero_proceso and len(self.venta_original.numero_proceso) >= 6:
+                correlativo = self.venta_original.numero_proceso[-6:]
+                self.txt_numero_proceso.setText(str(int(correlativo)))
+            else:
+                self.txt_numero_proceso.setText("")
+
+            # Cargar datos cliente
+            index_doc = self.cmb_doc_cliente.findData(self.venta_original.cliente_id)
+            if index_doc != -1: self.cmb_doc_cliente.setCurrentIndex(index_doc)
+
+            # Sincronizar nombre manualmente ya que las señales están bloqueadas
+            index_nom = self.cmb_nombre_cliente.findData(self.venta_original.cliente_id)
+            if index_nom != -1: self.cmb_nombre_cliente.setCurrentIndex(index_nom)
+            
+            self.date_fecha.setDate(QDate(self.venta_original.fecha.year, self.venta_original.fecha.month, self.venta_original.fecha.day))
+            
+            fecha_contable_guardada = getattr(self.venta_original, 'fecha_registro_contable', None)
+            if fecha_contable_guardada:
+                self.date_fecha_contable.setDate(QDate(fecha_contable_guardada.year, fecha_contable_guardada.month, fecha_contable_guardada.day))
+            else:
+                self.date_fecha_contable.setDate(self.date_fecha.date())
+
+            index_td = self.cmb_tipo_doc.findData(self.venta_original.tipo_documento.value)
+            if index_td != -1: self.cmb_tipo_doc.setCurrentIndex(index_td)
+
+            try:
+                serie, numero = self.venta_original.numero_documento.split('-', 1)
+                self.txt_serie_doc.setText(serie)
+                self.txt_numero_doc.setText(numero)
+            except ValueError:
+                self.txt_serie_doc.setText("")
+                self.txt_numero_doc.setText(self.venta_original.numero_documento)
+
+            index_moneda = self.cmb_moneda.findData(self.venta_original.moneda.value)
+            if index_moneda != -1: self.cmb_moneda.setCurrentIndex(index_moneda)
+            
+            self.moneda_cambiada() # Esto ajustará el TC y la UI
+            if self.venta_original.moneda == Moneda.DOLARES:
+                self.spn_tipo_cambio.setValue(float(self.venta_original.tipo_cambio))
+                self.actualizar_tipo_cambio() # Para actualizar la etiqueta de info
+
+            self.chk_incluye_igv.setChecked(self.venta_original.incluye_igv)
+            self.txt_observaciones.setPlainText(self.venta_original.observaciones or "")
+
+            self.detalles_venta = []
+            for det_obj in self.detalles_originales_obj:
+                producto = self.session.query(Producto).get(det_obj.producto_id)
+                almacen = self.session.query(Almacen).get(det_obj.almacen_id)
+                if not producto or not almacen: continue
+
+                cantidad_orig = Decimal(str(det_obj.cantidad))
+                precio_venta_sin_igv = Decimal(str(det_obj.precio_unitario_sin_igv))
+                
+                precio_ui = precio_venta_sin_igv
+                if self.venta_original.incluye_igv:
+                    precio_ui = (precio_ui * Decimal('1.18')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                
+                subtotal_ui_sin_igv = (cantidad_orig * precio_venta_sin_igv).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+                detalle_dict = {
+                    'producto_id': det_obj.producto_id,
+                    'producto_nombre': f"{producto.codigo} - {producto.nombre}",
+                    'almacen_id': det_obj.almacen_id,
+                    'almacen_nombre': almacen.nombre,
+                    'cantidad': float(cantidad_orig),
+                    'precio_unitario': float(precio_ui),
+                    'subtotal': float(subtotal_ui_sin_igv), # El subtotal ya está sin IGV
+                    'detalle_original_id': det_obj.id
+                }
+                self.detalles_venta.append(detalle_dict)
+
+            self.actualizar_tabla_productos()
+
+        finally:
+            for widget, original_state in signal_states.items():
+                widget.blockSignals(original_state)
+
+        self.recalcular_totales()
+
+    def producto_en_detalle_editado(self, combo_index, row):
+        if 0 <= row < len(self.detalles_venta):
+            combo_box = self.tabla_productos.cellWidget(row, 0)
+            if not combo_box: return
+            
+            nuevo_producto_id = combo_box.itemData(combo_index)
+            nuevo_producto_nombre = combo_box.itemText(combo_index)
+            
+            if nuevo_producto_id is not None:
+                detalle_actualizado = self.detalles_venta[row]
+                detalle_actualizado['producto_id'] = nuevo_producto_id
+                detalle_actualizado['producto_nombre'] = nuevo_producto_nombre
 
     def detalle_editado(self, row, column):
         if column not in [2, 3]: return
@@ -1036,6 +1232,12 @@ class VentasWindow(QWidget):
             btn_nueva.setToolTip("Licencia vencida - Solo consulta")
         header_layout.addWidget(titulo)
         header_layout.addStretch()
+        
+        self.btn_eliminar_rango = QPushButton()
+        style_button(self.btn_eliminar_rango, 'delete', "Eliminar Rango")
+        self.btn_eliminar_rango.clicked.connect(self.eliminar_rango_ventas)
+        header_layout.addWidget(self.btn_eliminar_rango)
+        
         header_layout.addWidget(btn_nueva)
 
         # Filtros (Estilo Compras)
@@ -1273,6 +1475,90 @@ class VentasWindow(QWidget):
         except Exception as e:
             self.session.rollback()
             QMessageBox.critical(self, "Error al Cargar Edición", f"No se pudo cargar la venta para editar:\n{str(e)}")
+
+    def eliminar_rango_ventas(self):
+        """Elimina un rango de ventas por Número de Proceso (Correlativo)."""
+        dialog = DeleteRangeDialog(self, title="Eliminar Rango de Ventas", label_text="Ingrese el rango de Correlativos (Nro. Proceso) a eliminar:")
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            desde, hasta = dialog.get_range()
+            
+            if not desde.isdigit() or not hasta.isdigit():
+                QMessageBox.warning(self, "Error", "Los correlativos deben ser numéricos.")
+                return
+                
+            corr_desde = int(desde)
+            corr_hasta = int(hasta)
+            
+            if corr_desde > corr_hasta:
+                QMessageBox.warning(self, "Error", "El valor 'Desde' no puede ser mayor que 'Hasta'.")
+                return
+                
+            confirm = QMessageBox.question(self, "Confirmar Eliminación Masiva", 
+                                         f"¿Está SEGURO de eliminar las ventas con correlativo del {corr_desde} al {corr_hasta}?\n\n"
+                                         "Esta acción anulará los movimientos de Kardex y NO se puede deshacer.",
+                                         QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            
+            if confirm == QMessageBox.StandardButton.Yes:
+                try:
+                    anio_sel = app_context.get_selected_year()
+                    mes_sel = self.cmb_mes_filtro.currentData()
+                    if not mes_sel:
+                        QMessageBox.warning(self, "Aviso", "Seleccione un mes específico para eliminar por rango de correlativos.")
+                        return
+
+                    prefijo = f"05{mes_sel:02d}"
+                    
+                    primer_dia, num_dias = calendar.monthrange(anio_sel, mes_sel)
+                    fecha_desde = date(anio_sel, mes_sel, 1)
+                    fecha_hasta = date(anio_sel, mes_sel, num_dias)
+                    
+                    columna_fecha = func.coalesce(Venta.fecha_registro_contable, Venta.fecha)
+                    ventas_mes = self.session.query(Venta).filter(
+                        columna_fecha >= fecha_desde,
+                        columna_fecha <= fecha_hasta
+                    ).all()
+                    
+                    ventas_a_eliminar = []
+                    for v in ventas_mes:
+                        if v.numero_proceso and v.numero_proceso.startswith(prefijo):
+                            try:
+                                sufijo = int(v.numero_proceso[4:])
+                                if corr_desde <= sufijo <= corr_hasta:
+                                    ventas_a_eliminar.append(v)
+                            except ValueError:
+                                pass
+                                
+                    if not ventas_a_eliminar:
+                        QMessageBox.information(self, "Aviso", "No se encontraron ventas en ese rango de correlativos para el mes seleccionado.")
+                        return
+                        
+                    count = len(ventas_a_eliminar)
+                    confirm2 = QMessageBox.question(self, "Confirmar", f"Se encontraron {count} ventas en el mes seleccionado.\n¿Proceder a eliminar?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+                    
+                    if confirm2 == QMessageBox.StandardButton.Yes:
+                        eliminados = 0
+                        errores = []
+                        for v in ventas_a_eliminar:
+                            try:
+                                self.ventas_manager.eliminar_venta(v.id)
+                                eliminados += 1
+                            except Exception as e:
+                                errores.append(f"{v.numero_proceso}: {str(e)}")
+                                
+                        self.session.commit()
+                        
+                        msg = f"Se eliminaron {eliminados} ventas."
+                        if errores:
+                            msg += f"\nHubo {len(errores)} errores:\n" + "\n".join(errores[:5])
+                            if len(errores) > 5: msg += "\n..."
+                            
+                        QMessageBox.information(self, "Resultado", msg)
+                        self.cargar_ventas()
+                        self.recargar_filtro_clientes()
+
+                except Exception as e:
+                    self.session.rollback()
+                    QMessageBox.critical(self, "Error", f"Error al eliminar rango:\n{str(e)}")
 
 # PRUEBA STANDALONE
 if __name__ == "__main__":
