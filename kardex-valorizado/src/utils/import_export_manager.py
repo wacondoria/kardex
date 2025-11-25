@@ -759,7 +759,7 @@ class ImportExportManager:
             headers = [
                 "CODIGO_PREFIJO", "NOMBRE", "TIPO_EQUIPO", "SUBTIPO_EQUIPO", "MARCA",
                 "MODELO", "SERIE", "CAPACIDAD", "NIVEL", "ALMACEN", "ESTADO",
-                "PROVEEDOR_RUC", "TARIFA_SOLES", "TARIFA_DOLARES", "DESCRIPCION"
+                "PROVEEDOR_RUC", "TARIFA_SOLES", "TARIFA_DOLARES", "FECHA_CALIBRACION", "FECHA_VENCIMIENTO", "DESCRIPCION"
             ]
             ws.append(headers)
 
@@ -831,6 +831,8 @@ class ImportExportManager:
             ws_inst.append(["PROVEEDOR_RUC", "RUC del proveedor/propietario.", "No"])
             ws_inst.append(["TARIFA_SOLES", "Tarifa diaria en Soles.", "No"])
             ws_inst.append(["TARIFA_DOLARES", "Tarifa diaria en Dólares.", "No"])
+            ws_inst.append(["FECHA_CALIBRACION", "Fecha de última calibración (dd/mm/aaaa).", "No"])
+            ws_inst.append(["FECHA_VENCIMIENTO", "Fecha de vencimiento de calibración (dd/mm/aaaa).", "No"])
             ws_inst.append(["DESCRIPCION", "Descripción detallada.", "No"])
 
             wb.save(path)
@@ -855,7 +857,7 @@ class ImportExportManager:
             expected_headers = [
                 "CODIGO_PREFIJO", "NOMBRE", "TIPO_EQUIPO", "SUBTIPO_EQUIPO", "MARCA",
                 "MODELO", "SERIE", "CAPACIDAD", "NIVEL", "ALMACEN", "ESTADO",
-                "PROVEEDOR_RUC", "TARIFA_SOLES", "TARIFA_DOLARES", "DESCRIPCION"
+                "PROVEEDOR_RUC", "TARIFA_SOLES", "TARIFA_DOLARES", "FECHA_CALIBRACION", "FECHA_VENCIMIENTO", "DESCRIPCION"
             ]
             actual_headers = [str(cell.value).upper().strip() for cell in ws[1]][:len(expected_headers)]
             if actual_headers != expected_headers:
@@ -891,7 +893,20 @@ class ImportExportManager:
                     prov_ruc = str(row[11]).strip() if row[11] else None
                     tarifa_sol = float(str(row[12]).strip() if row[12] else "0")
                     tarifa_dol = float(str(row[13]).strip() if row[13] else "0")
-                    desc = str(row[14]).strip() if row[14] else None
+                    
+                    fecha_calib_raw = row[14]
+                    fecha_venc_raw = row[15]
+                    desc = str(row[16]).strip() if row[16] else None
+
+                    fecha_calib = None
+                    if fecha_calib_raw:
+                        fecha_calib = (fecha_calib_raw if isinstance(fecha_calib_raw, (datetime, date)) 
+                                     else datetime.strptime(str(fecha_calib_raw).split(" ")[0], "%d/%m/%Y").date())
+                                     
+                    fecha_venc = None
+                    if fecha_venc_raw:
+                        fecha_venc = (fecha_venc_raw if isinstance(fecha_venc_raw, (datetime, date)) 
+                                    else datetime.strptime(str(fecha_venc_raw).split(" ")[0], "%d/%m/%Y").date())
 
                     # Validaciones
                     if not prefijo or len(prefijo) != 5: raise ValueError("Código prefijo debe tener 5 caracteres.")
@@ -941,6 +956,7 @@ class ImportExportManager:
                         "marca": marca, "modelo": modelo, "serie": serie, "capacidad": capacidad,
                         "nivel": nivel_enum, "almacen_id": almacen_id, "estado": estado_enum,
                         "proveedor_id": prov_id, "tarifa_sol": tarifa_sol, "tarifa_dol": tarifa_dol,
+                        "fecha_calib": fecha_calib, "fecha_venc": fecha_venc,
                         "desc": desc, "fila": row_idx
                     })
 
@@ -952,38 +968,67 @@ class ImportExportManager:
                 return
 
             creados = 0
+            actualizados = 0
             correlativos_map = {}
-            # Mapa de códigos existentes para evitar duplicados de nombre/prefijo si fuera necesario
-            # Pero la regla es autogenerar código.
-
-            # Función auxiliar local para generar código sin llamar a BD cada vez (optimización)
-            # Pero cuidado con concurrencia. Asumimos usuario único.
+            
+            # Mapa de equipos existentes por nombre para evitar duplicados en BD
+            equipos_existentes_db = {e.nombre.upper(): e for e in self.session.query(Equipo).all()}
 
             for data in equipos_a_crear:
                 try:
                     prefijo = data['prefijo']
+                    nombre_key = data['nombre'].upper()
 
-                    if prefijo not in correlativos_map:
-                        ultimo = self.session.query(Equipo).filter(Equipo.codigo.like(f"{prefijo}-%")).order_by(Equipo.codigo.desc()).first()
-                        correlativos_map[prefijo] = int(ultimo.codigo.split('-')[1]) if ultimo else 0
+                    if nombre_key in equipos_existentes_db:
+                        # Actualizar existente
+                        equipo = equipos_existentes_db[nombre_key]
+                        equipo.descripcion = data['desc']
+                        equipo.tipo_equipo_id = data['tipo_id']
+                        equipo.subtipo_equipo_id = data['subtipo_id']
+                        equipo.capacidad = data['capacidad']
+                        equipo.nivel = data['nivel']
+                        equipo.almacen_id = data['almacen_id']
+                        equipo.estado = data['estado']
+                        equipo.marca = data['marca']
+                        equipo.modelo = data['modelo']
+                        equipo.serie = data['serie']
+                        equipo.tarifa_diaria_referencial = data['tarifa_sol']
+                        equipo.tarifa_diaria_dolares = data['tarifa_dol']
+                        equipo.proveedor_id = data['proveedor_id']
+                        equipo.fecha_ultima_calibracion = data['fecha_calib']
+                        equipo.fecha_vencimiento_calibracion = data['fecha_venc']
+                        equipo.requiere_calibracion = bool(data['fecha_calib'])
+                        
+                        actualizados += 1
+                        
+                    else:
+                        # Crear nuevo
+                        if prefijo not in correlativos_map:
+                            ultimo = self.session.query(Equipo).filter(Equipo.codigo.like(f"{prefijo}-%")).order_by(Equipo.codigo.desc()).first()
+                            correlativos_map[prefijo] = int(ultimo.codigo.split('-')[1]) if ultimo else 0
 
-                    correlativos_map[prefijo] += 1
-                    codigo_completo = f"{prefijo}-{correlativos_map[prefijo]:06d}"
+                        correlativos_map[prefijo] += 1
+                        codigo_completo = f"{prefijo}-{correlativos_map[prefijo]:06d}"
 
-                    equipo = Equipo(
-                        codigo=codigo_completo, nombre=data['nombre'], descripcion=data['desc'],
-                        tipo_equipo_id=data['tipo_id'], subtipo_equipo_id=data['subtipo_id'],
-                        capacidad=data['capacidad'], nivel=data['nivel'], almacen_id=data['almacen_id'],
-                        estado=data['estado'], marca=data['marca'], modelo=data['modelo'],
-                        serie=data['serie'], tarifa_diaria_referencial=data['tarifa_sol'],
-                        tarifa_diaria_dolares=data['tarifa_dol'], proveedor_id=data['proveedor_id']
-                    )
-                    self.session.add(equipo)
-                    creados += 1
+                        equipo = Equipo(
+                            codigo=codigo_completo, nombre=data['nombre'], descripcion=data['desc'],
+                            tipo_equipo_id=data['tipo_id'], subtipo_equipo_id=data['subtipo_id'],
+                            capacidad=data['capacidad'], nivel=data['nivel'], almacen_id=data['almacen_id'],
+                            estado=data['estado'], marca=data['marca'], modelo=data['modelo'],
+                            serie=data['serie'], tarifa_diaria_referencial=data['tarifa_sol'],
+                            tarifa_diaria_dolares=data['tarifa_dol'], proveedor_id=data['proveedor_id'],
+                            fecha_ultima_calibracion=data['fecha_calib'], fecha_vencimiento_calibracion=data['fecha_venc'],
+                            requiere_calibracion=bool(data['fecha_calib'])
+                        )
+                        self.session.add(equipo)
+                        equipos_existentes_db[nombre_key] = equipo # Agregar al mapa para siguientes iteraciones
+                        creados += 1
                 except Exception as e:
                     errores_lectura.append(f"Fila {data['fila']} (Procesando): {str(e)}")
 
             self.session.commit()
+            self._mostrar_reporte_importacion(creados, actualizados, errores_lectura)
+
             self._mostrar_reporte_importacion(creados, 0, errores_lectura)
 
         except Exception as e:
