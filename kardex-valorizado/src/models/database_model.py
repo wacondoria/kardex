@@ -240,6 +240,7 @@ class Equipo(Base):
     
     # Identificación
     codigo = Column(String(50), unique=True, nullable=False) # Ej: MQ-315-A
+    codigo_unico = Column(String(20), unique=True, nullable=True) # Ej: EQ00001 (Nuevo correlativo global)
     nombre = Column(String(200), nullable=False)
     descripcion = Column(Text)
     nivel = Column(Enum(NivelEquipo), nullable=False)
