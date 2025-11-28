@@ -109,11 +109,11 @@ class RentalDashboardWidget(QWidget):
         # 2. Operator License Alerts
         operadores = self.session.query(Operador).filter(
             Operador.activo == True,
-            Operador.vencimiento_licencia != None
+            Operador.fecha_vencimiento_licencia != None
         ).all()
         
         for op in operadores:
-            days = (op.vencimiento_licencia - today).days
+            days = (op.fecha_vencimiento_licencia - today).days
             urgency = None
             msg = ""
             
