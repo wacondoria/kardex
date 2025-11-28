@@ -384,6 +384,10 @@ class Cliente(Base):
     proyectos = relationship("Proyecto", back_populates="cliente")
     ventas = relationship("Venta", back_populates="cliente")
 
+    @property
+    def razon_social_o_nombre(self):
+        return self.razon_social
+
 class OrdenCompra(Base):
     __tablename__ = 'ordenes_compra'
     
