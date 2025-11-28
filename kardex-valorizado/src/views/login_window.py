@@ -150,7 +150,7 @@ class LoginWindow(QWidget):
             # Esto asegura que el admin nunca quede bloqueado, incluso si la BD falla
             if user.username == 'admin':
                  permission_keys.update(['acceso_total', 'gestionar_usuarios', 'configuracion_sistema'])
-                 print("⚠️ Usuario 'admin' detectado: Se aseguraron permisos críticos.")
+                 print("Usuario 'admin' detectado: Se aseguraron permisos críticos.")
 
             app_context.set_user_permissions(list(permission_keys))
 
