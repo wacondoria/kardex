@@ -231,7 +231,7 @@ class ClientesWindow(BaseCRUDView):
         self.tabla.setColumnWidth(7, 180)
 
     def apply_ordering(self, query):
-        return query.order_by(Cliente.razon_social_o_nombre)
+        return query.order_by(Cliente.razon_social)
 
     def fill_row(self, row, cli):
         self.tabla.setItem(row, 0, QTableWidgetItem(str(cli.id)))
@@ -246,7 +246,7 @@ class ClientesWindow(BaseCRUDView):
         filtro_texto = f"%{text}%"
         return query.filter(or_(
             Cliente.ruc_o_dni.ilike(filtro_texto),
-            Cliente.razon_social_o_nombre.ilike(filtro_texto),
+            Cliente.razon_social.ilike(filtro_texto),
             Cliente.contacto.ilike(filtro_texto)
         ))
 
