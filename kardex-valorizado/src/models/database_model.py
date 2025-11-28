@@ -534,6 +534,7 @@ class Venta(Base):
     tipo_documento = Column(Enum(TipoDocumento), default=TipoDocumento.FACTURA)
     numero_documento = Column(String(20), nullable=False)
     fecha = Column(Date, nullable=False)
+    fecha_registro_contable = Column(Date, nullable=True) # Fecha Periodo Contable
     
     # Moneda y cambio
     moneda = Column(Enum(Moneda), default=Moneda.SOLES)
