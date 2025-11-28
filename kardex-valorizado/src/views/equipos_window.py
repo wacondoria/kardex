@@ -19,16 +19,6 @@ from utils.styles import STYLE_CUADRADO_VERDE, STYLE_CHECKBOX_CUSTOM
 
 # Try import ProveedorDialog from proveedores_window
 try:
-    from views.proveedores_window import ProveedorDialog
-except ImportError:
-    ProveedorDialog = None
-
-from views.dialogs.delete_range_dialog import DeleteRangeDialog
-
-def generar_codigo_equipo(session, prefijo):
-    """Genera el código completo con numeración automática para equipos"""
-    # Buscar el último código que empiece con el prefijo
-    ultimo = session.query(Equipo).filter(
         Equipo.codigo.like(f"{prefijo}-%")
     ).order_by(Equipo.codigo.desc()).first()
 
@@ -452,23 +442,6 @@ class EquipoDialog(QDialog):
         layout_tecnico.addStretch()
         tab_tecnico.setLayout(layout_tecnico)
         self.tabs.addTab(tab_tecnico, "Detalles Técnicos")
-
-        # --- FOOTER ---
-        btn_box = QHBoxLayout()
-        btn_cancel = QPushButton("Cancelar")
-        btn_cancel.clicked.connect(self.reject)
-        btn_save = QPushButton("Guardar")
-        btn_save.clicked.connect(self.guardar)
-        btn_save.setStyleSheet("background-color: #2ecc71; color: white; font-weight: bold; padding: 8px;")
-        
-        btn_box.addStretch()
-        btn_box.addWidget(btn_cancel)
-        btn_box.addWidget(btn_save)
-        
-        main_layout.addLayout(btn_box)
-        self.setLayout(main_layout)
-
-    def cargar_almacenes(self):
         almacenes = self.session.query(Almacen).filter_by(activo=True).all()
         for alm in almacenes:
             self.cmb_almacen.addItem(alm.nombre, alm.id)
@@ -1154,3 +1127,32 @@ class EquiposWindow(BaseCRUDView):
                 except Exception as e:
                     self.session.rollback()
                     QMessageBox.critical(self, "Error", f"Error al eliminar rango:\n{str(e)}")
+
+    def abrir_checklist(self):
+        selected_row = self.table.currentRow()
+        if selected_row < 0:
+            QMessageBox.warning(self, "Aviso", "Seleccione un equipo para realizar el checklist.")
+            return
+
+        equipo_id = int(self.table.item(selected_row, 0).text())
+        equipo = self.session.get(Equipo, equipo_id)
+        
+        if not equipo:
+            return
+            
+        user_info = app_context.get_user_info()
+        usuario_id = user_info.get('id') if user_info else 1 # Fallback to admin if no user info
+        
+        dialog = ChecklistFillDialog(self.session, equipo, usuario_id, self)
+        dialog.exec()
+
+    def abrir_historial(self):
+        selected_row = self.table.currentRow()
+        if selected_row < 0:
+            QMessageBox.warning(self, "Aviso", "Seleccione un equipo para ver su historial.")
+            return
+
+        equipo_id = int(self.table.item(selected_row, 0).text())
+        
+        dialog = EquipoHistoryDialog(self, equipo_id)
+        dialog.exec()
