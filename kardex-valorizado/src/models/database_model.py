@@ -495,6 +495,25 @@ class CompraDetalle(Base):
     almacen = relationship("Almacen")
 
 # ============================================
+# TABLA: SERIE CORRELATIVO
+# ============================================
+
+class SerieCorrelativo(Base):
+    __tablename__ = 'serie_correlativos'
+
+    id = Column(Integer, primary_key=True)
+    empresa_id = Column(Integer, ForeignKey('empresas.id'), nullable=False)
+    tipo_documento = Column(Enum(TipoDocumento), nullable=False)
+    serie = Column(String(10), nullable=False)
+    numero_actual = Column(Integer, default=0)
+
+    activo = Column(Boolean, default=True)
+    fecha_registro = Column(DateTime, default=datetime.now)
+
+    # Relaciones
+    empresa = relationship("Empresa")
+
+# ============================================
 # TABLA: VENTAS
 # ============================================
 
@@ -970,6 +989,7 @@ class Alquiler(Base):
     cliente = relationship("Cliente")
     proyecto = relationship("Proyecto", back_populates="alquileres")
     detalles = relationship("AlquilerDetalle", back_populates="alquiler", cascade="all, delete-orphan")
+    evidencias = relationship("AlquilerEvidencia", back_populates="alquiler", cascade="all, delete-orphan")
 
 class AlquilerDetalle(Base):
     __tablename__ = 'alquiler_detalles'
@@ -997,6 +1017,21 @@ class AlquilerDetalle(Base):
     alquiler = relationship("Alquiler", back_populates="detalles")
     equipo = relationship("Equipo", back_populates="detalles_alquiler")
     operador = relationship("Operador", back_populates="alquileres_detalle")
+
+class AlquilerEvidencia(Base):
+    __tablename__ = 'alquiler_evidencias'
+
+    id = Column(Integer, primary_key=True)
+    alquiler_id = Column(Integer, ForeignKey('alquileres.id'), nullable=False)
+
+    tipo = Column(String(50), nullable=False) # SALIDA, RETORNO, INCIDENCIA
+    ruta_archivo = Column(String(500), nullable=False)
+    comentario = Column(Text)
+
+    fecha_registro = Column(DateTime, default=datetime.now)
+
+    # Relaciones
+    alquiler = relationship("Alquiler", back_populates="evidencias")
 
 # ============================================
 
