@@ -211,6 +211,7 @@ class DashboardWidget(QWidget):
                 
                 stock_map = {pid: (stock or 0) for pid, stock in stocks_query}
                 
+                criticos_count = 0
                 for prod in prods_con_minimo:
                     stock_actual = stock_map.get(prod.id, 0)
                     if stock_actual <= prod.stock_minimo:
