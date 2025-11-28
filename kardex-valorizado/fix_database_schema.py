@@ -39,6 +39,26 @@ def fix_schema():
             else:
                 print("'solicitante_id' already exists in 'requisiciones'.")
 
+            if 'fecha_requerida' not in columns:
+                print("Adding 'fecha_requerida' to 'requisiciones' table...")
+                connection.execute(text("ALTER TABLE requisiciones ADD COLUMN fecha_requerida DATE"))
+                print("Done.")
+
+            if 'numero_requisicion' not in columns:
+                print("Adding 'numero_requisicion' to 'requisiciones' table...")
+                connection.execute(text("ALTER TABLE requisiciones ADD COLUMN numero_requisicion VARCHAR(20) DEFAULT 'REQ-000'"))
+                print("Done.")
+
+            if 'observaciones' not in columns:
+                print("Adding 'observaciones' to 'requisiciones' table...")
+                connection.execute(text("ALTER TABLE requisiciones ADD COLUMN observaciones TEXT"))
+                print("Done.")
+
+            if 'estado' not in columns:
+                print("Adding 'estado' to 'requisiciones' table...")
+                connection.execute(text("ALTER TABLE requisiciones ADD COLUMN estado VARCHAR(20) DEFAULT 'PENDIENTE'"))
+                print("Done.")
+
         # 3. Fix Empresas table
         if 'empresas' in inspector.get_table_names():
             columns = [col['name'] for col in inspector.get_columns('empresas')]
@@ -101,6 +121,71 @@ def fix_schema():
                 print("Done.")
             else:
                 print("'tipo_documento' already exists in 'clientes'.")
+
+        # 6. Fix Ventas table
+        if 'ventas' in inspector.get_table_names():
+            columns = [col['name'] for col in inspector.get_columns('ventas')]
+            if 'fecha_registro_contable' not in columns:
+                print("Adding 'fecha_registro_contable' to 'ventas' table...")
+                connection.execute(text("ALTER TABLE ventas ADD COLUMN fecha_registro_contable DATE"))
+                print("Done.")
+            else:
+                print("'fecha_registro_contable' already exists in 'ventas'.")
+
+            if 'numero_documento' not in columns:
+                print("Adding 'numero_documento' to 'ventas' table...")
+                connection.execute(text("ALTER TABLE ventas ADD COLUMN numero_documento VARCHAR(20) DEFAULT 'PENDING-000'"))
+                print("Done.")
+
+            if 'numero_proceso' not in columns:
+                print("Adding 'numero_proceso' to 'ventas' table...")
+                connection.execute(text("ALTER TABLE ventas ADD COLUMN numero_proceso VARCHAR(20)"))
+                print("Done.")
+
+            if 'tipo_documento' not in columns:
+                print("Adding 'tipo_documento' to 'ventas' table...")
+                connection.execute(text("ALTER TABLE ventas ADD COLUMN tipo_documento VARCHAR(20) DEFAULT 'FACTURA'"))
+                print("Done.")
+
+            if 'moneda' not in columns:
+                print("Adding 'moneda' to 'ventas' table...")
+                connection.execute(text("ALTER TABLE ventas ADD COLUMN moneda VARCHAR(10) DEFAULT 'SOLES'"))
+                print("Done.")
+
+            if 'tipo_cambio' not in columns:
+                print("Adding 'tipo_cambio' to 'ventas' table...")
+                connection.execute(text("ALTER TABLE ventas ADD COLUMN tipo_cambio FLOAT DEFAULT 1.0"))
+                print("Done.")
+
+            if 'incluye_igv' not in columns:
+                print("Adding 'incluye_igv' to 'ventas' table...")
+                connection.execute(text("ALTER TABLE ventas ADD COLUMN incluye_igv BOOLEAN DEFAULT 0"))
+                print("Done.")
+
+            if 'igv_porcentaje' not in columns:
+                print("Adding 'igv_porcentaje' to 'ventas' table...")
+                connection.execute(text("ALTER TABLE ventas ADD COLUMN igv_porcentaje FLOAT DEFAULT 18.0"))
+                print("Done.")
+
+            if 'subtotal' not in columns:
+                print("Adding 'subtotal' to 'ventas' table...")
+                connection.execute(text("ALTER TABLE ventas ADD COLUMN subtotal FLOAT DEFAULT 0.0"))
+                print("Done.")
+
+            if 'igv' not in columns:
+                print("Adding 'igv' to 'ventas' table...")
+                connection.execute(text("ALTER TABLE ventas ADD COLUMN igv FLOAT DEFAULT 0.0"))
+                print("Done.")
+
+            if 'total' not in columns:
+                print("Adding 'total' to 'ventas' table...")
+                connection.execute(text("ALTER TABLE ventas ADD COLUMN total FLOAT DEFAULT 0.0"))
+                print("Done.")
+
+            if 'observaciones' not in columns:
+                print("Adding 'observaciones' to 'ventas' table...")
+                connection.execute(text("ALTER TABLE ventas ADD COLUMN observaciones TEXT"))
+                print("Done.")
         
         connection.commit()
 
