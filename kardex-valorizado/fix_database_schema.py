@@ -91,6 +91,16 @@ def fix_schema():
                 print("Adding 'observaciones' to 'alquileres' table...")
                 connection.execute(text("ALTER TABLE alquileres ADD COLUMN observaciones TEXT"))
                 print("Done.")
+
+        # 5. Fix Clientes table
+        if 'clientes' in inspector.get_table_names():
+            columns = [col['name'] for col in inspector.get_columns('clientes')]
+            if 'tipo_documento' not in columns:
+                print("Adding 'tipo_documento' to 'clientes' table...")
+                connection.execute(text("ALTER TABLE clientes ADD COLUMN tipo_documento VARCHAR(20) DEFAULT 'RUC'"))
+                print("Done.")
+            else:
+                print("'tipo_documento' already exists in 'clientes'.")
         
         connection.commit()
 
