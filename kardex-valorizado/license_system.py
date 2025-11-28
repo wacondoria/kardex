@@ -17,7 +17,7 @@ class LicenseManager:
     
     # CLAVE SECRETA - CÁMBIALA POR UNA ÚNICA TUYA
     # Para generar una nueva: Fernet.generate_key()
-    SECRET_KEY = b'tu_clave_secreta_super_segura_aqui_cambiar_esto='
+    SECRET_KEY = b'2kxvJxBjSpZbh06EhRiYkfgmrrV6DNY85-fRyHuuvMY='
     
     def __init__(self):
         self.cipher = Fernet(self.SECRET_KEY)
