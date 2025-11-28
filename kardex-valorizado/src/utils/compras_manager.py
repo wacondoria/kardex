@@ -3,14 +3,6 @@ ComprasManager - Lógica de negocio para la gestión de compras.
 Archivo: src/utils/compras_manager.py
 """
 
-from decimal import Decimal, ROUND_HALF_UP
-from sqlalchemy.orm import Session
-from models.database_model import (
-    Compra, CompraDetalle, Producto, Almacen, MovimientoStock,
-"""
-ComprasManager - Lógica de negocio para la gestión de compras.
-Archivo: src/utils/compras_manager.py
-"""
 
 from decimal import Decimal, ROUND_HALF_UP
 from sqlalchemy.orm import Session

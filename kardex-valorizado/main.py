@@ -810,6 +810,24 @@ class KardexMainWindow(QMainWindow):
                 self.tab_widget.setCurrentIndex(i)
                 return
 
+        ajustes_widget = AjustesInventarioWindow()
+        self.tab_widget.addTab(ajustes_widget, nombre_pestana)
+        self.tab_widget.setCurrentWidget(ajustes_widget)
+
+
+def main():
+    setup_exception_hook()
+    setup_logger()
+
+    # Verificar y actualizar BD
+    verificar_y_actualizar_db()
+
+    # --- Actualización automática de TC ---
+    session = obtener_session()
+    ruta_excel = "tipo_cambio.xlsx"
+    nombre_hoja = "Hoja1"
+
+    try:
         actualizar_tc_desde_excel(session, ruta_excel, nombre_hoja)
     except Exception as e:
         print(f"Error durante la actualización de TC: {e}")
