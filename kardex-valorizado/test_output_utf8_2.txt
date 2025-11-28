@@ -1,0 +1,72 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.13.5, pytest-9.0.1, pluggy-1.6.0
+rootdir: C:\Users\TUF\Documents\GitHub\kardex\kardex-valorizado
+plugins: anyio-4.11.0
+collected 2 items
+
+tests\test_inventory_service.py .F                                       [100%]
+
+================================== FAILURES ===================================
+________________________ test_get_valorization_report _________________________
+
+session = <sqlalchemy.orm.session.Session object at 0x0000024C93867230>
+sample_data = {'almacen': <models.database_model.Almacen object at 0x0000024C938DFC50>, 'categoria': <models.database_model.Categori...model.Empresa object at 0x0000024C938DFB10>, 'producto': <models.database_model.Producto object at 0x0000024C938DFED0>}
+
+    def test_get_valorization_report(session, sample_data):
+        """Test valorization report calculation"""
+        service = InventoryService(session)
+    
+        # Create some movements
+        # 1. Buy 10 units at 10.0
+        mov1 = MovimientoStock(
+            empresa_id=sample_data["empresa"].id,
+            producto_id=sample_data["producto"].id,
+            almacen_id=sample_data["almacen"].id,
+            tipo=TipoMovimiento.COMPRA,
+            fecha_documento=date(2023, 1, 1),
+            cantidad_entrada=10.0,
+            cantidad_salida=0.0,
+            costo_unitario=10.0,
+            costo_total=100.0,
+            saldo_cantidad=10.0,
+            saldo_costo_total=100.0
+        )
+        session.add(mov1)
+    
+        # 2. Buy 5 units at 20.0
+        mov2 = MovimientoStock(
+            empresa_id=sample_data["empresa"].id,
+            producto_id=sample_data["producto"].id,
+            almacen_id=sample_data["almacen"].id,
+            tipo=TipoMovimiento.COMPRA,
+            fecha_documento=date(2023, 1, 2),
+            cantidad_entrada=5.0,
+            cantidad_salida=0.0,
+            costo_unitario=20.0,
+            costo_total=100.0,
+            saldo_cantidad=15.0,
+            saldo_costo_total=200.0
+        )
+        session.add(mov2)
+        session.commit()
+    
+        # Get report
+        report = service.get_valorization_report(sample_data["empresa"].id)
+    
+        assert len(report) == 1
+        item = report[0]
+        assert item["codigo"] == sample_data["producto"].codigo
+>       assert item["stock_total"] == 15.0
+               ^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'stock_total'
+
+tests\test_inventory_service.py:56: KeyError
+============================== warnings summary ===============================
+src\models\database_model.py:12
+  C:\Users\TUF\Documents\GitHub\kardex\kardex-valorizado\src\models\database_model.py:12: MovedIn20Warning: The ``declarative_base()`` function is now available as sqlalchemy.orm.declarative_base(). (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    Base = declarative_base()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_inventory_service.py::test_get_valorization_report - KeyErr...
+=================== 1 failed, 1 passed, 1 warning in 0.17s ====================
