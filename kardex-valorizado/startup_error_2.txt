@@ -1,0 +1,33 @@
+2025-11-28 16:10:58,762 - KardexApp - INFO - Logger inicializado correctamente.
+INFO:KardexApp:Logger inicializado correctamente.
+Error: No se encontr¾ el archivo Excel en: tipo_cambio.xlsx
+2025-11-28 16:10:58,889 - KardexApp.ExceptionHandler - CRITICAL - Excepci¾n no controlada: 'charmap' codec can't encode character '\U0001f4a1' in position 0: character maps to <undefined>
+Traceback (most recent call last):
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 1010, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 950, in main
+    stylesheet = get_theme_stylesheet(base_path=base_path.as_posix())
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\utils\themes.py", line 364, in get_theme_stylesheet
+    print("\U0001f4a1 Tema claro detectado. Aplicando estilos claros.")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.2544.0_x64__qbz5n2kfra8p0\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f4a1' in position 0: character maps to <undefined>
+
+CRITICAL:KardexApp.ExceptionHandler:Excepci¾n no controlada: 'charmap' codec can't encode character '\U0001f4a1' in position 0: character maps to <undefined>
+Traceback (most recent call last):
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 1010, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 950, in main
+    stylesheet = get_theme_stylesheet(base_path=base_path.as_posix())
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\utils\themes.py", line 364, in get_theme_stylesheet
+    print("\U0001f4a1 Tema claro detectado. Aplicando estilos claros.")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.2544.0_x64__qbz5n2kfra8p0\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f4a1' in position 0: character maps to <undefined>
+
