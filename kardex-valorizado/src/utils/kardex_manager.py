@@ -11,6 +11,8 @@ class AnioCerradoError(Exception):
     """Excepción lanzada cuando se intenta modificar un periodo cerrado."""
     pass
 
+from utils.transaction import transaction
+
 class KardexManager:
     """
     Gestiona toda la lógica de negocio relacionada con el Kardex, incluyendo movimientos de stock,
@@ -25,28 +27,27 @@ class KardexManager:
         Recalcula los saldos de todos los productos para una empresa.
         Este es un proceso intensivo y debe ser usado con precaución.
         """
-        empresa = self.session.query(Empresa).get(empresa_id)
-        if not empresa:
-            raise ValueError("Empresa no encontrada")
+        with transaction(self.session):
+            empresa = self.session.query(Empresa).get(empresa_id)
+            if not empresa:
+                raise ValueError("Empresa no encontrada")
 
-        productos = self.session.query(Producto).all() # Simplificado: obtener todos los productos
+            productos = self.session.query(Producto).all() # Simplificado: obtener todos los productos
 
-        for producto in productos:
-            movimientos = self.session.query(MovimientoStock).filter_by(
-                producto_id=producto.id
-            ).order_by(MovimientoStock.fecha_documento, MovimientoStock.id).all()
+            for producto in productos:
+                movimientos = self.session.query(MovimientoStock).filter_by(
+                    producto_id=producto.id
+                ).order_by(MovimientoStock.fecha_documento, MovimientoStock.id).all()
 
-            if not movimientos:
-                continue
+                if not movimientos:
+                    continue
 
-            if empresa.metodo_valuacion == MetodoValuacion.PROMEDIO_PONDERADO:
-                self._calcular_promedio_ponderado(movimientos)
-            elif empresa.metodo_valuacion == MetodoValuacion.PEPS:
-                self._calcular_peps(movimientos)
-            elif empresa.metodo_valuacion == MetodoValuacion.UEPS:
-                self._calcular_ueps(movimientos)
-
-        self.session.commit()
+                if empresa.metodo_valuacion == MetodoValuacion.PROMEDIO_PONDERADO:
+                    self._calcular_promedio_ponderado(movimientos)
+                elif empresa.metodo_valuacion == MetodoValuacion.PEPS:
+                    self._calcular_peps(movimientos)
+                elif empresa.metodo_valuacion == MetodoValuacion.UEPS:
+                    self._calcular_ueps(movimientos)
 
     def _calcular_promedio_ponderado(self, movimientos):
         saldo_cantidad = Decimal('0')
