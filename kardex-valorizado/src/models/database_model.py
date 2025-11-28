@@ -86,6 +86,23 @@ class EstadoProyecto(enum.Enum):
     FINALIZADO = "FINALIZADO"
     CANCELADO = "CANCELADO"
 
+class EstadoCotizacion(enum.Enum):
+    BORRADOR = "BORRADOR"
+    ENVIADA = "ENVIADA"
+    APROBADA = "APROBADA"
+    RECHAZADA = "RECHAZADA"
+    CONVERTIDA_VENTA = "CONVERTIDA_VENTA"
+
+# ============================================
+# TABLA DE ASOCIACIÓN: USUARIO - EMPRESA
+# ============================================
+
+usuario_empresa = Table('usuario_empresa', Base.metadata,
+    Column('usuario_id', Integer, ForeignKey('usuarios.id'), primary_key=True),
+    Column('empresa_id', Integer, ForeignKey('empresas.id'), primary_key=True)
+)
+
+
 # ============================================
 # TABLA: AÑO CONTABLE
 # ============================================
@@ -470,6 +487,113 @@ class CompraDetalle(Base):
     
     cantidad = Column(Float, nullable=False)
     precio_unitario_sin_igv = Column(Float, nullable=False)
+    subtotal = Column(Float, nullable=False)
+    
+    # Relaciones
+    compra = relationship("Compra", back_populates="detalles")
+    producto = relationship("Producto")
+    almacen = relationship("Almacen")
+
+# ============================================
+# TABLA: VENTAS
+# ============================================
+
+class Venta(Base):
+    __tablename__ = 'ventas'
+    
+    id = Column(Integer, primary_key=True)
+    cliente_id = Column(Integer, ForeignKey('clientes.id'), nullable=False)
+    proyecto_id = Column(Integer, ForeignKey('proyectos.id'), nullable=True)
+    
+    # Documento
+    numero_proceso = Column(String(20), nullable=True)
+    tipo_documento = Column(Enum(TipoDocumento), default=TipoDocumento.FACTURA)
+    numero_documento = Column(String(20), nullable=False)
+    fecha = Column(Date, nullable=False)
+    
+    # Moneda y cambio
+    moneda = Column(Enum(Moneda), default=Moneda.SOLES)
+    tipo_cambio = Column(Float, default=1.0)
+    
+    # IGV
+    incluye_igv = Column(Boolean, default=False)
+    igv_porcentaje = Column(Float, default=18.0)
+    
+    # Totales
+    subtotal = Column(Float, nullable=False)
+    igv = Column(Float, default=0)
+    total = Column(Float, nullable=False)
+    
+    observaciones = Column(Text)
+    fecha_registro = Column(DateTime, default=datetime.now)
+    
+    # Relaciones
+    cliente = relationship("Cliente", back_populates="ventas")
+    proyecto = relationship("Proyecto", back_populates="ventas")
+    detalles = relationship("VentaDetalle", back_populates="venta", cascade="all, delete-orphan")
+
+class VentaDetalle(Base):
+    __tablename__ = 'venta_detalles'
+    
+    id = Column(Integer, primary_key=True)
+    venta_id = Column(Integer, ForeignKey('ventas.id'), nullable=False)
+    producto_id = Column(Integer, ForeignKey('productos.id'), nullable=False)
+    almacen_id = Column(Integer, ForeignKey('almacenes.id'), nullable=False)
+    
+    cantidad = Column(Float, nullable=False)
+    precio_unitario = Column(Float, nullable=False)
+    subtotal = Column(Float, nullable=False)
+    
+    # Relaciones
+    venta = relationship("Venta", back_populates="detalles")
+    producto = relationship("Producto")
+    almacen = relationship("Almacen")
+
+# ============================================
+# TABLA: REQUISICIONES
+# ============================================
+
+class Requisicion(Base):
+    __tablename__ = 'requisiciones'
+    
+    id = Column(Integer, primary_key=True)
+    proyecto_id = Column(Integer, ForeignKey('proyectos.id'), nullable=True)
+    solicitante_id = Column(Integer, ForeignKey('usuarios.id'), nullable=False)
+    
+    numero_requisicion = Column(String(20), nullable=False, unique=True)
+    fecha = Column(Date, nullable=False)
+    fecha_requerida = Column(Date, nullable=True)
+    
+    estado = Column(Enum(EstadoOrden), default=EstadoOrden.PENDIENTE)
+    observaciones = Column(Text)
+    
+    fecha_registro = Column(DateTime, default=datetime.now)
+    
+    # Relaciones
+    proyecto = relationship("Proyecto", back_populates="requisiciones")
+    solicitante = relationship("Usuario")
+    detalles = relationship("RequisicionDetalle", back_populates="requisicion", cascade="all, delete-orphan")
+
+class RequisicionDetalle(Base):
+    __tablename__ = 'requisicion_detalles'
+    
+    id = Column(Integer, primary_key=True)
+    requisicion_id = Column(Integer, ForeignKey('requisiciones.id'), nullable=False)
+    producto_id = Column(Integer, ForeignKey('productos.id'), nullable=False)
+    
+    cantidad = Column(Float, nullable=False)
+    cantidad_atendida = Column(Float, default=0)
+    
+    # Relaciones
+    requisicion = relationship("Requisicion", back_populates="detalles")
+    producto = relationship("Producto")
+
+# ============================================
+# TABLA: MOTIVOS DE AJUSTE
+# ============================================
+
+class MotivoAjuste(Base):
+    __tablename__ = 'motivos_ajuste'
 
     id = Column(Integer, primary_key=True)
     nombre = Column(String(100), unique=True, nullable=False)
@@ -518,15 +642,6 @@ class AjusteInventarioDetalle(Base):
 
     # Relaciones
     ajuste = relationship("AjusteInventario", back_populates="detalles")
-    producto = relationship("Producto")
-    almacen = relationship("Almacen")
-    almacen_id = Column(Integer, ForeignKey('almacenes.id'), nullable=False)
-    
-    cantidad = Column(Float, nullable=False)
-    lote = Column(String(50))  # Si el producto tiene lote
-    
-    # Relaciones
-    requisicion = relationship("Requisicion", back_populates="detalles")
     producto = relationship("Producto")
     almacen = relationship("Almacen")
 
@@ -581,121 +696,16 @@ class MovimientoStock(Base):
     fecha_registro = Column(DateTime, default=datetime.now)
 
     # Optimistic Locking
-    version_id = Column(Integer, nullable=False, default=1)
-    __mapper_args__ = {
-        "version_id_col": version_id
-    }
-    
-    # Relaciones
-    empresa = relationship("Empresa", back_populates="movimientos")
-    producto = relationship("Producto", back_populates="movimientos")
-    almacen = relationship("Almacen", back_populates="movimientos")
-
-# ============================================
-# TABLAS: ROLES Y PERMISOS
-# ============================================
-
-# Tabla de Asociación Rol-Permiso
-rol_permisos = Table('rol_permisos', Base.metadata,
-    Column('rol_id', Integer, ForeignKey('roles.id'), primary_key=True),
-    Column('permiso_id', Integer, ForeignKey('permisos.id'), primary_key=True)
-)
-
-class Rol(Base):
-    __tablename__ = 'roles'
-    id = Column(Integer, primary_key=True)
-    nombre = Column(String(50), unique=True, nullable=False)
-    descripcion = Column(String(255))
-
-    usuarios = relationship('Usuario', back_populates='rol')
-    permisos = relationship('Permiso', secondary=rol_permisos, back_populates='roles')
-
-    def __repr__(self):
-        return f"<Rol(nombre='{self.nombre}')>"
-
-class Permiso(Base):
-    __tablename__ = 'permisos'
-    id = Column(Integer, primary_key=True)
-    clave = Column(String(50), unique=True, nullable=False) # ej: "ver_modulo_compras"
-    descripcion = Column(String(255))
-
-    roles = relationship('Rol', secondary=rol_permisos, back_populates='permisos')
-
-    def __repr__(self):
-        return f"<Permiso(clave='{self.clave}')>"
-
-# ============================================
-# TABLA: USUARIOS
-# ============================================
-
-class Usuario(Base):
-    __tablename__ = 'usuarios'
-    
-    id = Column(Integer, primary_key=True)
-    username = Column(String(50), unique=True, nullable=False)
-    password_hash = Column(String(256), nullable=False)
-    
-    nombre_completo = Column(String(200), nullable=False)
-    email = Column(String(100))
-
-    rol_id = Column(Integer, ForeignKey('roles.id'))
-    rol = relationship("Rol", back_populates="usuarios")
-    
-    activo = Column(Boolean, default=True)
-    fecha_registro = Column(DateTime, default=datetime.now)
-    ultimo_acceso = Column(DateTime, nullable=True)
-    
-    # Relaciones
-    acciones_auditoria = relationship("Auditoria", back_populates="usuario")
-    empresas = relationship("Empresa", secondary="usuario_empresa", back_populates="usuarios")
-
-# ============================================
-# TABLA DE ASOCIACIÓN: USUARIO - EMPRESA
-# ============================================
-
-usuario_empresa = Table('usuario_empresa', Base.metadata,
-    Column('usuario_id', Integer, ForeignKey('usuarios.id'), primary_key=True),
-    Column('empresa_id', Integer, ForeignKey('empresas.id'), primary_key=True)
-)
-
-# ============================================
-# TABLA: AUDITORIA
-# ============================================
-
-class Auditoria(Base):
-    __tablename__ = 'auditoria'
-
-    id = Column(Integer, primary_key=True)
-    usuario_id = Column(Integer, ForeignKey('usuarios.id'), nullable=True)
-    accion = Column(String(50), nullable=False) # CREATE, UPDATE, DELETE, LOGIN, LOGOUT
-    tabla = Column(String(50), nullable=True)   # Nombre de la tabla afectada
-    registro_id = Column(Integer, nullable=True) # ID del registro afectado
-    detalles = Column(Text, nullable=True)      # JSON o texto con los cambios
-    fecha = Column(DateTime, default=datetime.now)
     ip_address = Column(String(50), nullable=True)
 
-    usuario = relationship("Usuario")
+    usuario = relationship("Usuario", back_populates="acciones_auditoria")
 
     def __repr__(self):
         return f"<Auditoria(accion='{self.accion}', tabla='{self.tabla}', fecha='{self.fecha}')>"
 
 # ============================================
-# TABLA: LICENCIA
+# TABLA: PROYECTOS
 # ============================================
-
-class Licencia(Base):
-    __tablename__ = 'licencia'
-    
-    id = Column(Integer, primary_key=True)
-    activo = Column(Boolean, default=True)
-    fecha_registro = Column(DateTime, default=datetime.now)
-    
-    # Relaciones
-    empresa = relationship("Empresa", back_populates="proyectos")
-    cliente = relationship("Cliente", back_populates="proyectos")
-    ventas = relationship("Venta", back_populates="proyecto")
-    alquileres = relationship("Alquiler", back_populates="proyecto")
-    requisiciones = relationship("Requisicion", back_populates="proyecto")
 
 class Proyecto(Base):
     __tablename__ = 'proyectos'
@@ -715,16 +725,187 @@ class Proyecto(Base):
     presupuesto_estimado = Column(Float, default=0.0)
     costo_real = Column(Float, default=0.0)
     
-    estado = Column(Enum(EstadoProyecto), default=EstadoProyecto.PLANIFICACION)
-    activo = Column(Boolean, default=True)
-    fecha_registro = Column(DateTime, default=datetime.now)
-    
     # Relaciones
     empresa = relationship("Empresa", back_populates="proyectos")
     cliente = relationship("Cliente", back_populates="proyectos")
     ventas = relationship("Venta", back_populates="proyecto")
     alquileres = relationship("Alquiler", back_populates="proyecto")
     requisiciones = relationship("Requisicion", back_populates="proyecto")
+
+# ============================================
+
+class Cotizacion(Base):
+    __tablename__ = 'cotizaciones'
+
+    id = Column(Integer, primary_key=True)
+    cliente_id = Column(Integer, ForeignKey('clientes.id'), nullable=False)
+    
+    numero_cotizacion = Column(String(20), unique=True, nullable=False) # Ej: COT-0001
+    fecha_emision = Column(Date, nullable=False)
+    fecha_vencimiento = Column(Date, nullable=True)
+    
+    moneda = Column(Enum(Moneda), default=Moneda.SOLES)
+    tipo_cambio = Column(Float, default=1.0)
+    
+    subtotal = Column(Float, nullable=False)
+    igv = Column(Float, default=0)
+    total = Column(Float, nullable=False)
+    
+    estado = Column(Enum(EstadoCotizacion), default=EstadoCotizacion.BORRADOR)
+    observaciones = Column(Text)
+    
+    fecha_registro = Column(DateTime, default=datetime.now)
+    
+    # Relaciones
+    cliente = relationship("Cliente")
+    detalles = relationship("CotizacionDetalle", back_populates="cotizacion", cascade="all, delete-orphan")
+
+class CotizacionDetalle(Base):
+    __tablename__ = 'cotizacion_detalles'
+
+    id = Column(Integer, primary_key=True)
+    cotizacion_id = Column(Integer, ForeignKey('cotizaciones.id'), nullable=False)
+    producto_id = Column(Integer, ForeignKey('productos.id'), nullable=False)
+    
+    cantidad = Column(Float, nullable=False)
+    precio_unitario = Column(Float, nullable=False)
+    subtotal = Column(Float, nullable=False)
+    
+    # Relaciones
+    cotizacion = relationship("Cotizacion", back_populates="detalles")
+    producto = relationship("Producto")
+
+# ============================================
+# NUEVAS TABLAS: ALQUILER Y OPERACIONES
+# ============================================
+
+class Operador(Base):
+    __tablename__ = 'operadores'
+    
+    id = Column(Integer, primary_key=True)
+    nombre_completo = Column(String(200), nullable=False)
+    dni = Column(String(8), unique=True, nullable=False)
+    licencia_conducir = Column(String(20))
+    categoria_licencia = Column(String(10))
+    fecha_vencimiento_licencia = Column(Date)
+    telefono = Column(String(20))
+    
+    activo = Column(Boolean, default=True)
+    
+    # Relaciones
+    alquileres_detalle = relationship("AlquilerDetalle", back_populates="operador")
+
+class ChecklistModel(Base):
+    __tablename__ = 'checklist_modelos'
+    
+    id = Column(Integer, primary_key=True)
+    nombre = Column(String(100), nullable=False) # Ej: "Checklist Camioneta 4x4"
+    descripcion = Column(Text)
+    tipo_equipo_id = Column(Integer, ForeignKey('tipos_equipo.id'), nullable=True)
+    
+    activo = Column(Boolean, default=True)
+    
+    items = relationship("ChecklistItem", back_populates="modelo", cascade="all, delete-orphan")
+
+class ChecklistItem(Base):
+    __tablename__ = 'checklist_items'
+    
+    id = Column(Integer, primary_key=True)
+    modelo_id = Column(Integer, ForeignKey('checklist_modelos.id'), nullable=False)
+    descripcion = Column(String(200), nullable=False) # Ej: "Nivel de Aceite"
+    orden = Column(Integer, default=0)
+    es_critico = Column(Boolean, default=False)
+    
+    modelo = relationship("ChecklistModel", back_populates="items")
+
+class ChecklistInstancia(Base):
+    __tablename__ = 'checklist_instancias'
+    
+    id = Column(Integer, primary_key=True)
+    equipo_id = Column(Integer, ForeignKey('equipos.id'), nullable=False)
+    alquiler_detalle_id = Column(Integer, ForeignKey('alquiler_detalles.id'), nullable=True)
+    usuario_id = Column(Integer, ForeignKey('usuarios.id'), nullable=False)
+    
+    fecha = Column(DateTime, default=datetime.now)
+    tipo = Column(String(20)) # SALIDA, RETORNO, MANTENIMIENTO
+    observaciones = Column(Text)
+    aprobado = Column(Boolean, default=True)
+    
+    detalles = relationship("ChecklistInstanciaDetalle", back_populates="instancia", cascade="all, delete-orphan")
+
+class ChecklistInstanciaDetalle(Base):
+    __tablename__ = 'checklist_instancia_detalles'
+    
+    id = Column(Integer, primary_key=True)
+    instancia_id = Column(Integer, ForeignKey('checklist_instancias.id'), nullable=False)
+    item_descripcion = Column(String(200)) # Copia del item por si cambia el modelo
+    estado = Column(String(20)) # OK, MALO, NO_APLICA
+    observacion = Column(String(200))
+    
+    instancia = relationship("ChecklistInstancia", back_populates="detalles")
+
+class Alquiler(Base):
+    __tablename__ = 'alquileres'
+    
+    id = Column(Integer, primary_key=True)
+    cliente_id = Column(Integer, ForeignKey('clientes.id'), nullable=False)
+    proyecto_id = Column(Integer, ForeignKey('proyectos.id'), nullable=True)
+    
+    numero_contrato = Column(String(20), unique=True, nullable=False)
+    fecha_inicio = Column(Date, nullable=False)
+    fecha_fin_estimada = Column(Date, nullable=False)
+    fecha_fin_real = Column(Date, nullable=True)
+    
+    moneda = Column(Enum(Moneda), default=Moneda.SOLES)
+    tipo_cambio = Column(Float, default=1.0)
+    
+    subtotal = Column(Float, default=0.0)
+    igv = Column(Float, default=0.0)
+    total = Column(Float, default=0.0)
+    
+    estado = Column(Enum(EstadoAlquiler), default=EstadoAlquiler.COTIZACION)
+    observaciones = Column(Text)
+    
+    fecha_registro = Column(DateTime, default=datetime.now)
+    
+    # Relaciones
+    cliente = relationship("Cliente")
+    proyecto = relationship("Proyecto", back_populates="alquileres")
+    detalles = relationship("AlquilerDetalle", back_populates="alquiler", cascade="all, delete-orphan")
+
+class AlquilerDetalle(Base):
+    __tablename__ = 'alquiler_detalles'
+    
+    id = Column(Integer, primary_key=True)
+    alquiler_id = Column(Integer, ForeignKey('alquileres.id'), nullable=False)
+    equipo_id = Column(Integer, ForeignKey('equipos.id'), nullable=False)
+    
+    fecha_salida = Column(DateTime, nullable=True)
+    fecha_retorno = Column(DateTime, nullable=True)
+    
+    # Horómetros
+    horometro_salida = Column(Float, default=0.0)
+    horometro_retorno = Column(Float, default=0.0)
+    horas_uso = Column(Float, default=0.0)
+    
+    # Precios
+    precio_unitario = Column(Float, nullable=False) # Tarifa diaria
+    total = Column(Float, nullable=False)
+    
+    # Operador
+    operador_id = Column(Integer, ForeignKey('operadores.id'), nullable=True)
+    
+    # Sub-alquiler
+    es_subalquiler = Column(Boolean, default=False)
+    proveedor_subalquiler_id = Column(Integer, ForeignKey('proveedores.id'), nullable=True)
+    costo_subalquiler = Column(Float, default=0.0)
+    
+    # Relaciones
+    alquiler = relationship("Alquiler", back_populates="detalles")
+    equipo = relationship("Equipo", back_populates="detalles_alquiler")
+    operador = relationship("Operador", back_populates="alquileres_detalle")
+    proveedor_subalquiler = relationship("Proveedor")
+
 
 def poblar_datos_iniciales(session):
     """
@@ -877,7 +1058,7 @@ if __name__ == "__main__":
     poblar_datos_iniciales(session)
     session.close()
     
-    print("\n" + "=" * 60)
+    print("\\n" + "=" * 60)
     print("[OK] Base de datos lista para usar")
     print("  Usuario: admin")
     print("  Password: admin123")
