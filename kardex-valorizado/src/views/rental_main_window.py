@@ -5,7 +5,11 @@ from views.equipos_window import EquiposWindow
 from views.kits_window import KitsWindow
 from views.alquileres_window import AlquileresWindow
 from views.configuracion_alquiler_window import ConfiguracionAlquilerDialog
+from views.checklist_window import ChecklistManagerWidget
+from views.operadores_window import OperadoresWindow
+from views.rental_dashboard import RentalDashboardWidget
 from views.proyectos_window import ProyectosWindow
+from views.rental_gantt import RentalGanttWidget
 
 class RentalMainWindow(QMainWindow):
     """
@@ -56,6 +60,10 @@ class RentalMainWindow(QMainWindow):
         btn_config.clicked.connect(self.abrir_configuracion)
         toolbar.addWidget(btn_config)
         
+        btn_operadores = QPushButton("👷 Operadores")
+        btn_operadores.clicked.connect(self.abrir_operadores)
+        toolbar.addWidget(btn_operadores)
+        
         toolbar.addSeparator()
         
         btn_volver = QPushButton("🔙 Volver al Menú Principal")
@@ -68,11 +76,17 @@ class RentalMainWindow(QMainWindow):
         self.tab_widget.tabCloseRequested.connect(self.cerrar_pestana)
         self.setCentralWidget(self.tab_widget)
         
-        # Dashboard Placeholder
-        dashboard = QLabel("Dashboard de Alquileres (En Construcción)")
-        dashboard.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        dashboard.setStyleSheet("font-size: 20px; color: #7f8c8d;")
-        self.tab_widget.addTab(dashboard, "📊 Dashboard")
+        # Dashboard
+        self.dashboard_widget = RentalDashboardWidget()
+        self.tab_widget.addTab(self.dashboard_widget, "📊 Dashboard")
+        
+        # Gantt Chart (Disponibilidad)
+        self.gantt_widget = RentalGanttWidget()
+        self.tab_widget.addTab(self.gantt_widget, "📅 Disponibilidad")
+
+        # Checklists
+        self.checklist_widget = ChecklistManagerWidget()
+        self.tab_widget.addTab(self.checklist_widget, "📋 Checklists")
 
     def cerrar_pestana(self, index):
         widget = self.tab_widget.widget(index)
@@ -127,3 +141,14 @@ class RentalMainWindow(QMainWindow):
     def abrir_configuracion(self):
         dialog = ConfiguracionAlquilerDialog(self)
         dialog.exec()
+
+    def abrir_operadores(self):
+        nombre_pestana = "Gestión de Operadores"
+        for i in range(self.tab_widget.count()):
+            if self.tab_widget.tabText(i) == nombre_pestana:
+                self.tab_widget.setCurrentIndex(i)
+                return
+        
+        operadores_widget = OperadoresWindow()
+        self.tab_widget.addTab(operadores_widget, nombre_pestana)
+        self.tab_widget.setCurrentWidget(operadores_widget)
