@@ -1,0 +1,11 @@
+2025-11-28 17:17:50,411 - KardexApp - INFO - Logger inicializado correctamente.
+INFO:KardexApp:Logger inicializado correctamente.
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Error: No se encontr¾ el archivo Excel en: tipo_cambio.xlsx
+Tema claro detectado. Aplicando estilos claros.
+Usuario 'admin' detectado: Se aseguraron permisos crÝticos.
