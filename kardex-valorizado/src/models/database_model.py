@@ -495,6 +495,25 @@ class CompraDetalle(Base):
     almacen = relationship("Almacen")
 
 # ============================================
+# TABLA: SERIE CORRELATIVO
+# ============================================
+
+class SerieCorrelativo(Base):
+    __tablename__ = 'serie_correlativos'
+
+    id = Column(Integer, primary_key=True)
+    empresa_id = Column(Integer, ForeignKey('empresas.id'), nullable=False)
+    tipo_documento = Column(Enum(TipoDocumento), nullable=False)
+    serie = Column(String(10), nullable=False)
+    numero_actual = Column(Integer, default=0)
+
+    activo = Column(Boolean, default=True)
+    fecha_registro = Column(DateTime, default=datetime.now)
+
+    # Relaciones
+    empresa = relationship("Empresa")
+
+# ============================================
 # TABLA: VENTAS
 # ============================================
 

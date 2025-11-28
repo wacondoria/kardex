@@ -11,6 +11,10 @@ from PyQt6.QtGui import QFont
 import sys
 from pathlib import Path
 from datetime import datetime
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from services.backup_manager import BackupManager
+
+class BackupWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.backup_manager = BackupManager()

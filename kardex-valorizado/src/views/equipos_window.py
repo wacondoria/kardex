@@ -19,6 +19,13 @@ from utils.styles import STYLE_CUADRADO_VERDE, STYLE_CHECKBOX_CUSTOM
 
 # Try import ProveedorDialog from proveedores_window
 try:
+    from views.proveedores_window import ProveedorDialog
+except ImportError:
+    ProveedorDialog = None
+
+def generar_codigo_equipo(session, prefijo):
+    """Genera un código correlativo para equipos (Ej: GENER-000001)"""
+    ultimo = session.query(Equipo).filter(
         Equipo.codigo.like(f"{prefijo}-%")
     ).order_by(Equipo.codigo.desc()).first()
 

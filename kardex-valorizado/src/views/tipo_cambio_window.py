@@ -122,8 +122,8 @@ class TipoCambioDialog(QDialog):
         ))
         self.date_fecha.setEnabled(False)  # No se puede cambiar la fecha
 
-        self.spn_compra.setValue(self.tipo_cambio.precio_compra)
-        self.spn_venta.setValue(self.tipo_cambio.precio_venta)
+        self.spn_compra.setValue(self.tipo_cambio.compra)
+        self.spn_venta.setValue(self.tipo_cambio.venta)
 
     def guardar(self):
         """Guarda el tipo de cambio"""
@@ -161,8 +161,8 @@ class TipoCambioDialog(QDialog):
 
                 tc = TipoCambio(
                     fecha=fecha,
-                    precio_compra=precio_compra,
-                    precio_venta=precio_venta
+                    compra=precio_compra,
+                    venta=precio_venta
                     # activo=True es el default en el modelo (asumiendo)
                 )
 
@@ -170,8 +170,8 @@ class TipoCambioDialog(QDialog):
                 mensaje = "Tipo de cambio registrado exitosamente"
             else:
                 self.tipo_cambio = self.session.merge(self.tipo_cambio) # Asegurarse de que esté en sesión
-                self.tipo_cambio.precio_compra = precio_compra
-                self.tipo_cambio.precio_venta = precio_venta
+                self.tipo_cambio.compra = precio_compra
+                self.tipo_cambio.venta = precio_venta
                 mensaje = "Tipo de cambio actualizado exitosamente"
 
             self.session.commit()
@@ -322,11 +322,11 @@ class TipoCambioWindow(QWidget):
             item_fecha.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.tabla.setItem(row, 0, item_fecha)
 
-            item_compra = QTableWidgetItem(f"S/ {tc.precio_compra:.3f}")
+            item_compra = QTableWidgetItem(f"S/ {tc.compra:.3f}")
             item_compra.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             self.tabla.setItem(row, 1, item_compra)
 
-            item_venta = QTableWidgetItem(f"S/ {tc.precio_venta:.3f}")
+            item_venta = QTableWidgetItem(f"S/ {tc.venta:.3f}")
             item_venta.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             self.tabla.setItem(row, 2, item_venta)
 
