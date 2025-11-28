@@ -1,56 +1,46 @@
+from datetime import date, timedelta
 import sys
 from pathlib import Path
-from datetime import datetime, timedelta
+from sqlalchemy import inspect
 
-# Agregar src al path
+# Add src to path
 sys.path.insert(0, str(Path(__file__).parent / 'src'))
 
-from models.database_model import obtener_session, Licencia
-from license_system import LicenseManager
+from models.database_model import obtener_session, Licencia, engine
 
-def activar_licencia():
-    print("🔐 Iniciando activación de licencia...")
-    
+def activate_license():
+    # Ensure table exists
+    inspector = inspect(engine)
+    if not inspector.has_table('licencias'):
+        print("Table 'licencias' not found. Creating it...")
+        Licencia.__table__.create(engine)
+        print("Table 'licencias' created.")
+
     session = obtener_session()
-    manager = LicenseManager()
-    
     try:
-        # 1. Generar nueva licencia válida por 1 año
-        fecha_vencimiento = datetime.now() + timedelta(days=365)
-        codigo_licencia = manager.generar_licencia(
-            fecha_vencimiento=fecha_vencimiento,
-            empresa="Usuario Registrado",
-            notas="Licencia activada automáticamente"
-        )
+        # Deactivate existing licenses
+        existing_licenses = session.query(Licencia).filter_by(activa=True).all()
+        for license in existing_licenses:
+            license.activa = False
+            print(f"Deactivated existing license ID: {license.id}")
         
-        print(f"✓ Licencia generada correctamente.")
-        print(f"  Vence: {fecha_vencimiento.strftime('%d/%m/%Y')}")
-        
-        # 2. Desactivar licencias anteriores
-        licencias_activas = session.query(Licencia).filter_by(activa=True).all()
-        for lic in licencias_activas:
-            lic.activa = False
-            print(f"  - Licencia anterior desactivada (ID: {lic.id})")
-        
-        # 3. Insertar nueva licencia
-        nueva_licencia = Licencia(
-            codigo_licencia=codigo_licencia,
-            fecha_vencimiento=fecha_vencimiento.date(),
+        # Create new license
+        new_license = Licencia(
+            clave="LICENSE-KEY-12345",
+            fecha_inicio=date.today(),
+            fecha_vencimiento=date.today() + timedelta(days=365),
             activa=True,
-            fecha_instalacion=datetime.now()
+            tipo="STANDARD"
         )
-        
-        session.add(nueva_licencia)
+        session.add(new_license)
         session.commit()
-        
-        print("\n✨ ¡LICENCIA ACTIVADA CON ÉXITO! ✨")
-        print("El sistema ahora está plenamente operativo.")
+        print(f"Successfully activated new license. Valid until: {new_license.fecha_vencimiento}")
         
     except Exception as e:
         session.rollback()
-        print(f"\n❌ Error al activar licencia: {e}")
+        print(f"Error activating license: {e}")
     finally:
         session.close()
 
 if __name__ == "__main__":
-    activar_licencia()
+    activate_license()
