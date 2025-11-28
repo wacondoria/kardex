@@ -1,3 +1,701 @@
 2025-11-27 21:20:28,914 - KardexApp - INFO - Logger inicializado correctamente.
 2025-11-27 21:21:15,319 - KardexApp - INFO - Logger inicializado correctamente.
 2025-11-27 21:27:14,307 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 15:58:14,667 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 16:05:34,244 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 16:05:44,644 - KardexApp.ExceptionHandler - CRITICAL - Excepción no controlada: type object 'Operador' has no attribute 'vencimiento_licencia'
+Traceback (most recent call last):
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 991, in on_module_selected
+    launch_rental()
+    ~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 979, in launch_rental
+    main_window = RentalMainWindow()
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\rental_main_window.py", line 28, in __init__
+    self.init_ui()
+    ~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\rental_main_window.py", line 80, in init_ui
+    self.dashboard_widget = RentalDashboardWidget()
+                            ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\rental_dashboard.py", line 38, in __init__
+    self.load_alerts()
+    ~~~~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\rental_dashboard.py", line 112, in load_alerts
+    Operador.vencimiento_licencia != None
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: type object 'Operador' has no attribute 'vencimiento_licencia'. Did you mean: 'fecha_vencimiento_licencia'?
+
+2025-11-28 16:06:01,256 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 16:06:18,999 - KardexApp.ExceptionHandler - CRITICAL - Excepción no controlada: (sqlite3.OperationalError) no such column: requisiciones.solicitante_id
+[SQL: SELECT requisiciones.id AS requisiciones_id, requisiciones.proyecto_id AS requisiciones_proyecto_id, requisiciones.solicitante_id AS requisiciones_solicitante_id, requisiciones.numero_requisicion AS requisiciones_numero_requisicion, requisiciones.fecha AS requisiciones_fecha, requisiciones.fecha_requerida AS requisiciones_fecha_requerida, requisiciones.estado AS requisiciones_estado, requisiciones.observaciones AS requisiciones_observaciones, requisiciones.fecha_registro AS requisiciones_fecha_registro 
+FROM requisiciones 
+WHERE requisiciones.fecha >= ? AND requisiciones.fecha <= ? ORDER BY requisiciones.fecha DESC]
+[parameters: ('2025-01-01', '2025-12-31')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Traceback (most recent call last):
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such column: requisiciones.solicitante_id
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 792, in abrir_requisiciones
+    requisiciones_widget = RequisicionesWindow(user_info=self.user_info)
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\requisiciones_window.py", line 695, in __init__
+    self.cargar_requisiciones()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\requisiciones_window.py", line 796, in cargar_requisiciones
+    ).order_by(Requisicion.fecha.desc()).all()
+                                         ~~~^^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\query.py", line 2704, in all
+    return self._iter().all()  # type: ignore
+           ~~~~~~~~~~^^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\query.py", line 2857, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+        params,
+        ^^^^^^^
+        execution_options={"_sa_orm_load_options": self.load_options},
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\session.py", line 2351, in execute
+    return self._execute_internal(
+           ~~~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+    ...<4 lines>...
+        _add_event=_add_event,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\session.py", line 2249, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self,
+        ^^^^^
+    ...<4 lines>...
+        conn,
+        ^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+        statement, params or {}, execution_options=execution_options
+    )
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1419, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\sql\elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: requisiciones.solicitante_id
+[SQL: SELECT requisiciones.id AS requisiciones_id, requisiciones.proyecto_id AS requisiciones_proyecto_id, requisiciones.solicitante_id AS requisiciones_solicitante_id, requisiciones.numero_requisicion AS requisiciones_numero_requisicion, requisiciones.fecha AS requisiciones_fecha, requisiciones.fecha_requerida AS requisiciones_fecha_requerida, requisiciones.estado AS requisiciones_estado, requisiciones.observaciones AS requisiciones_observaciones, requisiciones.fecha_registro AS requisiciones_fecha_registro 
+FROM requisiciones 
+WHERE requisiciones.fecha >= ? AND requisiciones.fecha <= ? ORDER BY requisiciones.fecha DESC]
+[parameters: ('2025-01-01', '2025-12-31')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+2025-11-28 16:06:24,160 - KardexApp.ExceptionHandler - CRITICAL - Excepción no controlada: Entity namespace for "empresas" has no property "activo"
+Traceback (most recent call last):
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\sql\base.py", line 2215, in _entity_namespace_key
+    return getattr(ns, key)  # type: ignore
+AttributeError: type object 'Empresa' has no attribute 'activo'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 829, in abrir_valorizacion
+    valorizacion_widget = ValorizacionWindow()
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\valorizacion_window.py", line 41, in __init__
+    self.cargar_empresas()
+    ~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\valorizacion_window.py", line 169, in cargar_empresas
+    empresas = self.session.query(Empresa).filter_by(activo=True).all()
+               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\query.py", line 1992, in filter_by
+    _entity_namespace_key(from_entity, key) == value
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\sql\base.py", line 2217, in _entity_namespace_key
+    raise exc.InvalidRequestError(
+        'Entity namespace for "%s" has no property "%s"' % (entity, key)
+    ) from err
+sqlalchemy.exc.InvalidRequestError: Entity namespace for "empresas" has no property "activo"
+
+2025-11-28 16:08:39,368 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 16:08:39,481 - KardexApp.ExceptionHandler - CRITICAL - Excepción no controlada: 'charmap' codec can't encode character '\U0001f4a1' in position 0: character maps to <undefined>
+Traceback (most recent call last):
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 1010, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 950, in main
+    stylesheet = get_theme_stylesheet(base_path=base_path.as_posix())
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\utils\themes.py", line 364, in get_theme_stylesheet
+    print("💡 Tema claro detectado. Aplicando estilos claros.")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.2544.0_x64__qbz5n2kfra8p0\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f4a1' in position 0: character maps to <undefined>
+
+2025-11-28 16:10:24,866 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 16:10:35,403 - KardexApp.ExceptionHandler - CRITICAL - Excepción no controlada: type object 'Operador' has no attribute 'vencimiento_licencia'
+Traceback (most recent call last):
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 991, in on_module_selected
+    launch_rental()
+    ~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 979, in launch_rental
+    main_window = RentalMainWindow()
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\rental_main_window.py", line 28, in __init__
+    self.init_ui()
+    ~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\rental_main_window.py", line 80, in init_ui
+    self.dashboard_widget = RentalDashboardWidget()
+                            ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\rental_dashboard.py", line 38, in __init__
+    self.load_alerts()
+    ~~~~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\rental_dashboard.py", line 112, in load_alerts
+    Operador.vencimiento_licencia != None
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: type object 'Operador' has no attribute 'vencimiento_licencia'. Did you mean: 'fecha_vencimiento_licencia'?
+
+2025-11-28 16:10:58,762 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 16:10:58,889 - KardexApp.ExceptionHandler - CRITICAL - Excepción no controlada: 'charmap' codec can't encode character '\U0001f4a1' in position 0: character maps to <undefined>
+Traceback (most recent call last):
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 1010, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 950, in main
+    stylesheet = get_theme_stylesheet(base_path=base_path.as_posix())
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\utils\themes.py", line 364, in get_theme_stylesheet
+    print("💡 Tema claro detectado. Aplicando estilos claros.")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.2544.0_x64__qbz5n2kfra8p0\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f4a1' in position 0: character maps to <undefined>
+
+2025-11-28 16:14:19,910 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 16:14:28,184 - KardexApp.ExceptionHandler - CRITICAL - Excepción no controlada: type object 'Operador' has no attribute 'vencimiento_licencia'
+Traceback (most recent call last):
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 991, in on_module_selected
+    launch_rental()
+    ~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 979, in launch_rental
+    main_window = RentalMainWindow()
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\rental_main_window.py", line 28, in __init__
+    self.init_ui()
+    ~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\rental_main_window.py", line 80, in init_ui
+    self.dashboard_widget = RentalDashboardWidget()
+                            ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\rental_dashboard.py", line 38, in __init__
+    self.load_alerts()
+    ~~~~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\rental_dashboard.py", line 112, in load_alerts
+    Operador.vencimiento_licencia != None
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: type object 'Operador' has no attribute 'vencimiento_licencia'. Did you mean: 'fecha_vencimiento_licencia'?
+
+2025-11-28 16:15:02,440 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 16:19:14,660 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 16:19:24,744 - KardexApp.ExceptionHandler - CRITICAL - Excepción no controlada: type object 'Operador' has no attribute 'vencimiento_licencia'
+Traceback (most recent call last):
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 991, in on_module_selected
+    launch_rental()
+    ~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 979, in launch_rental
+    main_window = RentalMainWindow()
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\rental_main_window.py", line 28, in __init__
+    self.init_ui()
+    ~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\rental_main_window.py", line 80, in init_ui
+    self.dashboard_widget = RentalDashboardWidget()
+                            ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\rental_dashboard.py", line 38, in __init__
+    self.load_alerts()
+    ~~~~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\rental_dashboard.py", line 112, in load_alerts
+    Operador.vencimiento_licencia != None
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: type object 'Operador' has no attribute 'vencimiento_licencia'. Did you mean: 'fecha_vencimiento_licencia'?
+
+2025-11-28 16:30:04,675 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 16:30:16,299 - KardexApp.ExceptionHandler - CRITICAL - Excepción no controlada: type object 'Operador' has no attribute 'vencimiento_licencia'
+Traceback (most recent call last):
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 991, in on_module_selected
+    launch_rental()
+    ~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 979, in launch_rental
+    main_window = RentalMainWindow()
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\rental_main_window.py", line 28, in __init__
+    self.init_ui()
+    ~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\rental_main_window.py", line 80, in init_ui
+    self.dashboard_widget = RentalDashboardWidget()
+                            ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\rental_dashboard.py", line 38, in __init__
+    self.load_alerts()
+    ~~~~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\rental_dashboard.py", line 112, in load_alerts
+    Operador.vencimiento_licencia != None
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: type object 'Operador' has no attribute 'vencimiento_licencia'. Did you mean: 'fecha_vencimiento_licencia'?
+
+2025-11-28 16:32:48,643 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 16:33:03,893 - KardexApp.ExceptionHandler - CRITICAL - Excepción no controlada: (sqlite3.OperationalError) no such column: alquileres.numero_contrato
+[SQL: SELECT alquileres.id AS alquileres_id, alquileres.cliente_id AS alquileres_cliente_id, alquileres.proyecto_id AS alquileres_proyecto_id, alquileres.numero_contrato AS alquileres_numero_contrato, alquileres.fecha_inicio AS alquileres_fecha_inicio, alquileres.fecha_fin_estimada AS alquileres_fecha_fin_estimada, alquileres.fecha_fin_real AS alquileres_fecha_fin_real, alquileres.moneda AS alquileres_moneda, alquileres.tipo_cambio AS alquileres_tipo_cambio, alquileres.subtotal AS alquileres_subtotal, alquileres.igv AS alquileres_igv, alquileres.total AS alquileres_total, alquileres.estado AS alquileres_estado, alquileres.observaciones AS alquileres_observaciones, alquileres.fecha_registro AS alquileres_fecha_registro 
+FROM alquileres 
+WHERE alquileres.estado = ? AND alquileres.fecha_fin_estimada IS NOT NULL]
+[parameters: ('ACTIVO',)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Traceback (most recent call last):
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such column: alquileres.numero_contrato
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 991, in on_module_selected
+    launch_rental()
+    ~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 979, in launch_rental
+    main_window = RentalMainWindow()
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\rental_main_window.py", line 28, in __init__
+    self.init_ui()
+    ~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\rental_main_window.py", line 80, in init_ui
+    self.dashboard_widget = RentalDashboardWidget()
+                            ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\rental_dashboard.py", line 38, in __init__
+    self.load_alerts()
+    ~~~~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\rental_dashboard.py", line 142, in load_alerts
+    ).all()
+      ~~~^^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\query.py", line 2704, in all
+    return self._iter().all()  # type: ignore
+           ~~~~~~~~~~^^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\query.py", line 2857, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+        params,
+        ^^^^^^^
+        execution_options={"_sa_orm_load_options": self.load_options},
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\session.py", line 2351, in execute
+    return self._execute_internal(
+           ~~~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+    ...<4 lines>...
+        _add_event=_add_event,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\session.py", line 2249, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self,
+        ^^^^^
+    ...<4 lines>...
+        conn,
+        ^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+        statement, params or {}, execution_options=execution_options
+    )
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1419, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\sql\elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: alquileres.numero_contrato
+[SQL: SELECT alquileres.id AS alquileres_id, alquileres.cliente_id AS alquileres_cliente_id, alquileres.proyecto_id AS alquileres_proyecto_id, alquileres.numero_contrato AS alquileres_numero_contrato, alquileres.fecha_inicio AS alquileres_fecha_inicio, alquileres.fecha_fin_estimada AS alquileres_fecha_fin_estimada, alquileres.fecha_fin_real AS alquileres_fecha_fin_real, alquileres.moneda AS alquileres_moneda, alquileres.tipo_cambio AS alquileres_tipo_cambio, alquileres.subtotal AS alquileres_subtotal, alquileres.igv AS alquileres_igv, alquileres.total AS alquileres_total, alquileres.estado AS alquileres_estado, alquileres.observaciones AS alquileres_observaciones, alquileres.fecha_registro AS alquileres_fecha_registro 
+FROM alquileres 
+WHERE alquileres.estado = ? AND alquileres.fecha_fin_estimada IS NOT NULL]
+[parameters: ('ACTIVO',)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+2025-11-28 16:47:24,784 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 16:47:39,996 - KardexApp.ExceptionHandler - CRITICAL - Excepción no controlada: (sqlite3.OperationalError) no such column: alquileres.fecha_fin_real
+[SQL: SELECT alquileres.id AS alquileres_id, alquileres.cliente_id AS alquileres_cliente_id, alquileres.proyecto_id AS alquileres_proyecto_id, alquileres.numero_contrato AS alquileres_numero_contrato, alquileres.fecha_inicio AS alquileres_fecha_inicio, alquileres.fecha_fin_estimada AS alquileres_fecha_fin_estimada, alquileres.fecha_fin_real AS alquileres_fecha_fin_real, alquileres.moneda AS alquileres_moneda, alquileres.tipo_cambio AS alquileres_tipo_cambio, alquileres.subtotal AS alquileres_subtotal, alquileres.igv AS alquileres_igv, alquileres.total AS alquileres_total, alquileres.estado AS alquileres_estado, alquileres.observaciones AS alquileres_observaciones, alquileres.fecha_registro AS alquileres_fecha_registro 
+FROM alquileres 
+WHERE alquileres.estado = ? AND alquileres.fecha_fin_estimada IS NOT NULL]
+[parameters: ('ACTIVO',)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Traceback (most recent call last):
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such column: alquileres.fecha_fin_real
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 991, in on_module_selected
+    launch_rental()
+    ~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 979, in launch_rental
+    main_window = RentalMainWindow()
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\rental_main_window.py", line 28, in __init__
+    self.init_ui()
+    ~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\rental_main_window.py", line 80, in init_ui
+    self.dashboard_widget = RentalDashboardWidget()
+                            ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\rental_dashboard.py", line 38, in __init__
+    self.load_alerts()
+    ~~~~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\rental_dashboard.py", line 142, in load_alerts
+    ).all()
+      ~~~^^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\query.py", line 2704, in all
+    return self._iter().all()  # type: ignore
+           ~~~~~~~~~~^^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\query.py", line 2857, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+        params,
+        ^^^^^^^
+        execution_options={"_sa_orm_load_options": self.load_options},
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\session.py", line 2351, in execute
+    return self._execute_internal(
+           ~~~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+    ...<4 lines>...
+        _add_event=_add_event,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\session.py", line 2249, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self,
+        ^^^^^
+    ...<4 lines>...
+        conn,
+        ^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+        statement, params or {}, execution_options=execution_options
+    )
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1419, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\sql\elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: alquileres.fecha_fin_real
+[SQL: SELECT alquileres.id AS alquileres_id, alquileres.cliente_id AS alquileres_cliente_id, alquileres.proyecto_id AS alquileres_proyecto_id, alquileres.numero_contrato AS alquileres_numero_contrato, alquileres.fecha_inicio AS alquileres_fecha_inicio, alquileres.fecha_fin_estimada AS alquileres_fecha_fin_estimada, alquileres.fecha_fin_real AS alquileres_fecha_fin_real, alquileres.moneda AS alquileres_moneda, alquileres.tipo_cambio AS alquileres_tipo_cambio, alquileres.subtotal AS alquileres_subtotal, alquileres.igv AS alquileres_igv, alquileres.total AS alquileres_total, alquileres.estado AS alquileres_estado, alquileres.observaciones AS alquileres_observaciones, alquileres.fecha_registro AS alquileres_fecha_registro 
+FROM alquileres 
+WHERE alquileres.estado = ? AND alquileres.fecha_fin_estimada IS NOT NULL]
+[parameters: ('ACTIVO',)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+2025-11-28 16:47:49,866 - KardexApp.ExceptionHandler - CRITICAL - Excepción no controlada: 'EquipoDialog' object has no attribute 'cargar_almacenes'
+Traceback (most recent call last):
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\base_crud_view.py", line 198, in create_item
+    self._open_dialog(None)
+    ~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\equipos_window.py", line 1034, in _open_dialog
+    dialog = EquipoDialog(self, equipo=item)
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\equipos_window.py", line 204, in __init__
+    self.init_ui()
+    ~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\equipos_window.py", line 324, in init_ui
+    self.cargar_almacenes()
+    ^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'EquipoDialog' object has no attribute 'cargar_almacenes'
+
+2025-11-28 16:48:00,739 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 16:48:36,272 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 16:48:46,115 - KardexApp.ExceptionHandler - CRITICAL - Excepción no controlada: (sqlite3.OperationalError) no such column: alquileres.fecha_fin_real
+[SQL: SELECT alquileres.id AS alquileres_id, alquileres.cliente_id AS alquileres_cliente_id, alquileres.proyecto_id AS alquileres_proyecto_id, alquileres.numero_contrato AS alquileres_numero_contrato, alquileres.fecha_inicio AS alquileres_fecha_inicio, alquileres.fecha_fin_estimada AS alquileres_fecha_fin_estimada, alquileres.fecha_fin_real AS alquileres_fecha_fin_real, alquileres.moneda AS alquileres_moneda, alquileres.tipo_cambio AS alquileres_tipo_cambio, alquileres.subtotal AS alquileres_subtotal, alquileres.igv AS alquileres_igv, alquileres.total AS alquileres_total, alquileres.estado AS alquileres_estado, alquileres.observaciones AS alquileres_observaciones, alquileres.fecha_registro AS alquileres_fecha_registro 
+FROM alquileres 
+WHERE alquileres.estado = ? AND alquileres.fecha_fin_estimada IS NOT NULL]
+[parameters: ('ACTIVO',)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Traceback (most recent call last):
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such column: alquileres.fecha_fin_real
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 991, in on_module_selected
+    launch_rental()
+    ~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 979, in launch_rental
+    main_window = RentalMainWindow()
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\rental_main_window.py", line 28, in __init__
+    self.init_ui()
+    ~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\rental_main_window.py", line 80, in init_ui
+    self.dashboard_widget = RentalDashboardWidget()
+                            ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\rental_dashboard.py", line 38, in __init__
+    self.load_alerts()
+    ~~~~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\rental_dashboard.py", line 142, in load_alerts
+    ).all()
+      ~~~^^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\query.py", line 2704, in all
+    return self._iter().all()  # type: ignore
+           ~~~~~~~~~~^^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\query.py", line 2857, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+        params,
+        ^^^^^^^
+        execution_options={"_sa_orm_load_options": self.load_options},
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\session.py", line 2351, in execute
+    return self._execute_internal(
+           ~~~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+    ...<4 lines>...
+        _add_event=_add_event,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\session.py", line 2249, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self,
+        ^^^^^
+    ...<4 lines>...
+        conn,
+        ^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+        statement, params or {}, execution_options=execution_options
+    )
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1419, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\sql\elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: alquileres.fecha_fin_real
+[SQL: SELECT alquileres.id AS alquileres_id, alquileres.cliente_id AS alquileres_cliente_id, alquileres.proyecto_id AS alquileres_proyecto_id, alquileres.numero_contrato AS alquileres_numero_contrato, alquileres.fecha_inicio AS alquileres_fecha_inicio, alquileres.fecha_fin_estimada AS alquileres_fecha_fin_estimada, alquileres.fecha_fin_real AS alquileres_fecha_fin_real, alquileres.moneda AS alquileres_moneda, alquileres.tipo_cambio AS alquileres_tipo_cambio, alquileres.subtotal AS alquileres_subtotal, alquileres.igv AS alquileres_igv, alquileres.total AS alquileres_total, alquileres.estado AS alquileres_estado, alquileres.observaciones AS alquileres_observaciones, alquileres.fecha_registro AS alquileres_fecha_registro 
+FROM alquileres 
+WHERE alquileres.estado = ? AND alquileres.fecha_fin_estimada IS NOT NULL]
+[parameters: ('ACTIVO',)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+2025-11-28 16:50:57,367 - KardexApp - INFO - Logger inicializado correctamente.
