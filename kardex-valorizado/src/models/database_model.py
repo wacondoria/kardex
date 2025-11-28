@@ -131,6 +131,7 @@ class Empresa(Base):
     direccion = Column(Text)
     telefono = Column(String(20))
     email = Column(String(100))
+    activo = Column(Boolean, default=True)
     
     # Configuración
     metodo_valuacion = Column(Enum(MetodoValuacion), default=MetodoValuacion.PROMEDIO_PONDERADO)
