@@ -79,6 +79,13 @@ class EstadoAlquiler(enum.Enum):
     FINALIZADO = "FINALIZADO"
     ANULADO = "ANULADO"
 
+class EstadoProyecto(enum.Enum):
+    PLANIFICACION = "PLANIFICACION"
+    EJECUCION = "EJECUCION"
+    PAUSADO = "PAUSADO"
+    FINALIZADO = "FINALIZADO"
+    CANCELADO = "CANCELADO"
+
 # ============================================
 # TABLA: AÑO CONTABLE
 # ============================================
@@ -111,19 +118,12 @@ class Empresa(Base):
     # Configuración
     metodo_valuacion = Column(Enum(MetodoValuacion), default=MetodoValuacion.PROMEDIO_PONDERADO)
     
-    # Estado
-    activo = Column(Boolean, default=True)
-    fecha_registro = Column(DateTime, default=datetime.now)
-    
     # Relaciones
     almacenes = relationship("Almacen", back_populates="empresa")
     movimientos = relationship("MovimientoStock", back_populates="empresa")
     ordenes_compra = relationship("OrdenCompra", back_populates="empresa")
     usuarios = relationship("Usuario", secondary="usuario_empresa", back_populates="empresas")
-
-# ============================================
-# TABLA: ALMACENES
-# ============================================
+    proyectos = relationship("Proyecto", back_populates="empresa")
 
 class Almacen(Base):
     __tablename__ = 'almacenes'
@@ -136,7 +136,6 @@ class Almacen(Base):
     descripcion = Column(Text)
     ubicacion = Column(String(200))
     
-    # Estado
     es_principal = Column(Boolean, default=False)
     activo = Column(Boolean, default=True)
     fecha_registro = Column(DateTime, default=datetime.now)
@@ -156,10 +155,6 @@ class Categoria(Base):
     
     # Relaciones
     productos = relationship("Producto", back_populates="categoria")
-
-# ============================================
-# TABLA: PRODUCTOS
-# ============================================
 
 class Producto(Base):
     __tablename__ = 'productos'
@@ -201,6 +196,23 @@ class Producto(Base):
     conversiones = relationship("ConversionUnidad", back_populates="producto")
     movimientos = relationship("MovimientoStock", back_populates="producto")
     detalles_orden = relationship("OrdenCompraDetalle", back_populates="producto")
+
+# ============================================
+# TABLA: FOTOS DE PRODUCTOS
+# ============================================
+
+class ConversionUnidad(Base):
+    __tablename__ = 'conversiones_unidad'
+    
+    id = Column(Integer, primary_key=True)
+    producto_id = Column(Integer, ForeignKey('productos.id'), nullable=False)
+    
+    unidad_origen = Column(String(10), nullable=False)
+    unidad_destino = Column(String(10), nullable=False)
+    factor_conversion = Column(Float, nullable=False)
+    
+    # Relaciones
+    producto = relationship("Producto", back_populates="conversiones")
 
 # ============================================
 # TABLA: FOTOS DE PRODUCTOS
@@ -318,155 +330,41 @@ class KitComponente(Base):
     tipo_equipo = relationship("TipoEquipo", back_populates="componentes")
     equipo_default = relationship("Equipo", back_populates="componentes_kit")
 
-# ============================================
-# TABLA: ALQUILERES (GUÍAS DE SALIDA / CONTRATOS)
-# ============================================
-
-class Alquiler(Base):
-    __tablename__ = 'alquileres'
-
-    id = Column(Integer, primary_key=True)
-    cliente_id = Column(Integer, ForeignKey('clientes.id'), nullable=False)
-    
-    numero_guia = Column(String(20), nullable=True)
-    fecha_inicio = Column(Date, nullable=False)
-    fecha_fin_estimada = Column(Date, nullable=True)
-    fecha_devolucion_real = Column(Date, nullable=True)
-    
-    ubicacion_obra = Column(String(200))
-    estado = Column(Enum(EstadoAlquiler), default=EstadoAlquiler.COTIZACION)
-    
-    observaciones = Column(Text)
-    fecha_registro = Column(DateTime, default=datetime.now)
-    usuario_id = Column(Integer, ForeignKey('usuarios.id'))
-    
-
-    cliente = relationship("Cliente")
-    usuario = relationship("Usuario")
-    detalles = relationship("AlquilerDetalle", back_populates="alquiler", cascade="all, delete-orphan")
-    evidencias = relationship("AlquilerEvidencia", back_populates="alquiler", cascade="all, delete-orphan")
-
-class AlquilerDetalle(Base):
-    __tablename__ = 'alquiler_detalles'
-
-    id = Column(Integer, primary_key=True)
-    alquiler_id = Column(Integer, ForeignKey('alquileres.id'), nullable=False)
-    
-    # Puede ser un Equipo (Nivel A, B, C) o un Producto (Nivel D - Consumible)
-    equipo_id = Column(Integer, ForeignKey('equipos.id'), nullable=True)
-    producto_id = Column(Integer, ForeignKey('productos.id'), nullable=True)
-    
-    cantidad = Column(Float, default=1.0)
-    
-    # Datos de salida
-    horometro_salida = Column(Float, nullable=True)
-    
-    # Datos de retorno
-    cantidad_devuelta = Column(Float, default=0.0)
-    horometro_retorno = Column(Float, nullable=True)
-    estado_retorno = Column(String(100)) # Bueno, Dañado, Perdido
-    
-    # Precios
-    tarifa_diaria = Column(Float, default=0.0) # Para equipos
-    precio_venta = Column(Float, default=0.0) # Para consumibles
-    
-    alquiler = relationship("Alquiler", back_populates="detalles")
-    equipo = relationship("Equipo", back_populates="detalles_alquiler")
-    producto = relationship("Producto")
-
-class AlquilerEvidencia(Base):
-    __tablename__ = 'alquiler_evidencias'
-    
-    id = Column(Integer, primary_key=True)
-    alquiler_id = Column(Integer, ForeignKey('alquileres.id'), nullable=False)
-    
-    ruta_archivo = Column(String(500), nullable=False)
-    tipo = Column(String(50)) # SALIDA, RETORNO
-    comentario = Column(Text)
-    
-    fecha_registro = Column(DateTime, default=datetime.now)
-    
-    alquiler = relationship("Alquiler", back_populates="evidencias")
-
-class ConversionUnidad(Base):
-    __tablename__ = 'conversiones_unidad'
-    
-    id = Column(Integer, primary_key=True)
-    producto_id = Column(Integer, ForeignKey('productos.id'), nullable=False)
-    
-    unidad_origen = Column(String(10), nullable=False)
-    unidad_destino = Column(String(10), nullable=False)
-    factor_conversion = Column(Float, nullable=False)  # ej: 1 saco = 50 kg
-    
-    fecha_registro = Column(DateTime, default=datetime.now)
-    
-    # Relaciones
-    producto = relationship("Producto", back_populates="conversiones")
 class Proveedor(Base):
     __tablename__ = 'proveedores'
     
     id = Column(Integer, primary_key=True)
-    
-    # Datos obligatorios
     ruc = Column(String(11), unique=True, nullable=False)
     razon_social = Column(String(200), nullable=False)
-    
-    # Datos opcionales
     direccion = Column(Text)
     telefono = Column(String(20))
     email = Column(String(100))
     contacto = Column(String(100))
     
-    # Estado
     activo = Column(Boolean, default=True)
     fecha_registro = Column(DateTime, default=datetime.now)
     
     # Relaciones
-    compras = relationship("Compra", back_populates="proveedor")
     ordenes_compra = relationship("OrdenCompra", back_populates="proveedor")
-
-# ============================================
-# TABLA: CLIENTES
-# ============================================
+    compras = relationship("Compra", back_populates="proveedor")
 
 class Cliente(Base):
     __tablename__ = 'clientes'
-
+    
     id = Column(Integer, primary_key=True)
-
-    # Datos obligatorios
-    ruc_o_dni = Column(String(11), unique=True, nullable=False)
-    razon_social_o_nombre = Column(String(200), nullable=False)
-
-    # Datos opcionales
+    tipo_documento = Column(String(20), default="RUC") # RUC, DNI
+    numero_documento = Column(String(20), unique=True, nullable=False)
+    razon_social = Column(String(200), nullable=False)
     direccion = Column(Text)
     telefono = Column(String(20))
     email = Column(String(100))
-    contacto = Column(String(100))
-
-    # Estado
+    
     activo = Column(Boolean, default=True)
     fecha_registro = Column(DateTime, default=datetime.now)
-    # Relaciones
-    ventas = relationship("Venta", back_populates="cliente")
-
-# ============================================
-# TABLA: TIPO DE CAMBIO
-# ============================================
-
-class TipoCambio(Base):
-    __tablename__ = 'tipo_cambio'
     
-    id = Column(Integer, primary_key=True)
-    fecha = Column(Date, unique=True, nullable=False)
-    precio_compra = Column(Float, nullable=False)
-    precio_venta = Column(Float, nullable=False)
-    activo = Column(Boolean, default=True, nullable=False)
-    fecha_registro = Column(DateTime, default=datetime.now)
-
-# ============================================
-# TABLA: ÓRDENES DE COMPRA
-# ============================================
+    # Relaciones
+    proyectos = relationship("Proyecto", back_populates="cliente")
+    ventas = relationship("Venta", back_populates="cliente")
 
 class OrdenCompra(Base):
     __tablename__ = 'ordenes_compra'
@@ -497,10 +395,6 @@ class OrdenCompra(Base):
     proveedor = relationship("Proveedor", back_populates="ordenes_compra")
     detalles = relationship("OrdenCompraDetalle", back_populates="orden")
     compras_generadas = relationship("Compra", back_populates="orden_compra")
-
-# ============================================
-# TABLA: DETALLE ORDEN DE COMPRA
-# ============================================
 
 class OrdenCompraDetalle(Base):
     __tablename__ = 'orden_compra_detalles'
@@ -576,117 +470,6 @@ class CompraDetalle(Base):
     
     cantidad = Column(Float, nullable=False)
     precio_unitario_sin_igv = Column(Float, nullable=False)
-    subtotal = Column(Float, nullable=False)
-    
-    lote = Column(String(50))
-    fecha_vencimiento = Column(Date, nullable=True)
-    
-    # Relaciones (AÑADIDAS/CORREGIDAS)
-    compra = relationship("Compra", back_populates="detalles")
-    producto = relationship("Producto")
-    almacen = relationship("Almacen")
-
-# ============================================
-# TABLA: VENTAS
-# ============================================
-
-class Venta(Base):
-    __tablename__ = 'ventas'
-
-    id = Column(Integer, primary_key=True)
-    cliente_id = Column(Integer, ForeignKey('clientes.id'), nullable=False)
-
-    # Documento
-    numero_proceso = Column(String(20), nullable=True)
-    tipo_documento = Column(Enum(TipoDocumento), default=TipoDocumento.BOLETA)
-    serie_documento = Column(String(4), nullable=False) # F001, B001
-    correlativo_documento = Column(String(8), nullable=False) # 00000001
-
-    fecha = Column(Date, nullable=False) # Fecha de Emisión (Kardex)
-    fecha_registro_contable = Column(Date, nullable=True) # Fecha Periodo Contable
-
-    # Moneda y cambio
-    moneda = Column(Enum(Moneda), default=Moneda.SOLES)
-    tipo_cambio = Column(Float, default=1.0)
-
-    # IGV
-    incluye_igv = Column(Boolean, default=False)
-    igv_porcentaje = Column(Float, default=18.0)
-
-    # Totales
-    subtotal = Column(Float, nullable=False)
-    igv = Column(Float, default=0)
-    total = Column(Float, nullable=False)
-
-    # Descuentos
-    descuento_global = Column(Float, default=0)
-
-    ruta_archivo = Column(String(500))
-    observaciones = Column(Text)
-    fecha_registro = Column(DateTime, default=datetime.now)
-
-    # Relaciones
-    cliente = relationship("Cliente", back_populates="ventas")
-    detalles = relationship("VentaDetalle", back_populates="venta", cascade="all, delete-orphan")
-
-# ============================================
-# TABLA: DETALLE DE VENTA
-# ============================================
-
-class VentaDetalle(Base):
-    __tablename__ = 'venta_detalles'
-
-    id = Column(Integer, primary_key=True)
-    venta_id = Column(Integer, ForeignKey('ventas.id'), nullable=False)
-    producto_id = Column(Integer, ForeignKey('productos.id'), nullable=False)
-    almacen_id = Column(Integer, ForeignKey('almacenes.id'), nullable=False)
-
-    cantidad = Column(Float, nullable=False)
-    precio_unitario_sin_igv = Column(Float, nullable=False)
-    subtotal = Column(Float, nullable=False)
-
-    # Relaciones
-    venta = relationship("Venta", back_populates="detalles")
-    producto = relationship("Producto")
-    almacen = relationship("Almacen")
-
-# ============================================
-# TABLA: SERIES Y CORRELATIVOS
-# ============================================
-
-class SerieCorrelativo(Base):
-    __tablename__ = 'serie_correlativos'
-
-    id = Column(Integer, primary_key=True)
-    empresa_id = Column(Integer, ForeignKey('empresas.id'), nullable=False)
-
-    tipo_documento = Column(Enum(TipoDocumento), nullable=False)
-    serie = Column(String(4), nullable=False) # F001, B001
-    correlativo_actual = Column(Integer, default=0, nullable=False)
-
-    activo = Column(Boolean, default=True)
-
-    # Relaciones
-    empresa = relationship("Empresa")
-
-class Destino(Base):
-    __tablename__ = 'destinos'
-    
-    id = Column(Integer, primary_key=True)
-    nombre = Column(String(100), unique=True, nullable=False)
-    descripcion = Column(Text)
-    activo = Column(Boolean, default=True)
-    fecha_registro = Column(DateTime, default=datetime.now)
-    
-    # Relaciones
-    requisiciones = relationship("Requisicion", back_populates="destino")
-
-# ============================================
-# TABLA: MOTIVOS DE AJUSTE
-# ============================================
-
-class MotivoAjuste(Base):
-    __tablename__ = 'motivos_ajuste'
 
     id = Column(Integer, primary_key=True)
     nombre = Column(String(100), unique=True, nullable=False)
@@ -737,38 +520,6 @@ class AjusteInventarioDetalle(Base):
     ajuste = relationship("AjusteInventario", back_populates="detalles")
     producto = relationship("Producto")
     almacen = relationship("Almacen")
-
-# ============================================
-# TABLA: REQUISICIONES
-# ============================================
-
-class Requisicion(Base):
-    __tablename__ = 'requisiciones'
-    
-    id = Column(Integer, primary_key=True)
-    destino_id = Column(Integer, ForeignKey('destinos.id'), nullable=False)
-    
-    numero_requisicion = Column(String(20), nullable=False)
-    fecha = Column(Date, nullable=False)
-    solicitante = Column(String(100))
-    observaciones = Column(Text)
-    
-    fecha_registro = Column(DateTime, default=datetime.now)
-    
-    # Relaciones
-    destino = relationship("Destino", back_populates="requisiciones")
-    detalles = relationship("RequisicionDetalle", back_populates="requisicion")
-
-# ============================================
-# TABLA: DETALLE REQUISICIÓN
-# ============================================
-
-class RequisicionDetalle(Base):
-    __tablename__ = 'requisicion_detalles'
-    
-    id = Column(Integer, primary_key=True)
-    requisicion_id = Column(Integer, ForeignKey('requisiciones.id'), nullable=False)
-    producto_id = Column(Integer, ForeignKey('productos.id'), nullable=False)
     almacen_id = Column(Integer, ForeignKey('almacenes.id'), nullable=False)
     
     cantidad = Column(Float, nullable=False)
@@ -936,10 +687,44 @@ class Licencia(Base):
     __tablename__ = 'licencia'
     
     id = Column(Integer, primary_key=True)
-    codigo_licencia = Column(Text, nullable=False)
-    fecha_instalacion = Column(DateTime, default=datetime.now)
-    fecha_vencimiento = Column(Date, nullable=False)
-    activa = Column(Boolean, default=True)
+    activo = Column(Boolean, default=True)
+    fecha_registro = Column(DateTime, default=datetime.now)
+    
+    # Relaciones
+    empresa = relationship("Empresa", back_populates="proyectos")
+    cliente = relationship("Cliente", back_populates="proyectos")
+    ventas = relationship("Venta", back_populates="proyecto")
+    alquileres = relationship("Alquiler", back_populates="proyecto")
+    requisiciones = relationship("Requisicion", back_populates="proyecto")
+
+class Proyecto(Base):
+    __tablename__ = 'proyectos'
+
+    id = Column(Integer, primary_key=True)
+    empresa_id = Column(Integer, ForeignKey('empresas.id'), nullable=False)
+    cliente_id = Column(Integer, ForeignKey('clientes.id'), nullable=False)
+    
+    codigo = Column(String(20), unique=True, nullable=False)
+    nombre = Column(String(200), nullable=False)
+    descripcion = Column(Text)
+    
+    fecha_inicio = Column(Date, nullable=False)
+    fecha_fin_estimada = Column(Date, nullable=True)
+    fecha_fin_real = Column(Date, nullable=True)
+    
+    presupuesto_estimado = Column(Float, default=0.0)
+    costo_real = Column(Float, default=0.0)
+    
+    estado = Column(Enum(EstadoProyecto), default=EstadoProyecto.PLANIFICACION)
+    activo = Column(Boolean, default=True)
+    fecha_registro = Column(DateTime, default=datetime.now)
+    
+    # Relaciones
+    empresa = relationship("Empresa", back_populates="proyectos")
+    cliente = relationship("Cliente", back_populates="proyectos")
+    ventas = relationship("Venta", back_populates="proyecto")
+    alquileres = relationship("Alquiler", back_populates="proyecto")
+    requisiciones = relationship("Requisicion", back_populates="proyecto")
 
 def poblar_datos_iniciales(session):
     """
@@ -1042,19 +827,6 @@ def poblar_datos_iniciales(session):
         if primera_empresa:
             admin.empresas.append(primera_empresa)
             
-        session.add(admin)
-    
-    session.commit()
-    print("[OK] Datos iniciales verificados/creados")
-
-# ============================================
-# FUNCIONES DE INICIALIZACIÓN
-# ============================================
-
-# Import Config here if not at top
-try:
-    from utils.config import Config
-except ImportError:
     pass
 
 def crear_base_datos(db_url=None):
