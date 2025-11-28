@@ -64,8 +64,8 @@ class OperadorDialog(QDialog):
         self.txt_dni.setText(self.operador.dni)
         self.txt_licencia.setText(self.operador.licencia_conducir or "")
         self.txt_categoria.setText(self.operador.categoria_licencia or "")
-        if self.operador.vencimiento_licencia:
-            self.date_vencimiento.setDate(self.operador.vencimiento_licencia)
+        if self.operador.fecha_vencimiento_licencia:
+            self.date_vencimiento.setDate(self.operador.fecha_vencimiento_licencia)
         self.chk_activo.setChecked(self.operador.activo)
 
     def guardar(self):
@@ -89,7 +89,7 @@ class OperadorDialog(QDialog):
                 
             self.operador.licencia_conducir = self.txt_licencia.text().strip()
             self.operador.categoria_licencia = self.txt_categoria.text().strip()
-            self.operador.vencimiento_licencia = self.date_vencimiento.date().toPyDate()
+            self.operador.fecha_vencimiento_licencia = self.date_vencimiento.date().toPyDate()
             self.operador.activo = self.chk_activo.isChecked()
             
             self.session.commit()
@@ -115,10 +115,10 @@ class OperadoresWindow(BaseCRUDView):
         self.tabla.setItem(row, 3, QTableWidgetItem(item.licencia_conducir or "-"))
         
         venc = "-"
-        if item.vencimiento_licencia:
-            venc = item.vencimiento_licencia.strftime("%d/%m/%Y")
+        if item.fecha_vencimiento_licencia:
+            venc = item.fecha_vencimiento_licencia.strftime("%d/%m/%Y")
             # Check if expired
-            if item.vencimiento_licencia < date.today():
+            if item.fecha_vencimiento_licencia < date.today():
                 venc += " (VENCIDO)"
                 
         item_venc = QTableWidgetItem(venc)
