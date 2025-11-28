@@ -4,18 +4,6 @@ Archivo: src/views/productos_window.py
 (Versión refactorizada usando BaseCRUDView)
 """
 
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-                             QPushButton, QTableWidget, QTableWidgetItem,
-                             QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox,
-                             QTextEdit, QCheckBox, QMessageBox, QDialog,
-                             QFormLayout, QHeaderView, QGroupBox, QFileDialog)
-from PyQt6.QtCore import Qt, pyqtSignal, QEvent, QRegularExpression
-from PyQt6.QtGui import QFont, QKeyEvent, QRegularExpressionValidator
-import sys
-from pathlib import Path
-
-try:
-    from openpyxl import Workbook, load_workbook
     from openpyxl.styles import Font, Alignment, PatternFill
     from openpyxl.worksheet.datavalidation import DataValidation
 except ImportError:
@@ -36,6 +24,8 @@ except ImportError:
 from utils.widgets import UpperLineEdit, SearchableComboBox
 from utils.button_utils import style_button
 from views.base_crud_view import BaseCRUDView
+from pydantic import ValidationError
+from schemas.product_schema import ProductCreate
 
 UNIDADES_SUNAT = [
     "UND - Unidad", "KG - Kilogramo", "GR - Gramo", "LT - Litro",
@@ -364,26 +354,46 @@ class ProductoDialog(QDialog):
         nombre = self.cmb_nombre.currentText().strip()
         categoria_id = self.cmb_categoria.currentData()
         unidad = self.cmb_unidad.currentText().split(' - ')[0]
-
-        if len(codigo_prefijo) != 5:
-            QMessageBox.warning(self, "Error", "El prefijo del código debe tener 5 caracteres")
-            return
-
-        if not nombre:
-            QMessageBox.warning(self, "Error", "El nombre es obligatorio")
-            return
-
-        if not categoria_id:
-            QMessageBox.warning(self, "Error", "Debe seleccionar una categoría")
-            return
-
+        
+        # Preparar datos para validación Pydantic
+        # Nota: Para validación, necesitamos un código temporal si es nuevo, 
+        # o el código real si ya existe.
+        # Sin embargo, la generación del código depende de la DB.
+        # Validaremos primero los campos básicos y luego el objeto completo.
+        
         try:
+            # 1. Generar código si es nuevo (necesario para el esquema)
             if not self.producto:
-                codigo_completo = generar_codigo_completo(self.session, codigo_prefijo)
+                if len(codigo_prefijo) != 5:
+                     QMessageBox.warning(self, "Error", "El prefijo del código debe tener 5 caracteres")
+                     return
+                codigo_final = generar_codigo_completo(self.session, codigo_prefijo)
+            else:
+                codigo_final = self.producto.codigo
 
-                existe = self.session.query(Producto).filter_by(codigo=codigo_completo).first()
+            # 2. Construir diccionario de datos
+            data = {
+                "codigo": codigo_final,
+                "nombre": nombre,
+                "descripcion": self.txt_descripcion.toPlainText(),
+                "categoria_id": categoria_id if categoria_id else 0, # 0 fallará validación gt=0
+                "unidad_medida": unidad,
+                "stock_minimo": self.spn_stock_min.value(),
+                "precio_venta": self.spn_precio_venta.value() if self.spn_precio_venta.value() > 0 else None,
+                "tiene_lote": self.chk_tiene_lote.isChecked(),
+                "tiene_serie": self.chk_tiene_serie.isChecked(),
+                "dias_vencimiento": self.spn_dias_vencimiento.value() if self.chk_tiene_vencimiento.isChecked() else None
+            }
+
+            # 3. Validar con Pydantic
+            producto_valido = ProductCreate(**data)
+            
+            # 4. Lógica de negocio (DB)
+            if not self.producto:
+                # Verificar duplicados (Código ya generado, pero verificar concurrencia)
+                existe = self.session.query(Producto).filter_by(codigo=codigo_final).first()
                 if existe:
-                    QMessageBox.warning(self, "Error", f"El código {codigo_completo} ya existe. Intente de nuevo (el correlativo se actualizará).")
+                    QMessageBox.warning(self, "Error", f"El código {codigo_final} ya existe. Intente de nuevo.")
                     self.actualizar_siguiente_correlativo(codigo_prefijo)
                     return
 
@@ -397,16 +407,16 @@ class ProductoDialog(QDialog):
                         return
 
                 producto = Producto(
-                    codigo=codigo_completo,
-                    nombre=nombre,
-                    descripcion=self.txt_descripcion.toPlainText(),
-                    categoria_id=categoria_id,
-                    unidad_medida=unidad,
-                    stock_minimo=self.spn_stock_min.value(),
-                    precio_venta=self.spn_precio_venta.value() if self.spn_precio_venta.value() > 0 else None,
-                    tiene_lote=self.chk_tiene_lote.isChecked(),
-                    tiene_serie=self.chk_tiene_serie.isChecked(),
-                    dias_vencimiento=self.spn_dias_vencimiento.value() if self.chk_tiene_vencimiento.isChecked() else None
+                    codigo=producto_valido.codigo,
+                    nombre=producto_valido.nombre,
+                    descripcion=producto_valido.descripcion,
+                    categoria_id=producto_valido.categoria_id,
+                    unidad_medida=producto_valido.unidad_medida,
+                    stock_minimo=producto_valido.stock_minimo,
+                    precio_venta=producto_valido.precio_venta,
+                    tiene_lote=producto_valido.tiene_lote,
+                    tiene_serie=producto_valido.tiene_serie,
+                    dias_vencimiento=producto_valido.dias_vencimiento
                 )
 
                 self.session.add(producto)
@@ -427,28 +437,36 @@ class ProductoDialog(QDialog):
                         QMessageBox.warning(self, "Error", f"Ya existe OTRO producto activo con el nombre '{nombre}' y el prefijo '{codigo_prefijo}'.")
                         return
 
-                self.producto.nombre = nombre
-                self.producto.descripcion = self.txt_descripcion.toPlainText()
-                self.producto.categoria_id = categoria_id
-
+                # Actualizar campos desde el objeto validado
+                self.producto.nombre = producto_valido.nombre
+                self.producto.descripcion = producto_valido.descripcion
+                self.producto.categoria_id = producto_valido.categoria_id
+                
                 if self.cmb_unidad.isEnabled():
-                    self.producto.unidad_medida = unidad
+                    self.producto.unidad_medida = producto_valido.unidad_medida
 
-                self.producto.stock_minimo = self.spn_stock_min.value()
-                self.producto.precio_venta = self.spn_precio_venta.value() if self.spn_precio_venta.value() > 0 else None
-                self.producto.tiene_lote = self.chk_tiene_lote.isChecked()
-                self.producto.tiene_serie = self.chk_tiene_serie.isChecked()
-                self.producto.dias_vencimiento = self.spn_dias_vencimiento.value() if self.chk_tiene_vencimiento.isChecked() else None
+                self.producto.stock_minimo = producto_valido.stock_minimo
+                self.producto.precio_venta = producto_valido.precio_venta
+                self.producto.tiene_lote = producto_valido.tiene_lote
+                self.producto.tiene_serie = producto_valido.tiene_serie
+                self.producto.dias_vencimiento = producto_valido.dias_vencimiento
 
                 mensaje = "Producto actualizado exitosamente"
 
-            self.session.commit()
-            QMessageBox.information(self, "Éxito", mensaje)
-
-            self.producto_guardado.emit()
-            self.session.close()
-            self.accept()
-
+            try:
+                self.session.commit()
+                
+                # Audit Log
+                action = "CREATE" if not self.producto else "UPDATE"
+                details = producto_valido.model_dump_json()
+                AuditService.log_action(
+                    session=self.session,
+                    usuario_id=1, # TODO: Get actual user ID
+        except ValidationError as e:
+            # Formatear errores de Pydantic
+            errores = "\n".join([f"- {err['loc'][0]}: {err['msg']}" for err in e.errors()])
+            QMessageBox.warning(self, "Error de Validación", f"Datos inválidos:\n{errores}")
+            
         except Exception as e:
             self.session.rollback()
             QMessageBox.critical(self, "Error", f"Error al guardar:\n{str(e)}")
