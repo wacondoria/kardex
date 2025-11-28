@@ -358,10 +358,10 @@ def get_theme_stylesheet(base_path):
     if app:
         window_color = app.palette().color(QPalette.ColorRole.Window)
         if window_color.lightness() < 128:
-            print("💡 Tema oscuro detectado. Aplicando estilos oscuros.")
+            print("Tema oscuro detectado. Aplicando estilos oscuros.")
             stylesheet_template = DARK_THEME_STYLESHEET
         else:
-            print("💡 Tema claro detectado. Aplicando estilos claros.")
+            print("Tema claro detectado. Aplicando estilos claros.")
 
     # Formatear la hoja de estilo con la ruta base
     return stylesheet_template.format(base_path=base_path)
