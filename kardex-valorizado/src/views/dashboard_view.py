@@ -188,6 +188,7 @@ class DashboardWidget(QWidget):
             
             product_ids = [p.id for p in prods_con_minimo]
             
+            criticos_count = 0
             if product_ids:
                 subquery = (
                     self.session.query(
