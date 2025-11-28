@@ -5,6 +5,7 @@ from views.equipos_window import EquiposWindow
 from views.kits_window import KitsWindow
 from views.alquileres_window import AlquileresWindow
 from views.configuracion_alquiler_window import ConfiguracionAlquilerDialog
+from views.proyectos_window import ProyectosWindow
 
 class RentalMainWindow(QMainWindow):
     """
@@ -39,6 +40,10 @@ class RentalMainWindow(QMainWindow):
         btn_kits.clicked.connect(self.abrir_kits)
         toolbar.addWidget(btn_kits)
         
+        btn_proyectos = QPushButton("🏗️ Proyectos")
+        btn_proyectos.clicked.connect(self.abrir_proyectos)
+        toolbar.addWidget(btn_proyectos)
+
         toolbar.addSeparator()
         
         btn_alquileres = QPushButton("📄 Alquileres")
@@ -107,6 +112,17 @@ class RentalMainWindow(QMainWindow):
         alquileres_widget = AlquileresWindow()
         self.tab_widget.addTab(alquileres_widget, nombre_pestana)
         self.tab_widget.setCurrentWidget(alquileres_widget)
+
+    def abrir_proyectos(self):
+        nombre_pestana = "Gestión de Proyectos"
+        for i in range(self.tab_widget.count()):
+            if self.tab_widget.tabText(i) == nombre_pestana:
+                self.tab_widget.setCurrentIndex(i)
+                return
+        
+        proyectos_widget = ProyectosWindow()
+        self.tab_widget.addTab(proyectos_widget, nombre_pestana)
+        self.tab_widget.setCurrentWidget(proyectos_widget)
 
     def abrir_configuracion(self):
         dialog = ConfiguracionAlquilerDialog(self)
