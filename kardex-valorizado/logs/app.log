@@ -2061,3 +2061,4 @@ WHERE requisiciones.fecha >= ? AND requisiciones.fecha <= ? ORDER BY requisicion
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
 
 2025-11-28 18:11:58,060 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 18:24:03,385 - KardexApp - INFO - Logger inicializado correctamente.
