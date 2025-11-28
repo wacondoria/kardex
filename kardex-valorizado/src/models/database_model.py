@@ -188,6 +188,12 @@ class Producto(Base):
     # Estado
     activo = Column(Boolean, default=True)
     fecha_registro = Column(DateTime, default=datetime.now)
+
+    # Optimistic Locking
+    version_id = Column(Integer, nullable=False, default=1)
+    __mapper_args__ = {
+        "version_id_col": version_id
+    }
     
     # Relaciones
     categoria = relationship("Categoria", back_populates="productos")
@@ -791,7 +797,7 @@ class MovimientoStock(Base):
     # Documento relacionado
     tipo_documento = Column(Enum(TipoDocumento), nullable=True)
     numero_documento = Column(String(20))
-    fecha_documento = Column(Date, nullable=False)
+    fecha_documento = Column(Date, nullable=False, index=True)
     
     # Proveedor o destino según sea ingreso o salida
     proveedor_id = Column(Integer, ForeignKey('proveedores.id'), nullable=True)
@@ -822,6 +828,12 @@ class MovimientoStock(Base):
     
     observaciones = Column(Text)
     fecha_registro = Column(DateTime, default=datetime.now)
+
+    # Optimistic Locking
+    version_id = Column(Integer, nullable=False, default=1)
+    __mapper_args__ = {
+        "version_id_col": version_id
+    }
     
     # Relaciones
     empresa = relationship("Empresa", back_populates="movimientos")
@@ -895,24 +907,26 @@ usuario_empresa = Table('usuario_empresa', Base.metadata,
     Column('empresa_id', Integer, ForeignKey('empresas.id'), primary_key=True)
 )
 
+# ============================================
+# TABLA: AUDITORIA
+# ============================================
+
 class Auditoria(Base):
     __tablename__ = 'auditoria'
-    
+
     id = Column(Integer, primary_key=True)
-    usuario_id = Column(Integer, ForeignKey('usuarios.id'), nullable=False)
-    
-    accion = Column(String(50), nullable=False)  # CREATE, UPDATE, DELETE
-    tabla = Column(String(50), nullable=False)
-    registro_id = Column(Integer, nullable=False)
-    
-    datos_anteriores = Column(Text)  # JSON con datos previos
-    datos_nuevos = Column(Text)  # JSON con datos nuevos
-    
-    ip_address = Column(String(45))
-    fecha_hora = Column(DateTime, default=datetime.now)
-    
-    # Relaciones
-    usuario = relationship("Usuario", back_populates="acciones_auditoria")
+    usuario_id = Column(Integer, ForeignKey('usuarios.id'), nullable=True)
+    accion = Column(String(50), nullable=False) # CREATE, UPDATE, DELETE, LOGIN, LOGOUT
+    tabla = Column(String(50), nullable=True)   # Nombre de la tabla afectada
+    registro_id = Column(Integer, nullable=True) # ID del registro afectado
+    detalles = Column(Text, nullable=True)      # JSON o texto con los cambios
+    fecha = Column(DateTime, default=datetime.now)
+    ip_address = Column(String(50), nullable=True)
+
+    usuario = relationship("Usuario")
+
+    def __repr__(self):
+        return f"<Auditoria(accion='{self.accion}', tabla='{self.tabla}', fecha='{self.fecha}')>"
 
 # ============================================
 # TABLA: LICENCIA
