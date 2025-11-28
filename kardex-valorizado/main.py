@@ -37,6 +37,7 @@ from views.sistemas_importacion_window import SistemasImportacionWindow
 from views.dashboard_view import DashboardWidget
 from views.module_selector import ModuleSelector
 from views.rental_main_window import RentalMainWindow
+from views.proyectos_window import ProyectosWindow
 
 # --- Integración para actualización automática ---
 from utils.actualizador_tc import actualizar_tc_desde_excel
@@ -481,6 +482,10 @@ class KardexMainWindow(QMainWindow):
         accion_clientes.triggered.connect(self.abrir_clientes)
         menu_maestros.addAction(accion_clientes)
 
+        accion_proyectos = QAction("🏗️ Proyectos", self)
+        accion_proyectos.triggered.connect(self.abrir_proyectos)
+        menu_maestros.addAction(accion_proyectos)
+
         accion_empresas = QAction("🏢 Empresas y Almacenes", self)
         accion_empresas.setShortcut("Ctrl+E")
         accion_empresas.triggered.connect(self.abrir_empresas)
@@ -589,6 +594,10 @@ class KardexMainWindow(QMainWindow):
         btn_ordenes_compra = QPushButton("📄 Órdenes de Compra")
         btn_ordenes_compra.clicked.connect(self.abrir_ordenes_compra)
         toolbar.addWidget(btn_ordenes_compra)
+
+        btn_proyectos = QPushButton("🏗️ Proyectos")
+        btn_proyectos.clicked.connect(self.abrir_proyectos)
+        toolbar.addWidget(btn_proyectos)
 
         # --- 3. CORRECCIÓN EN LA BARRA DE HERRAMIENTAS ---
         btn_requisiciones = QPushButton("📤 Requisiciones")
@@ -704,6 +713,18 @@ class KardexMainWindow(QMainWindow):
         self.ventana_clientes.show()
         self.ventana_clientes.raise_()
         self.ventana_clientes.activateWindow()
+
+    def abrir_proyectos(self):
+        """Abre la ventana de gestión de proyectos en una nueva pestaña"""
+        nombre_pestana = "Proyectos"
+        for i in range(self.tab_widget.count()):
+            if self.tab_widget.tabText(i) == nombre_pestana:
+                self.tab_widget.setCurrentIndex(i)
+                return
+
+        proyectos_widget = ProyectosWindow()
+        self.tab_widget.addTab(proyectos_widget, nombre_pestana)
+        self.tab_widget.setCurrentWidget(proyectos_widget)
 
     def abrir_backup(self):
         """Abre la ventana de backup"""
