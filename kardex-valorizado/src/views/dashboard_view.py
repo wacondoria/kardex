@@ -182,19 +182,40 @@ class DashboardWidget(QWidget):
                 Producto.stock_minimo > 0
             ).all()
 
-            criticos_count = 0
-            # Importar KardexManager localmente para evitar circularidad
-            from utils.kardex_manager import KardexManager
-            km = KardexManager(self.session)
+            # Optimización: Consulta masiva de stocks
+            # Subquery para obtener el último movimiento de cada producto en cada almacén
+            from models.database_model import MovimientoStock
+            
+            product_ids = [p.id for p in prods_con_minimo]
+            
+            if product_ids:
+                subquery = (
+                    self.session.query(
+                        func.max(MovimientoStock.id).label('max_id')
+                    )
+                    .filter(MovimientoStock.producto_id.in_(product_ids))
+                    .group_by(MovimientoStock.producto_id, MovimientoStock.almacen_id)
+                    .subquery()
+                )
 
-            # Optimización: Solo comprobar si hay pocos productos, o hacerlo asíncrono.
-            # Por ahora, lo haremos directo pero con cuidado.
-            for prod in prods_con_minimo:
-                # Sumar saldo de todos los almacenes (global)
-                stock_total = km.obtener_stock_global_producto(prod.id)
-                if stock_total <= prod.stock_minimo:
-                    criticos_count += 1
-
+                # Sumar saldo de todos los almacenes por producto
+                stocks_query = (
+                    self.session.query(
+                        MovimientoStock.producto_id,
+                        func.sum(MovimientoStock.saldo_cantidad)
+                    )
+                    .join(subquery, MovimientoStock.id == subquery.c.max_id)
+                    .group_by(MovimientoStock.producto_id)
+                    .all()
+                )
+                
+                stock_map = {pid: (stock or 0) for pid, stock in stocks_query}
+                
+                for prod in prods_con_minimo:
+                    stock_actual = stock_map.get(prod.id, 0)
+                    if stock_actual <= prod.stock_minimo:
+                        criticos_count += 1
+            
             self.kpi_stock.value_label.setText(str(criticos_count))
             if criticos_count > 0:
                 self.kpi_stock.value_label.setStyleSheet("color: #dc3545; font-size: 24px; font-weight: bold;")
