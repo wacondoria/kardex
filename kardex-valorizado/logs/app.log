@@ -1632,3 +1632,432 @@ WHERE requisiciones.fecha >= ? AND requisiciones.fecha <= ? ORDER BY requisicion
 [parameters: ('2025-01-01', '2025-12-31')]
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
 
+2025-11-28 17:39:21,707 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 17:39:31,641 - KardexApp.ExceptionHandler - CRITICAL - Excepción no controlada: type object 'Venta' has no attribute 'fecha_registro_contable'
+Traceback (most recent call last):
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 748, in abrir_ventas
+    ventas_widget = VentasWindow(self.user_info)
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\ventas_window.py", line 800, in __init__
+    self.cargar_ventas()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\ventas_window.py", line 867, in cargar_ventas
+    extract('year', Venta.fecha_registro_contable) == anio,
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: type object 'Venta' has no attribute 'fecha_registro_contable'
+
+2025-11-28 17:48:37,152 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 17:48:46,410 - KardexApp.ExceptionHandler - CRITICAL - Excepción no controlada: type object 'Venta' has no attribute 'fecha_registro_contable'
+Traceback (most recent call last):
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 748, in abrir_ventas
+    ventas_widget = VentasWindow(self.user_info)
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\ventas_window.py", line 800, in __init__
+    self.cargar_ventas()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\ventas_window.py", line 867, in cargar_ventas
+    extract('year', Venta.fecha_registro_contable) == anio,
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: type object 'Venta' has no attribute 'fecha_registro_contable'
+
+2025-11-28 17:53:56,700 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 17:54:07,762 - KardexApp.ExceptionHandler - CRITICAL - Excepción no controlada: type object 'Venta' has no attribute 'fecha_registro_contable'
+Traceback (most recent call last):
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 748, in abrir_ventas
+    ventas_widget = VentasWindow(self.user_info)
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\ventas_window.py", line 800, in __init__
+    self.cargar_ventas()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\ventas_window.py", line 867, in cargar_ventas
+    extract('year', Venta.fecha_registro_contable) == anio,
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: type object 'Venta' has no attribute 'fecha_registro_contable'
+
+2025-11-28 17:57:25,384 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 17:57:34,602 - KardexApp.ExceptionHandler - CRITICAL - Excepción no controlada: type object 'Venta' has no attribute 'fecha_registro_contable'
+Traceback (most recent call last):
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 748, in abrir_ventas
+    ventas_widget = VentasWindow(self.user_info)
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\ventas_window.py", line 800, in __init__
+    self.cargar_ventas()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\ventas_window.py", line 867, in cargar_ventas
+    extract('year', Venta.fecha_registro_contable) == anio,
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: type object 'Venta' has no attribute 'fecha_registro_contable'
+
+2025-11-28 17:59:04,547 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 17:59:27,801 - KardexApp.ExceptionHandler - CRITICAL - Excepción no controlada: type object 'Venta' has no attribute 'fecha_registro_contable'
+Traceback (most recent call last):
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 748, in abrir_ventas
+    ventas_widget = VentasWindow(self.user_info)
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\ventas_window.py", line 800, in __init__
+    self.cargar_ventas()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\ventas_window.py", line 867, in cargar_ventas
+    extract('year', Venta.fecha_registro_contable) == anio,
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: type object 'Venta' has no attribute 'fecha_registro_contable'
+
+2025-11-28 18:01:16,165 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 18:02:50,315 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 18:03:02,159 - KardexApp.ExceptionHandler - CRITICAL - Excepción no controlada: (sqlite3.OperationalError) no such column: ventas.numero_documento
+[SQL: SELECT ventas.id AS ventas_id, ventas.cliente_id AS ventas_cliente_id, ventas.proyecto_id AS ventas_proyecto_id, ventas.numero_proceso AS ventas_numero_proceso, ventas.tipo_documento AS ventas_tipo_documento, ventas.numero_documento AS ventas_numero_documento, ventas.fecha AS ventas_fecha, ventas.moneda AS ventas_moneda, ventas.tipo_cambio AS ventas_tipo_cambio, ventas.incluye_igv AS ventas_incluye_igv, ventas.igv_porcentaje AS ventas_igv_porcentaje, ventas.subtotal AS ventas_subtotal, ventas.igv AS ventas_igv, ventas.total AS ventas_total, ventas.observaciones AS ventas_observaciones, ventas.fecha_registro_contable AS ventas_fecha_registro_contable, ventas.fecha_registro AS ventas_fecha_registro 
+FROM ventas 
+WHERE CAST(STRFTIME('%Y', ventas.fecha_registro_contable) AS INTEGER) = ? AND CAST(STRFTIME('%m', ventas.fecha_registro_contable) AS INTEGER) = ? ORDER BY ventas.fecha DESC]
+[parameters: (2025, 11)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Traceback (most recent call last):
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such column: ventas.numero_documento
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 748, in abrir_ventas
+    ventas_widget = VentasWindow(self.user_info)
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\ventas_window.py", line 800, in __init__
+    self.cargar_ventas()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\ventas_window.py", line 874, in cargar_ventas
+    ventas = query.order_by(Venta.fecha.desc()).all()
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\query.py", line 2704, in all
+    return self._iter().all()  # type: ignore
+           ~~~~~~~~~~^^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\query.py", line 2857, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+        params,
+        ^^^^^^^
+        execution_options={"_sa_orm_load_options": self.load_options},
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\session.py", line 2351, in execute
+    return self._execute_internal(
+           ~~~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+    ...<4 lines>...
+        _add_event=_add_event,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\session.py", line 2249, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self,
+        ^^^^^
+    ...<4 lines>...
+        conn,
+        ^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+        statement, params or {}, execution_options=execution_options
+    )
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1419, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\sql\elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: ventas.numero_documento
+[SQL: SELECT ventas.id AS ventas_id, ventas.cliente_id AS ventas_cliente_id, ventas.proyecto_id AS ventas_proyecto_id, ventas.numero_proceso AS ventas_numero_proceso, ventas.tipo_documento AS ventas_tipo_documento, ventas.numero_documento AS ventas_numero_documento, ventas.fecha AS ventas_fecha, ventas.moneda AS ventas_moneda, ventas.tipo_cambio AS ventas_tipo_cambio, ventas.incluye_igv AS ventas_incluye_igv, ventas.igv_porcentaje AS ventas_igv_porcentaje, ventas.subtotal AS ventas_subtotal, ventas.igv AS ventas_igv, ventas.total AS ventas_total, ventas.observaciones AS ventas_observaciones, ventas.fecha_registro_contable AS ventas_fecha_registro_contable, ventas.fecha_registro AS ventas_fecha_registro 
+FROM ventas 
+WHERE CAST(STRFTIME('%Y', ventas.fecha_registro_contable) AS INTEGER) = ? AND CAST(STRFTIME('%m', ventas.fecha_registro_contable) AS INTEGER) = ? ORDER BY ventas.fecha DESC]
+[parameters: (2025, 11)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+2025-11-28 18:07:31,968 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 18:07:56,407 - KardexApp.ExceptionHandler - CRITICAL - Excepción no controlada: (sqlite3.OperationalError) no such column: requisiciones.fecha_requerida
+[SQL: SELECT requisiciones.id AS requisiciones_id, requisiciones.proyecto_id AS requisiciones_proyecto_id, requisiciones.solicitante_id AS requisiciones_solicitante_id, requisiciones.numero_requisicion AS requisiciones_numero_requisicion, requisiciones.fecha AS requisiciones_fecha, requisiciones.fecha_requerida AS requisiciones_fecha_requerida, requisiciones.estado AS requisiciones_estado, requisiciones.observaciones AS requisiciones_observaciones, requisiciones.fecha_registro AS requisiciones_fecha_registro 
+FROM requisiciones 
+WHERE requisiciones.fecha >= ? AND requisiciones.fecha <= ? ORDER BY requisiciones.fecha DESC]
+[parameters: ('2025-01-01', '2025-12-31')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Traceback (most recent call last):
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such column: requisiciones.fecha_requerida
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 825, in abrir_requisiciones
+    requisiciones_widget = RequisicionesWindow(user_info=self.user_info)
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\requisiciones_window.py", line 695, in __init__
+    self.cargar_requisiciones()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\requisiciones_window.py", line 796, in cargar_requisiciones
+    ).order_by(Requisicion.fecha.desc()).all()
+                                         ~~~^^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\query.py", line 2704, in all
+    return self._iter().all()  # type: ignore
+           ~~~~~~~~~~^^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\query.py", line 2857, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+        params,
+        ^^^^^^^
+        execution_options={"_sa_orm_load_options": self.load_options},
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\session.py", line 2351, in execute
+    return self._execute_internal(
+           ~~~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+    ...<4 lines>...
+        _add_event=_add_event,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\session.py", line 2249, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self,
+        ^^^^^
+    ...<4 lines>...
+        conn,
+        ^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+        statement, params or {}, execution_options=execution_options
+    )
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1419, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\sql\elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: requisiciones.fecha_requerida
+[SQL: SELECT requisiciones.id AS requisiciones_id, requisiciones.proyecto_id AS requisiciones_proyecto_id, requisiciones.solicitante_id AS requisiciones_solicitante_id, requisiciones.numero_requisicion AS requisiciones_numero_requisicion, requisiciones.fecha AS requisiciones_fecha, requisiciones.fecha_requerida AS requisiciones_fecha_requerida, requisiciones.estado AS requisiciones_estado, requisiciones.observaciones AS requisiciones_observaciones, requisiciones.fecha_registro AS requisiciones_fecha_registro 
+FROM requisiciones 
+WHERE requisiciones.fecha >= ? AND requisiciones.fecha <= ? ORDER BY requisiciones.fecha DESC]
+[parameters: ('2025-01-01', '2025-12-31')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+2025-11-28 18:09:43,641 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 18:10:06,336 - KardexApp.ExceptionHandler - CRITICAL - Excepción no controlada: (sqlite3.OperationalError) no such column: requisiciones.estado
+[SQL: SELECT requisiciones.id AS requisiciones_id, requisiciones.proyecto_id AS requisiciones_proyecto_id, requisiciones.solicitante_id AS requisiciones_solicitante_id, requisiciones.numero_requisicion AS requisiciones_numero_requisicion, requisiciones.fecha AS requisiciones_fecha, requisiciones.fecha_requerida AS requisiciones_fecha_requerida, requisiciones.estado AS requisiciones_estado, requisiciones.observaciones AS requisiciones_observaciones, requisiciones.fecha_registro AS requisiciones_fecha_registro 
+FROM requisiciones 
+WHERE requisiciones.fecha >= ? AND requisiciones.fecha <= ? ORDER BY requisiciones.fecha DESC]
+[parameters: ('2025-01-01', '2025-12-31')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Traceback (most recent call last):
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such column: requisiciones.estado
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 825, in abrir_requisiciones
+    requisiciones_widget = RequisicionesWindow(user_info=self.user_info)
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\requisiciones_window.py", line 695, in __init__
+    self.cargar_requisiciones()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\requisiciones_window.py", line 796, in cargar_requisiciones
+    ).order_by(Requisicion.fecha.desc()).all()
+                                         ~~~^^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\query.py", line 2704, in all
+    return self._iter().all()  # type: ignore
+           ~~~~~~~~~~^^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\query.py", line 2857, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+        params,
+        ^^^^^^^
+        execution_options={"_sa_orm_load_options": self.load_options},
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\session.py", line 2351, in execute
+    return self._execute_internal(
+           ~~~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+    ...<4 lines>...
+        _add_event=_add_event,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\session.py", line 2249, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self,
+        ^^^^^
+    ...<4 lines>...
+        conn,
+        ^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+        statement, params or {}, execution_options=execution_options
+    )
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1419, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\sql\elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\USER\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: requisiciones.estado
+[SQL: SELECT requisiciones.id AS requisiciones_id, requisiciones.proyecto_id AS requisiciones_proyecto_id, requisiciones.solicitante_id AS requisiciones_solicitante_id, requisiciones.numero_requisicion AS requisiciones_numero_requisicion, requisiciones.fecha AS requisiciones_fecha, requisiciones.fecha_requerida AS requisiciones_fecha_requerida, requisiciones.estado AS requisiciones_estado, requisiciones.observaciones AS requisiciones_observaciones, requisiciones.fecha_registro AS requisiciones_fecha_registro 
+FROM requisiciones 
+WHERE requisiciones.fecha >= ? AND requisiciones.fecha <= ? ORDER BY requisiciones.fecha DESC]
+[parameters: ('2025-01-01', '2025-12-31')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+2025-11-28 18:11:58,060 - KardexApp - INFO - Logger inicializado correctamente.
