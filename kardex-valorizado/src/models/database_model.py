@@ -549,6 +549,7 @@ class Venta(Base):
     total = Column(Float, nullable=False)
     
     observaciones = Column(Text)
+    fecha_registro_contable = Column(Date, nullable=True) # Fecha Periodo Contable
     fecha_registro = Column(DateTime, default=datetime.now)
     
     # Relaciones
