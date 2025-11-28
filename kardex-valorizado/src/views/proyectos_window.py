@@ -290,7 +290,7 @@ class ProyectosWindow(BaseCRUDView):
         return query.join(Cliente).filter(or_(
             Proyecto.codigo.ilike(filtro_texto),
             Proyecto.nombre.ilike(filtro_texto),
-            Cliente.razon_social_o_nombre.ilike(filtro_texto)
+            Cliente.razon_social.ilike(filtro_texto)
         ))
 
     def _open_dialog(self, item=None):
