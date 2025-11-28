@@ -20,18 +20,28 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from models.database_model import (obtener_session, Producto, Empresa, Almacen,
                                    MovimientoStock, Categoria, Moneda)
 from utils.widgets import SearchableComboBox, MoneyDelegate
+from utils.ui_components import StandardTable
+from utils.worker import WorkerThread
+from PyQt6.QtWidgets import QProgressBar
 
+
+from utils.dependency_injector import ServiceContainer
 
 class ValorizacionWindow(QWidget):
     """Ventana de Valorización de Inventario"""
     
-    def __init__(self):
+    def __init__(self, container: ServiceContainer = None):
         super().__init__()
-        self.session = obtener_session()
+        # Si no se pasa contenedor, crear uno (para pruebas standalone o compatibilidad)
+        self.container = container if container else ServiceContainer()
+        self.session = self.container.session
+        self.service = self.container.get_inventory_service()
         self.datos_valorizacion = []
         self.init_ui()
         self.cargar_empresas()
     
+    # ... (init_ui and other methods remain the same until generar_valorizacion)
+
     def init_ui(self):
         self.setWindowTitle("Valorización de Inventario")
         
@@ -104,9 +114,13 @@ class ValorizacionWindow(QWidget):
         btn_exportar = QPushButton("📥 Exportar Excel")
         # Estilo eliminado para usar tema global
         btn_exportar.clicked.connect(self.exportar_excel)
+
+        btn_regenerar = QPushButton("🔄 Regenerar Saldos")
+        btn_regenerar.clicked.connect(self.regenerar_saldos)
         
         btn_layout.addWidget(btn_generar)
         btn_layout.addWidget(btn_exportar)
+        btn_layout.addWidget(btn_regenerar)
         btn_layout.addStretch()
         
         filtros_layout.addLayout(btn_layout)
@@ -120,19 +134,15 @@ class ValorizacionWindow(QWidget):
         layout.addWidget(self.lbl_resumen)
         
         # === TABLA ===
-        self.tabla = QTableWidget()
+        self.tabla = StandardTable()
         self.tabla.setColumnCount(7)
         self.tabla.setHorizontalHeaderLabels([
             "Código", "Producto", "Categoría", "Unidad", 
             "Cantidad", "Costo Unit.", "Valor Total"
         ])
         
-        self.tabla.setStyleSheet("") # Reset style to use global theme
-        
         header = self.tabla.horizontalHeader()
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
-        
-        self.tabla.setAlternatingRowColors(True)
         
         money_delegate = MoneyDelegate(self.tabla)
         self.tabla.setItemDelegateForColumn(4, money_delegate)
@@ -144,6 +154,12 @@ class ValorizacionWindow(QWidget):
         # Totales por categoría
         self.lbl_totales = QLabel()
         # Estilo eliminado para usar tema global
+        # Progress Bar (oculto por defecto)
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setRange(0, 0) # Indeterminado
+        self.progress_bar.setVisible(False)
+        layout.addWidget(self.progress_bar)
+
         layout.addWidget(self.lbl_totales)
         
         self.setLayout(layout)
@@ -183,7 +199,7 @@ class ValorizacionWindow(QWidget):
             self.cmb_categoria.addItem(cat.nombre, cat.id)
     
     def generar_valorizacion(self):
-        """Genera la valorización de inventario"""
+        """Genera la valorización de inventario usando WorkerThread"""
         empresa_id = self.cmb_empresa.currentData()
         
         if not empresa_id:
@@ -194,79 +210,32 @@ class ValorizacionWindow(QWidget):
         categoria_id = self.cmb_categoria.currentData()
         solo_stock = self.chk_solo_stock.isChecked()
         
-        # Obtener todos los productos
-        query_productos = self.session.query(Producto).filter_by(activo=True)
+        # UI Update
+        self.progress_bar.setVisible(True)
+        self.tabla.setRowCount(0)
+        self.lbl_resumen.setText("⏳ Generando reporte...")
+        self.setEnabled(False) # Bloquear UI
         
-        if categoria_id:
-            query_productos = query_productos.filter_by(categoria_id=categoria_id)
-        
-        productos = query_productos.order_by(Producto.nombre).all()
-        
-        self.datos_valorizacion = []
-        
-        for producto in productos:
-            # Obtener último movimiento por almacén
-            query_mov = self.session.query(MovimientoStock).filter_by(
-                empresa_id=empresa_id,
-                producto_id=producto.id
-            )
-            
-            if almacen_id:
-                query_mov = query_mov.filter_by(almacen_id=almacen_id)
-            
-            # Obtener últimos movimientos por almacén
-            if almacen_id:
-                ultimo_mov = query_mov.order_by(MovimientoStock.id.desc()).first()
-                
-                if ultimo_mov and ultimo_mov.saldo_cantidad > 0:
-                    costo_unitario = ultimo_mov.saldo_costo_total / ultimo_mov.saldo_cantidad if ultimo_mov.saldo_cantidad > 0 else 0
-                    
-                    self.datos_valorizacion.append({
-                        'codigo': producto.codigo,
-                        'nombre': producto.nombre,
-                        'categoria': producto.categoria.nombre,
-                        'unidad': producto.unidad_medida,
-                        'cantidad': ultimo_mov.saldo_cantidad,
-                        'costo_unitario': costo_unitario,
-                        'valor_total': ultimo_mov.saldo_costo_total,
-                        'almacen': ultimo_mov.almacen.nombre
-                    })
-            else:
-                # Sumar todos los almacenes
-                movimientos = query_mov.order_by(MovimientoStock.almacen_id, MovimientoStock.id.desc()).all()
-                
-                # Obtener último movimiento por almacén
-                almacenes_vistos = set()
-                cantidad_total = Decimal('0')
-                valor_total = Decimal('0')
-                
-                for mov in movimientos:
-                    if mov.almacen_id not in almacenes_vistos:
-                        almacenes_vistos.add(mov.almacen_id)
-                        cantidad_total += Decimal(str(mov.saldo_cantidad))
-                        valor_total += Decimal(str(mov.saldo_costo_total))
-                
-                if cantidad_total > 0:
-                    costo_unitario = valor_total / cantidad_total
-                    
-                    self.datos_valorizacion.append({
-                        'codigo': producto.codigo,
-                        'nombre': producto.nombre,
-                        'categoria': producto.categoria.nombre,
-                        'unidad': producto.unidad_medida,
-                        'cantidad': float(cantidad_total),
-                        'costo_unitario': float(costo_unitario),
-                        'valor_total': float(valor_total),
-                        'almacen': 'TODOS'
-                    })
-        
-        # Filtrar solo con stock si está marcado
-        if solo_stock:
-            self.datos_valorizacion = [d for d in self.datos_valorizacion if d['cantidad'] > 0]
+        # Configurar Worker
+        self.worker = WorkerThread(
+            self.service.get_valorization_report,
+            empresa_id=empresa_id,
+            almacen_id=almacen_id,
+            categoria_id=categoria_id,
+            solo_stock=solo_stock
+        )
+        self.worker.finished.connect(self.on_valorizacion_finished)
+        self.worker.error.connect(self.on_valorizacion_error)
+        self.worker.start()
+
+    def on_valorizacion_finished(self, data):
+        """Callback cuando termina el worker"""
+        self.setEnabled(True)
+        self.progress_bar.setVisible(False)
+        self.datos_valorizacion = data
         
         if not self.datos_valorizacion:
             QMessageBox.information(self, "Sin datos", "No hay productos con stock para los filtros seleccionados")
-            self.tabla.setRowCount(0)
             self.lbl_resumen.setText("")
             self.lbl_totales.setText("")
             return
@@ -279,6 +248,13 @@ class ValorizacionWindow(QWidget):
         
         # Mostrar en tabla
         self.mostrar_valorizacion()
+
+    def on_valorizacion_error(self, error_msg):
+        """Callback cuando hay error en el worker"""
+        self.setEnabled(True)
+        self.progress_bar.setVisible(False)
+        self.lbl_resumen.setText("❌ Error")
+        QMessageBox.critical(self, "Error", f"Error al generar reporte: {error_msg}")
     
     def mostrar_valorizacion(self):
         """Muestra la valorización en la tabla"""
@@ -361,6 +337,40 @@ class ValorizacionWindow(QWidget):
             
             self.lbl_totales.setText(texto_totales)
     
+    def regenerar_saldos(self):
+        """Regenera los saldos de todos los productos de la empresa seleccionada"""
+        empresa_id = self.cmb_empresa.currentData()
+        if not empresa_id:
+            QMessageBox.warning(self, "Error", "Seleccione una empresa")
+            return
+
+        reply = QMessageBox.question(
+            self, 
+            "Confirmar Regeneración",
+            "Esta acción recalculará todos los saldos y costos promedios desde cero basándose en el historial de movimientos.\n\n"
+            "Úselo si detecta inconsistencias en los saldos.\n"
+            "¿Desea continuar? (Esto puede tardar unos segundos)",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            try:
+                # Obtener productos de la empresa (o todos los activos)
+                # Idealmente esto debería estar en el servicio también para no iterar en UI
+                # Por ahora iteramos aquí para mostrar progreso si fuera necesario
+                productos = self.session.query(Producto).filter_by(activo=True).all()
+                
+                count = 0
+                for prod in productos:
+                    self.service.recalculate_kardex(prod.id, empresa_id)
+                    count += 1
+                
+                QMessageBox.information(self, "Éxito", f"Se han regenerado los saldos de {count} productos correctamente.")
+                self.generar_valorizacion() # Refrescar tabla
+                
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Error al regenerar saldos: {str(e)}")
+
     def exportar_excel(self):
         """Exporta la valorización a Excel"""
         if not self.datos_valorizacion:
