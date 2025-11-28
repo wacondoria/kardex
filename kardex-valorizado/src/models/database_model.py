@@ -696,6 +696,104 @@ class MovimientoStock(Base):
     fecha_registro = Column(DateTime, default=datetime.now)
 
     # Optimistic Locking
+    version_id = Column(Integer, nullable=False, default=1)
+    __mapper_args__ = {
+        "version_id_col": version_id
+    }
+    
+    # Relaciones
+    empresa = relationship("Empresa", back_populates="movimientos")
+    producto = relationship("Producto", back_populates="movimientos")
+    almacen = relationship("Almacen", back_populates="movimientos")
+
+# ============================================
+# TABLAS: ROLES Y PERMISOS
+# ============================================
+
+# Tabla de Asociación Rol-Permiso
+rol_permisos = Table('rol_permisos', Base.metadata,
+    Column('rol_id', Integer, ForeignKey('roles.id'), primary_key=True),
+    Column('permiso_id', Integer, ForeignKey('permisos.id'), primary_key=True)
+)
+
+class Rol(Base):
+    __tablename__ = 'roles'
+    id = Column(Integer, primary_key=True)
+    nombre = Column(String(50), unique=True, nullable=False)
+    descripcion = Column(String(255))
+
+    usuarios = relationship('Usuario', back_populates='rol')
+    permisos = relationship('Permiso', secondary=rol_permisos, back_populates='roles')
+
+    def __repr__(self):
+        return f"<Rol(nombre='{self.nombre}')>"
+
+class Permiso(Base):
+    __tablename__ = 'permisos'
+    id = Column(Integer, primary_key=True)
+    clave = Column(String(50), unique=True, nullable=False) # ej: "ver_modulo_compras"
+    descripcion = Column(String(255))
+
+    roles = relationship('Rol', secondary=rol_permisos, back_populates='permisos')
+
+    def __repr__(self):
+        return f"<Permiso(clave='{self.clave}')>"
+
+# ============================================
+# TABLA: LICENCIAS
+# ============================================
+
+class Licencia(Base):
+    __tablename__ = 'licencias'
+    
+    id = Column(Integer, primary_key=True)
+    clave = Column(String(255), nullable=False)
+    fecha_inicio = Column(Date, nullable=False)
+    fecha_vencimiento = Column(Date, nullable=False)
+    activa = Column(Boolean, default=True)
+    tipo = Column(String(50), default="STANDARD")
+    
+    fecha_registro = Column(DateTime, default=datetime.now)
+
+# ============================================
+# TABLA: USUARIOS
+# ============================================
+
+class Usuario(Base):
+    __tablename__ = 'usuarios'
+    
+    id = Column(Integer, primary_key=True)
+    username = Column(String(50), unique=True, nullable=False)
+    password_hash = Column(String(256), nullable=False)
+    
+    nombre_completo = Column(String(200), nullable=False)
+    email = Column(String(100))
+
+    rol_id = Column(Integer, ForeignKey('roles.id'))
+    rol = relationship("Rol", back_populates="usuarios")
+    
+    activo = Column(Boolean, default=True)
+    fecha_registro = Column(DateTime, default=datetime.now)
+    ultimo_acceso = Column(DateTime, nullable=True)
+    
+    # Relaciones
+    acciones_auditoria = relationship("Auditoria", back_populates="usuario")
+    empresas = relationship("Empresa", secondary="usuario_empresa", back_populates="usuarios")
+
+# ============================================
+# TABLA: AUDITORIA
+# ============================================
+
+class Auditoria(Base):
+    __tablename__ = 'auditoria'
+
+    id = Column(Integer, primary_key=True)
+    usuario_id = Column(Integer, ForeignKey('usuarios.id'), nullable=True)
+    accion = Column(String(50), nullable=False) # CREATE, UPDATE, DELETE, LOGIN, LOGOUT
+    tabla = Column(String(50), nullable=True)   # Nombre de la tabla afectada
+    registro_id = Column(Integer, nullable=True) # ID del registro afectado
+    detalles = Column(Text, nullable=True)      # JSON o texto con los cambios
+    fecha = Column(DateTime, default=datetime.now)
     ip_address = Column(String(50), nullable=True)
 
     usuario = relationship("Usuario", back_populates="acciones_auditoria")
@@ -895,171 +993,55 @@ class AlquilerDetalle(Base):
     # Operador
     operador_id = Column(Integer, ForeignKey('operadores.id'), nullable=True)
     
-    # Sub-alquiler
-    es_subalquiler = Column(Boolean, default=False)
-    proveedor_subalquiler_id = Column(Integer, ForeignKey('proveedores.id'), nullable=True)
-    costo_subalquiler = Column(Float, default=0.0)
-    
     # Relaciones
     alquiler = relationship("Alquiler", back_populates="detalles")
     equipo = relationship("Equipo", back_populates="detalles_alquiler")
     operador = relationship("Operador", back_populates="alquileres_detalle")
-    proveedor_subalquiler = relationship("Proveedor")
 
+# ============================================
 
-def poblar_datos_iniciales(session):
-    """
-    Crea datos iniciales necesarios
-    """
-    # Categorías predefinidas
-    categorias_data = [
-        {"nombre": "MATERIA PRIMA", "descripcion": "Materiales para producción"},
-        {"nombre": "SUMINISTRO", "descripcion": "Suministros diversos"},
-        {"nombre": "MATERIAL AUXILIAR", "descripcion": "Materiales auxiliares"}
-    ]
+# ============================================
+# TABLA: DESTINOS
+# ============================================
+
+class Destino(Base):
+    __tablename__ = 'destinos'
     
-    for cat_data in categorias_data:
-        existe = session.query(Categoria).filter_by(nombre=cat_data["nombre"]).first()
-        if not existe:
-            cat = Categoria(**cat_data)
-            session.add(cat)
+    id = Column(Integer, primary_key=True)
+    nombre = Column(String(200), nullable=False)
+    direccion = Column(Text)
+    activo = Column(Boolean, default=True)
+
+# ============================================
+# TABLA: TIPO DE CAMBIO
+# ============================================
+
+class TipoCambio(Base):
+    __tablename__ = 'tipo_cambio'
     
-    # Usuario administrador por defecto
-    from werkzeug.security import generate_password_hash
+    id = Column(Integer, primary_key=True)
+    fecha = Column(Date, nullable=False, unique=True)
+    compra = Column(Float, nullable=False)
+    venta = Column(Float, nullable=False)
+    moneda_origen = Column(Enum(Moneda), default=Moneda.DOLARES)
+    moneda_destino = Column(Enum(Moneda), default=Moneda.SOLES)
+    activo = Column(Boolean, default=True)
+    fecha_registro = Column(DateTime, default=datetime.now)
 
-    # Crear Permisos
-    permisos_data = {
-        'acceso_total': {'clave': 'acceso_total', 'descripcion': 'Acceso sin restricciones a todas las funcionalidades.'},
-        'ver_dashboard': {'clave': 'ver_dashboard', 'descripcion': 'Ver el panel principal.'},
-        'gestionar_compras': {'clave': 'gestionar_compras', 'descripcion': 'Crear, ver y editar compras.'},
-        'gestionar_ventas': {'clave': 'gestionar_ventas', 'descripcion': 'Crear, ver y editar ventas.'},
-        'gestionar_requisiciones': {'clave': 'gestionar_requisiciones', 'descripcion': 'Crear, ver y editar requisiciones.'},
-        'gestionar_inventario': {'clave': 'gestionar_inventario', 'descripcion': 'Gestionar productos, categorías y ajustes.'},
-        'ver_reportes': {'clave': 'ver_reportes', 'descripcion': 'Acceder y generar reportes.'},
-        'gestionar_usuarios': {'clave': 'gestionar_usuarios', 'descripcion': 'Crear, editar y eliminar usuarios y roles.'},
-        'configuracion_sistema': {'clave': 'configuracion_sistema', 'descripcion': 'Acceder a la configuración del sistema.'}
-    }
-    
-    permisos_objs = {}
-    for key, p_data in permisos_data.items():
-        permiso = session.query(Permiso).filter_by(clave=p_data['clave']).first()
-        if not permiso:
-            permiso = Permiso(**p_data)
-            session.add(permiso)
-            session.flush() # Para tener ID
-        permisos_objs[key] = permiso
 
-    # Crear Roles y Asignar Permisos
-    roles_data = [
-        {
-            'nombre': 'Administrador', 
-            'descripcion': 'Acceso total al sistema.',
-            'permisos': list(permisos_objs.values())
-        },
-        {
-            'nombre': 'Supervisor', 
-            'descripcion': 'Acceso a módulos de gestión y reportes.',
-            'permisos': [
-                permisos_objs['ver_dashboard'],
-                permisos_objs['gestionar_compras'],
-                permisos_objs['gestionar_ventas'],
-                permisos_objs['gestionar_requisiciones'],
-                permisos_objs['ver_reportes']
-            ]
-        },
-        {
-            'nombre': 'Operador', 
-            'descripcion': 'Acceso limitado a operaciones diarias.',
-            'permisos': [
-                permisos_objs['ver_dashboard'],
-                permisos_objs['gestionar_compras'],
-                permisos_objs['gestionar_ventas'],
-                permisos_objs['gestionar_requisiciones']
-            ]
-        }
-    ]
+# CONFIGURACIÓN DE BASE DE DATOS
+# ============================================
 
-    rol_admin_obj = None
-    for r_data in roles_data:
-        rol = session.query(Rol).filter_by(nombre=r_data['nombre']).first()
-        if not rol:
-            rol = Rol(nombre=r_data['nombre'], descripcion=r_data['descripcion'])
-            session.add(rol)
-            session.flush()
-            rol.permisos = r_data['permisos']
-        
-        if r_data['nombre'] == 'Administrador':
-            rol_admin_obj = rol
+# Crear el motor de base de datos
+engine = create_engine('sqlite:///kardex.db', echo=False)
 
-    session.commit() # Commit roles and permissions first
+# Crear la sesión
+Session = sessionmaker(bind=engine)
 
-    # Crear Usuario Administrador y Asignar Rol
-    admin_user = session.query(Usuario).filter_by(username="admin").first()
-    if not admin_user and rol_admin_obj:
-        admin = Usuario(
-            username="admin",
-            password_hash=generate_password_hash("admin123"),
-            nombre_completo="Administrador del Sistema",
-            rol_id=rol_admin_obj.id
-        )
-        
-        # Asignar empresa al admin si existe alguna
-        primera_empresa = session.query(Empresa).first()
-        if primera_empresa:
-            admin.empresas.append(primera_empresa)
-            
-    pass
-
-def crear_base_datos(db_url=None):
-    """
-    Crea todas las tablas en la base de datos
-    """
-    if db_url is None:
-        try:
-            from utils.config import Config
-            db_url = Config.get_db_url()
-        except ImportError:
-            db_url = 'sqlite:///kardex.db'
-        
-    engine = create_engine(db_url, echo=True)
-    Base.metadata.create_all(engine)
-    print(f"[OK] Base de datos creada exitosamente en: {db_url}")
-    return engine
-
-def obtener_session(db_url=None):
-    """
-    Obtiene una sesión de SQLAlchemy
-    """
-    if db_url is None:
-        try:
-            from utils.config import Config
-            db_url = Config.get_db_url()
-        except ImportError:
-            db_url = 'sqlite:///kardex.db'
-        
-    engine = create_engine(db_url)
-    Session = sessionmaker(bind=engine)
+def obtener_session():
+    """Retorna una nueva sesión de base de datos"""
     return Session()
 
-# ============================================
-# SCRIPT PRINCIPAL
-# ============================================
-
-if __name__ == "__main__":
-    print("=" * 60)
-    print("INICIALIZANDO BASE DE DATOS - KARDEX VALORIZADO")
-    print("=" * 60)
-    
-    # Crear base de datos
-    engine = crear_base_datos()
-    
-    # Poblar datos iniciales
-    session = obtener_session()
-    poblar_datos_iniciales(session)
-    session.close()
-    
-    print("\\n" + "=" * 60)
-    print("[OK] Base de datos lista para usar")
-    print("  Usuario: admin")
-    print("  Password: admin123")
-    print("=" * 60)
+def init_db():
+    """Inicializa la base de datos creando las tablas"""
+    Base.metadata.create_all(engine)
