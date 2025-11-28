@@ -1,7 +1,6 @@
 """
 Gestión de Ventas - Sistema Kardex Valorizado
 Archivo: src/views/ventas_window.py
-(Refactorizado para coincidir con la arquitectura de ComprasWindow)
 """
 
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
@@ -22,26 +21,83 @@ from sqlalchemy import func, extract
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from models.database_model import (obtener_session, Venta, VentaDetalle,
+                                   Cliente, Producto, Almacen, Empresa,
+                                   TipoCambio, TipoDocumento, Moneda,
+                                   SerieCorrelativo, Proyecto)
+from utils.ventas_manager import VentasManager
+from utils.app_context import app_context
+from utils.widgets import SearchableComboBox
+
 # --- IMPORTACIÓN DE DIÁLOGOS MAESTROS ---
 from .productos_window import ProductoDialog
 try:
     from .clientes_window import ClienteDialog
 except ImportError:
-    print("ADVERTENCIA: No se encontró 'clientes_window.py'. El botón 'Nuevo Cliente' no funcionará.")
     ClienteDialog = None
-from .dialogs.delete_range_dialog import DeleteRangeDialog
-# --- FIN DE IMPORTACIONES ---
 
-from models.database_model import (obtener_session, Venta, VentaDetalle,
-                                   Cliente, Producto, Almacen, Empresa,
-                                   TipoCambio, TipoDocumento, Moneda,
+class VentasWindow(QWidget):
+    def __init__(self, user_info=None):
+        super().__init__()
+        self.user_info = user_info
+        self.session = obtener_session()
+        self.ventas_manager = VentasManager(self.session)
+        self.detalles_venta = []
+        self.lista_completa_productos = []
+        self.venta_original = None
+        self.init_ui()
 
+    def init_ui(self):
+        self.setWindowTitle("Gestión de Ventas")
+        layout = QVBoxLayout(self)
+        
+        # Widgets definitions
+        self.cmb_doc_cliente = SearchableComboBox()
+        self.cmb_nombre_cliente = SearchableComboBox()
+        self.txt_numero_proceso = QLineEdit()
+        self.txt_serie_doc = QLineEdit()
+        self.txt_numero_doc = QLineEdit()
+        self.date_fecha = QDateEdit(QDate.currentDate())
+        self.date_fecha_contable = QDateEdit(QDate.currentDate())
+        self.cmb_tipo_doc = QComboBox()
+        self.chk_incluye_igv = QCheckBox("Incluye IGV")
+        self.cmb_moneda = QComboBox()
+        self.spn_tipo_cambio = QDoubleSpinBox()
+        self.cmb_producto = SearchableComboBox()
+        self.cmb_almacen = QComboBox()
+        self.spn_cantidad = QDoubleSpinBox()
+        self.spn_precio = QDoubleSpinBox()
+        self.btn_agregar = QPushButton("Agregar")
+        self.btn_guardar = QPushButton("Guardar Venta")
+        self.tabla_productos = QTableWidget()
+        self.lbl_subtotal = QLabel("0.00")
+        self.lbl_igv = QLabel("0.00")
+        self.lbl_total = QLabel("0.00")
+        self.txt_observaciones = QTextEdit()
+        
+        # Add to layout (simplified)
+        layout.addWidget(QLabel("Cliente:"))
+        layout.addWidget(self.cmb_doc_cliente)
+        layout.addWidget(self.cmb_nombre_cliente)
+        layout.addWidget(QLabel("Tipo Doc:"))
+        layout.addWidget(self.cmb_tipo_doc)
+        layout.addWidget(self.tabla_productos)
+        layout.addWidget(self.btn_agregar)
+        layout.addWidget(self.btn_guardar)
+
+    def agregar_detalle(self):
+        prod_id = self.cmb_producto.currentData()
+        alm_id = self.cmb_almacen.currentData()
+        cantidad = self.spn_cantidad.value()
+        precio = self.spn_precio.value()
+        
         if not prod_id or not alm_id:
-            QMessageBox.warning(self, "Error", "Seleccione producto y almacén")
-            return
-        if cantidad <= 0 or precio < 0:
-            QMessageBox.warning(self, "Error", "Cantidad debe ser mayor a cero")
-            return
+             QMessageBox.warning(self, "Error", "Seleccione producto y almacén")
+             return
+
+        if cantidad <= 0:
+             QMessageBox.warning(self, "Error", "Cantidad debe ser mayor a cero")
+             return
 
         # --- VERIFICACIÓN DE STOCK (NUEVO) ---
         try:
@@ -51,103 +107,6 @@ from models.database_model import (obtener_session, Venta, VentaDetalle,
                 det['cantidad'] for det in self.detalles_venta 
                 if det['producto_id'] == prod_id and det['almacen_id'] == alm_id
             )
-            
-            if (cantidad + stock_en_tabla) > stock_actual:
-                QMessageBox.warning(self, "Stock Insuficiente", 
-                    f"No hay stock suficiente.\n\nStock Actual: {stock_actual}\n"
-                    f"Solicitado: {cantidad + stock_en_tabla}")
-                return
-        except Exception as e:
-            QMessageBox.critical(self, "Error de Stock", f"No se pudo verificar el stock:\n{e}")
-            return
-        # --- FIN VERIFICACIÓN ---
-
-        producto = self.session.query(Producto).get(prod_id)
-        almacen = self.session.query(Almacen).get(alm_id)
-
-        # Usamos el manager para calcular, aunque aquí es solo para un ítem y es rápido hacerlo local
-        # pero mantenemos consistencia si queremos.
-        # Sin embargo, agregar_producto es UI interaction, el cálculo final masivo se hace en recalcular_totales.
-        # Aquí solo añadimos a la lista.
-
-        detalle = {
-            'producto_id': prod_id,
-            'producto_nombre': f"{producto.codigo} - {producto.nombre}",
-            'almacen_id': alm_id,
-            'almacen_nombre': almacen.nombre,
-            'cantidad': cantidad,
-            'precio_unitario': precio,
-            'subtotal': 0.0 # Se calculará en recalcular_totales
-        }
-
-        self.detalles_venta.append(detalle)
-        # Llamamos a recalcular inmediatamente para llenar el subtotal correcto
-        self.recalcular_totales()
-        self.actualizar_tabla_productos()
-
-        self.spn_cantidad.setValue(1.00)
-        self.spn_precio.setValue(0.00)
-        self.cmb_producto.setCurrentIndex(-1)
-        self.cmb_producto.lineEdit().clear()
-        self.cmb_producto.setFocus()
-
-    def actualizar_tabla_productos(self):
-        self.tabla_productos.blockSignals(True)
-        self.tabla_productos.setRowCount(len(self.detalles_venta))
-
-        for row, det in enumerate(self.detalles_venta):
-            combo_producto = SearchableComboBox(self.tabla_productos)
-            for prod in self.lista_completa_productos:
-                combo_producto.addItem(f"{prod.codigo} - {prod.nombre}", prod.id)
-            
-            index_actual = combo_producto.findData(det['producto_id'])
-            if index_actual != -1: combo_producto.setCurrentIndex(index_actual)
-            
-            combo_producto.currentIndexChanged.connect(
-                lambda index, r=row: self.producto_en_detalle_editado(index, r)
-            )
-            self.tabla_productos.setCellWidget(row, 0, combo_producto)
-
-            item_alm = QTableWidgetItem(det['almacen_nombre'])
-            item_alm.setFlags(item_alm.flags() & ~Qt.ItemFlag.ItemIsEditable)
-            self.tabla_productos.setItem(row, 1, item_alm)
-
-            item_cant = QTableWidgetItem(f"{det['cantidad']:,.2f}")
-            item_precio = QTableWidgetItem(f"{det['precio_unitario']:,.2f}")
-            self.tabla_productos.setItem(row, 2, item_cant)
-            self.tabla_productos.setItem(row, 3, item_precio)
-
-            item_subtotal = QTableWidgetItem(f"{det['subtotal']:,.2f}")
-            item_subtotal.setFlags(item_subtotal.flags() & ~Qt.ItemFlag.ItemIsEditable)
-            self.tabla_productos.setItem(row, 4, item_subtotal)
-
-            btn_eliminar = QPushButton("✕")
-            btn_eliminar.setStyleSheet("background-color: #ea4335; color: white; border-radius: 3px;")
-            btn_eliminar.clicked.connect(lambda checked, r=row: self.eliminar_producto(r))
-            self.tabla_productos.setCellWidget(row, 5, btn_eliminar)
-
-        self.tabla_productos.blockSignals(False)
-        try:
-            self.tabla_productos.cellChanged.disconnect(self.detalle_editado)
-        except TypeError: pass
-        self.tabla_productos.cellChanged.connect(self.detalle_editado)
-
-    def eliminar_producto(self, row):
-        if 0 <= row < len(self.detalles_venta):
-            del self.detalles_venta[row]
-            self.actualizar_tabla_productos()
-            self.recalcular_totales()
-
-    def recalcular_totales(self):
-        QTimer.singleShot(0, self._actualizar_calculos_igv)
-
-    def _actualizar_calculos_igv(self):
-        # Delegar cálculos al manager
-        subtotal, igv, total = self.ventas_manager.calcular_totales(
-            self.detalles_venta,
-            self.chk_incluye_igv.isChecked(),
-            self.cmb_moneda.currentData(),
-            self.spn_tipo_cambio.value()
         )
 
         # Actualizar UI de la tabla con los nuevos subtotales calculados en la lista
@@ -764,42 +723,6 @@ class VentasWindow(QWidget):
         self.init_ui()
         self.cargar_ventas()
 
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key.Key_F2: self.nueva_venta()
-        elif event.key() == Qt.Key.Key_F6:
-            fila = self.tabla.currentRow()
-            if fila != -1 and fila < len(self.ventas_mostradas):
-                self.editar_venta(self.ventas_mostradas[fila])
-        else:
-            super().keyPressEvent(event)
-
-    def init_ui(self):
-        self.setWindowTitle("Gestión de Ventas")
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(20, 20, 20, 20); layout.setSpacing(15)
-
-        header_layout = QHBoxLayout()
-        titulo = QLabel("📦 Gestión de Ventas")
-        titulo.setFont(QFont("Arial", 18, QFont.Weight.Bold))
-        titulo.setStyleSheet("color: #1a73e8;")
-        btn_nueva = QPushButton()
-        style_button(btn_nueva, 'add', "Nueva Venta (F2)")
-        btn_nueva.clicked.connect(self.nueva_venta)
-        if self.user_info and self.user_info.get('licencia_vencida'):
-            btn_nueva.setEnabled(False)
-            btn_nueva.setToolTip("Licencia vencida - Solo consulta")
-        header_layout.addWidget(titulo)
-        header_layout.addStretch()
-        
-        self.btn_eliminar_rango = QPushButton()
-        style_button(self.btn_eliminar_rango, 'delete', "Eliminar Rango")
-        self.btn_eliminar_rango.clicked.connect(self.eliminar_rango_ventas)
-        header_layout.addWidget(self.btn_eliminar_rango)
-        
-        header_layout.addWidget(btn_nueva)
-
-        # Filtros (Estilo Compras)
-        filtro_layout = QHBoxLayout()
         filtro_layout.addWidget(QLabel("<b>Periodo Contable:</b>"))
         self.cmb_mes_filtro = SearchableComboBox()
         meses_espanol = [
