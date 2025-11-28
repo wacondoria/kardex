@@ -3,7 +3,19 @@ Gestión de Productos - Sistema Kardex Valorizado
 Archivo: src/views/productos_window.py
 (Versión refactorizada usando BaseCRUDView)
 """
+import sys
+from pathlib import Path
 
+from PyQt6.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTableWidget,
+    QTableWidgetItem, QHeaderView, QLineEdit, QComboBox, QMessageBox,
+    QDialog, QFormLayout, QSpinBox, QDoubleSpinBox, QCheckBox, QGroupBox,
+    QTextEdit
+)
+from PyQt6.QtCore import Qt, pyqtSignal, QRegularExpression
+from PyQt6.QtGui import QFont, QRegularExpressionValidator
+
+try:
     from openpyxl.styles import Font, Alignment, PatternFill
     from openpyxl.worksheet.datavalidation import DataValidation
 except ImportError:
@@ -453,15 +465,21 @@ class ProductoDialog(QDialog):
 
                 mensaje = "Producto actualizado exitosamente"
 
-            try:
-                self.session.commit()
-                
-                # Audit Log
-                action = "CREATE" if not self.producto else "UPDATE"
-                details = producto_valido.model_dump_json()
-                AuditService.log_action(
-                    session=self.session,
-                    usuario_id=1, # TODO: Get actual user ID
+            # try:
+            self.session.commit()
+
+            # Audit Log
+            # action = "CREATE" if not self.producto else "UPDATE"
+            # details = producto_valido.model_dump_json()
+            # AuditService.log_action(
+            #     session=self.session,
+            #     usuario_id=1, # TODO: Get actual user ID
+            # )
+
+            QMessageBox.information(self, "Éxito", mensaje)
+            self.producto_guardado.emit()
+            self.accept()
+
         except ValidationError as e:
             # Formatear errores de Pydantic
             errores = "\n".join([f"- {err['loc'][0]}: {err['msg']}" for err in e.errors()])
