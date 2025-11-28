@@ -449,9 +449,16 @@ class EquipoDialog(QDialog):
         layout_tecnico.addStretch()
         tab_tecnico.setLayout(layout_tecnico)
         self.tabs.addTab(tab_tecnico, "Detalles Técnicos")
-        almacenes = self.session.query(Almacen).filter_by(activo=True).all()
-        for alm in almacenes:
-            self.cmb_almacen.addItem(alm.nombre, alm.id)
+
+
+    def cargar_almacenes(self):
+        try:
+            self.cmb_almacen.clear()
+            almacenes = self.session.query(Almacen).filter_by(activo=True).all()
+            for alm in almacenes:
+                self.cmb_almacen.addItem(alm.nombre, alm.id)
+        except Exception as e:
+            print(f"Error al cargar almacenes: {e}")
 
     def cargar_tipos_equipo(self):
         self.cmb_tipo.blockSignals(True)
