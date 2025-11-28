@@ -42,6 +42,8 @@ from views.rental_main_window import RentalMainWindow
 from utils.actualizador_tc import actualizar_tc_desde_excel
 from models.database_model import obtener_session
 from utils.themes import get_theme_stylesheet
+from utils.logger import setup_logger
+from utils.exception_handler import setup_exception_hook
 
 # --- MODIFICADO: Añadida función de migración de BD ---
 from sqlalchemy import create_engine, inspect, text
@@ -808,18 +810,6 @@ class KardexMainWindow(QMainWindow):
                 self.tab_widget.setCurrentIndex(i)
                 return
 
-        ajustes_widget = AjustesInventarioWindow(self.user_info)
-        self.tab_widget.addTab(ajustes_widget, nombre_pestana)
-        self.tab_widget.setCurrentWidget(ajustes_widget)
-
-
-def main():
-    verificar_y_actualizar_db()
-
-    session = obtener_session()
-    try:
-        ruta_excel = r"C:\Users\USER\OneDrive\MIM\DATABASS\BASE DE DATOS.xlsx"
-        nombre_hoja = "TCbio"
         actualizar_tc_desde_excel(session, ruta_excel, nombre_hoja)
     except Exception as e:
         print(f"Error durante la actualización de TC: {e}")
