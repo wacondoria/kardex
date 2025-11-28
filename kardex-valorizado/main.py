@@ -201,6 +201,39 @@ def verificar_y_actualizar_db(db_url='sqlite:///kardex.db'):
     except Exception as e:
         print(f"❌ Error al crear las tablas del módulo de ventas: {e}")
 
+    # 6.5 Migrar tabla clientes si es necesario
+    try:
+        columns_clientes = [col['name'] for col in inspector.get_columns('clientes')]
+
+        # Caso 1: Renombrar ruc_o_dni -> numero_documento
+        if 'ruc_o_dni' in columns_clientes and 'numero_documento' not in columns_clientes:
+            print("⚠️  Detectada columna antigua 'ruc_o_dni' en 'clientes'. Renombrando...")
+            with engine.connect() as connection:
+                connection.execute(text("ALTER TABLE clientes RENAME COLUMN ruc_o_dni TO numero_documento"))
+                connection.commit()
+            print("✓  Columna 'ruc_o_dni' renombrada a 'numero_documento'.")
+
+        # Caso 2: Renombrar razon_social_o_nombre -> razon_social
+        if 'razon_social_o_nombre' in columns_clientes and 'razon_social' not in columns_clientes:
+            print("⚠️  Detectada columna antigua 'razon_social_o_nombre' en 'clientes'. Renombrando...")
+            with engine.connect() as connection:
+                connection.execute(text("ALTER TABLE clientes RENAME COLUMN razon_social_o_nombre TO razon_social"))
+                connection.commit()
+            print("✓  Columna 'razon_social_o_nombre' renombrada a 'razon_social'.")
+
+        # Caso 3: Agregar tipo_documento
+        # Refrescamos las columnas por si acaso
+        columns_clientes = [col['name'] for col in inspector.get_columns('clientes')]
+        if 'tipo_documento' not in columns_clientes:
+             print("⚠️  Agregando columna 'tipo_documento' a 'clientes'...")
+             with engine.connect() as connection:
+                connection.execute(text("ALTER TABLE clientes ADD COLUMN tipo_documento VARCHAR(20) DEFAULT 'RUC'"))
+                connection.commit()
+             print("✓  Columna 'tipo_documento' añadida.")
+
+    except Exception as e:
+        print(f"❌ Error al migrar tabla clientes: {e}")
+
     # 7. Verificar columna 'cliente_id' en 'movimientos_stock'
     try:
         columns = [col['name'] for col in inspector.get_columns('movimientos_stock')]
