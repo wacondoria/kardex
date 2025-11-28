@@ -62,3 +62,7 @@ STYLE_LOGIN_WINDOW = """
 
 # Estilo para la etiqueta de licencia en Login (si se desea estandarizar)
 STYLE_LOGIN_LICENCIA = "font-size: 9px; font-weight: normal; color: #555;"
+# --- Agregar al final de src/utils/styles.py ---
+
+# Estilo para filas alternas en Tablas (Treeview)
+STYLE_TABLE_ALTERNATE = "#F5F5F5"
