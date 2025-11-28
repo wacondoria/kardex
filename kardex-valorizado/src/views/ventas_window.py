@@ -276,7 +276,7 @@ class VentaDialog(QDialog):
 
     def cargar_datos_iniciales(self):
         # Clientes
-        clientes = self.session.query(Cliente).filter_by(activo=True).order_by(Cliente.razon_social_o_nombre).all()
+        clientes = self.session.query(Cliente).filter_by(activo=True).order_by(Cliente.razon_social).all()
         for c in clientes:
             self.cmb_doc_cliente.addItem(c.ruc_o_dni, c.id)
             self.cmb_nombre_cliente.addItem(c.razon_social_o_nombre, c.id)
@@ -721,7 +721,7 @@ class VentaDialog(QDialog):
                 # Recargar clientes
                 self.cmb_doc_cliente.clear()
                 self.cmb_nombre_cliente.clear()
-                clientes = self.session.query(Cliente).filter_by(activo=True).order_by(Cliente.razon_social_o_nombre).all()
+                clientes = self.session.query(Cliente).filter_by(activo=True).order_by(Cliente.razon_social).all()
                 for c in clientes:
                     self.cmb_doc_cliente.addItem(c.ruc_o_dni, c.id)
                     self.cmb_nombre_cliente.addItem(c.razon_social_o_nombre, c.id)
@@ -830,7 +830,7 @@ class VentasWindow(QWidget):
         self.cmb_cliente_filtro = SearchableComboBox()
         self.cmb_cliente_filtro.addItem("Todos los Clientes", None)
         # Cargar clientes
-        clientes = self.session.query(Cliente).filter_by(activo=True).order_by(Cliente.razon_social_o_nombre).all()
+        clientes = self.session.query(Cliente).filter_by(activo=True).order_by(Cliente.razon_social).all()
         for c in clientes:
             self.cmb_cliente_filtro.addItem(c.razon_social_o_nombre, c.id)
         self.cmb_cliente_filtro.currentIndexChanged.connect(self.cargar_ventas)
