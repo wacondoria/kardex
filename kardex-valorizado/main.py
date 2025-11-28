@@ -38,6 +38,13 @@ from views.dashboard_view import DashboardWidget
 from views.module_selector import ModuleSelector
 from views.rental_main_window import RentalMainWindow
 from views.proyectos_window import ProyectosWindow
+from services.backup_scheduler import BackupScheduler
+from utils.theme_manager import ThemeManager
+from views.cotizaciones_window import CotizacionesWindow
+from views.reportes_window import ReportesWindow
+from views.auditoria_window import AuditoriaWindow
+from views.import_wizard import ImportWizard
+from views.equipos_calendar import MaintenanceCalendar
 
 # --- Integración para actualización automática ---
 from utils.actualizador_tc import actualizar_tc_desde_excel
@@ -427,7 +434,19 @@ class KardexMainWindow(QMainWindow):
         self.ventana_admin_anios = None
         self.ventana_importacion = None
         self.ventana_motivos_ajuste = None
+        self.ventana_motivos_ajuste = None
         self.ventana_ajustes_inventario = None
+        self.ventana_cotizaciones = None
+        self.ventana_reportes_avanzados = None
+        self.ventana_auditoria = None
+        self.ventana_import_wizard = None
+        self.ventana_calendario = None
+        
+        # Iniciar Scheduler de Backups
+        self.backup_scheduler = BackupScheduler()
+        self.backup_scheduler.start()
+        
+        self.current_theme = "light"
         self.init_ui()
 
     def init_ui(self):
@@ -520,6 +539,10 @@ class KardexMainWindow(QMainWindow):
         accion_ordenes_compra.triggered.connect(self.abrir_ordenes_compra)
         menu_operaciones.addAction(accion_ordenes_compra)
 
+        accion_cotizaciones = QAction("📝 Cotizaciones", self)
+        accion_cotizaciones.triggered.connect(self.abrir_cotizaciones)
+        menu_operaciones.addAction(accion_cotizaciones)
+
         # --- 2. CORRECCIÓN EN EL MENÚ ---
         accion_requisiciones = QAction("📤 Requisiciones", self)
         # Se elimina la línea: accion_requisiciones.setEnabled(False)
@@ -545,6 +568,14 @@ class KardexMainWindow(QMainWindow):
         accion_inventario.triggered.connect(self.abrir_valorizacion)
         menu_reportes.addAction(accion_inventario)
 
+        accion_reportes_avanzados = QAction("📈 Reportes Avanzados", self)
+        accion_reportes_avanzados.triggered.connect(self.abrir_reportes_avanzados)
+        menu_reportes.addAction(accion_reportes_avanzados)
+
+        accion_calendario = QAction("📅 Calendario Mantenimiento", self)
+        accion_calendario.triggered.connect(self.abrir_calendario)
+        menu_reportes.addAction(accion_calendario)
+
         # Menú Sistema
         menu_sistema = menubar.addMenu("⚙️ Sistema")
 
@@ -560,8 +591,13 @@ class KardexMainWindow(QMainWindow):
 
         accion_importacion = QAction("⬆️ Central de Importaciones", self)
         accion_importacion.setEnabled(app_context.has_permission('configuracion_sistema'))
-        accion_importacion.triggered.connect(self.abrir_importacion)
+        accion_importacion.triggered.connect(self.abrir_import_wizard)
         menu_sistema.addAction(accion_importacion)
+
+        accion_auditoria = QAction("🕵️ Auditoría", self)
+        accion_auditoria.setEnabled(app_context.has_permission('configuracion_sistema'))
+        accion_auditoria.triggered.connect(self.abrir_auditoria)
+        menu_sistema.addAction(accion_auditoria)
 
         menu_sistema.addSeparator()
 
@@ -569,6 +605,12 @@ class KardexMainWindow(QMainWindow):
         accion_backup.setEnabled(app_context.has_permission('configuracion_sistema'))
         accion_backup.triggered.connect(self.abrir_backup)
         menu_sistema.addAction(accion_backup)
+
+        menu_sistema.addSeparator()
+
+        accion_tema = QAction("🌓 Alternar Modo Oscuro", self)
+        accion_tema.triggered.connect(self.toggle_tema)
+        menu_sistema.addAction(accion_tema)
 
         menu_sistema.addSeparator()
 
@@ -798,8 +840,47 @@ class KardexMainWindow(QMainWindow):
             self.ventana_admin_anios = AnioContableWindow()
 
         self.ventana_admin_anios.show()
-        self.ventana_admin_anios.raise_()
-        self.ventana_admin_anios.activateWindow()
+
+    def toggle_tema(self):
+        self.current_theme = ThemeManager.toggle_theme(QApplication.instance(), self.current_theme)
+
+    def abrir_cotizaciones(self):
+        nombre_pestana = "Cotizaciones"
+        for i in range(self.tab_widget.count()):
+            if self.tab_widget.tabText(i) == nombre_pestana:
+                self.tab_widget.setCurrentIndex(i)
+                return
+        self.ventana_cotizaciones = CotizacionesWindow()
+        self.tab_widget.addTab(self.ventana_cotizaciones, nombre_pestana)
+        self.tab_widget.setCurrentWidget(self.ventana_cotizaciones)
+
+    def abrir_reportes_avanzados(self):
+        if self.ventana_reportes_avanzados is None:
+            self.ventana_reportes_avanzados = ReportesWindow()
+        self.ventana_reportes_avanzados.show()
+        self.ventana_reportes_avanzados.raise_()
+        self.ventana_reportes_avanzados.activateWindow()
+
+    def abrir_auditoria(self):
+        if self.ventana_auditoria is None:
+            self.ventana_auditoria = AuditoriaWindow()
+        self.ventana_auditoria.show()
+        self.ventana_auditoria.raise_()
+        self.ventana_auditoria.activateWindow()
+
+    def abrir_import_wizard(self):
+        wizard = ImportWizard(self)
+        wizard.exec()
+
+    def abrir_calendario(self):
+        nombre_pestana = "Calendario"
+        for i in range(self.tab_widget.count()):
+            if self.tab_widget.tabText(i) == nombre_pestana:
+                self.tab_widget.setCurrentIndex(i)
+                return
+        self.ventana_calendario = MaintenanceCalendar()
+        self.tab_widget.addTab(self.ventana_calendario, nombre_pestana)
+        self.tab_widget.setCurrentWidget(self.ventana_calendario)
 
     def abrir_importacion(self):
         """Abre la ventana de importación de datos."""
