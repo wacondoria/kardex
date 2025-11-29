@@ -2330,3 +2330,51 @@ WHERE alquiler_detalles.equipo_id = ? AND alquileres.estado != ? AND alquileres.
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
 
 2025-11-28 21:58:14,044 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 22:18:25,645 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 22:20:57,873 - KardexApp.ExceptionHandler - CRITICAL - Excepción no controlada: name 'QDialog' is not defined
+Traceback (most recent call last):
+  File "C:\Users\TUF\Documents\GitHub\kardex\kardex-valorizado\main.py", line 898, in abrir_import_wizard
+    if wizard.exec() == QDialog.DialogCode.Accepted:
+                        ^^^^^^^
+NameError: name 'QDialog' is not defined
+
+2025-11-28 22:23:04,866 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 22:35:06,836 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 22:37:17,710 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 22:38:51,181 - KardexApp.ExceptionHandler - CRITICAL - Excepción no controlada: 'Cliente' object has no attribute 'ruc_o_dni'
+Traceback (most recent call last):
+  File "C:\Users\TUF\Documents\GitHub\kardex\kardex-valorizado\src\views\base_crud_view.py", line 213, in show_data
+    self.fill_row(row, item)
+    ~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\Users\TUF\Documents\GitHub\kardex\kardex-valorizado\src\views\clientes_window.py", line 238, in fill_row
+    self.tabla.setItem(row, 1, QTableWidgetItem(cli.ruc_o_dni))
+                                                ^^^^^^^^^^^^^
+AttributeError: 'Cliente' object has no attribute 'ruc_o_dni'
+
+2025-11-28 22:41:11,340 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 22:42:18,726 - KardexApp.ExceptionHandler - CRITICAL - Excepción no controlada: 'Cliente' object has no attribute 'contacto'
+Traceback (most recent call last):
+  File "C:\Users\TUF\Documents\GitHub\kardex\kardex-valorizado\src\views\base_crud_view.py", line 213, in show_data
+    self.fill_row(row, item)
+    ~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\Users\TUF\Documents\GitHub\kardex\kardex-valorizado\src\views\clientes_window.py", line 242, in fill_row
+    self.tabla.setItem(row, 5, QTableWidgetItem(cli.contacto or ""))
+                                                ^^^^^^^^^^^^
+AttributeError: 'Cliente' object has no attribute 'contacto'
+
+2025-11-28 22:46:34,502 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 22:47:05,296 - KardexApp.ExceptionHandler - CRITICAL - Excepción no controlada: 'Cliente' object has no attribute 'contacto'
+Traceback (most recent call last):
+  File "C:\Users\TUF\Documents\GitHub\kardex\kardex-valorizado\src\views\base_crud_view.py", line 207, in show_data
+    self.fill_row(row, item)
+    ~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\Users\TUF\Documents\GitHub\kardex\kardex-valorizado\src\views\clientes_window.py", line 242, in fill_row
+    self.tabla.setItem(row, 5, QTableWidgetItem(cli.contacto or ""))
+                                                ^^^^^^^^^^^^
+AttributeError: 'Cliente' object has no attribute 'contacto'
+
+2025-11-28 22:48:17,224 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 22:53:16,963 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 22:56:55,990 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 23:03:12,132 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 23:06:44,427 - KardexApp - INFO - Logger inicializado correctamente.
