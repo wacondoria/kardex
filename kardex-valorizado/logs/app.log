@@ -2062,3 +2062,271 @@ WHERE requisiciones.fecha >= ? AND requisiciones.fecha <= ? ORDER BY requisicion
 
 2025-11-28 18:11:58,060 - KardexApp - INFO - Logger inicializado correctamente.
 2025-11-28 18:24:03,385 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 20:26:10,487 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 20:58:13,361 - KardexApp.ExceptionHandler - CRITICAL - Excepción no controlada: QueuePool limit of size 5 overflow 10 reached, connection timed out, timeout 30.00 (Background on this error at: https://sqlalche.me/e/20/3o7r)
+Traceback (most recent call last):
+  File "C:\Users\TUF\Documents\GitHub\kardex\kardex-valorizado\src\views\base_crud_view.py", line 198, in create_item
+    self._open_dialog(None)
+    ~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\TUF\Documents\GitHub\kardex\kardex-valorizado\src\views\equipos_window.py", line 1055, in _open_dialog
+    dialog = EquipoDialog(self, equipo=item)
+  File "C:\Users\TUF\Documents\GitHub\kardex\kardex-valorizado\src\views\equipos_window.py", line 204, in __init__
+    self.init_ui()
+    ~~~~~~~~~~~~^^
+  File "C:\Users\TUF\Documents\GitHub\kardex\kardex-valorizado\src\views\equipos_window.py", line 266, in init_ui
+    self.cargar_tipos_equipo()
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\TUF\Documents\GitHub\kardex\kardex-valorizado\src\views\equipos_window.py", line 476, in cargar_tipos_equipo
+    tipos = self.session.query(TipoEquipo).filter_by(activo=True).all()
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\orm\query.py", line 2704, in all
+    return self._iter().all()  # type: ignore
+           ~~~~~~~~~~^^
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\orm\query.py", line 2857, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+        params,
+        ^^^^^^^
+        execution_options={"_sa_orm_load_options": self.load_options},
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\orm\session.py", line 2351, in execute
+    return self._execute_internal(
+           ~~~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+    ...<4 lines>...
+        _add_event=_add_event,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\orm\session.py", line 2239, in _execute_internal
+    conn = self._connection_for_bind(bind)
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\orm\session.py", line 2108, in _connection_for_bind
+    return trans._connection_for_bind(engine, execution_options)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 2, in _connection_for_bind
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\orm\session.py", line 1187, in _connection_for_bind
+    conn = bind.connect()
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\engine\base.py", line 3277, in connect
+    return self._connection_cls(self)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\engine\base.py", line 143, in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\engine\base.py", line 3301, in raw_connection
+    return self.pool.connect()
+           ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\pool\base.py", line 447, in connect
+    return _ConnectionFairy._checkout(self)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\pool\base.py", line 1264, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\pool\base.py", line 711, in checkout
+    rec = pool._do_get()
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\pool\impl.py", line 166, in _do_get
+    raise exc.TimeoutError(
+    ...<4 lines>...
+    )
+sqlalchemy.exc.TimeoutError: QueuePool limit of size 5 overflow 10 reached, connection timed out, timeout 30.00 (Background on this error at: https://sqlalche.me/e/20/3o7r)
+
+2025-11-28 21:05:57,410 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 21:06:05,284 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 21:12:41,090 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 21:26:02,581 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 21:30:38,799 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 21:35:27,785 - KardexApp.ExceptionHandler - CRITICAL - Excepción no controlada: SubtipoEquipoDialog.__init__() got an unexpected keyword argument 'tipo_equipo_id'. Did you mean 'tipo_equipo'?
+Traceback (most recent call last):
+  File "C:\Users\TUF\Documents\GitHub\kardex\kardex-valorizado\src\views\equipos_window.py", line 558, in crear_nuevo_subtipo
+    dialog = SubtipoEquipoDialog(self, tipo_equipo_id=tipo_id)
+TypeError: SubtipoEquipoDialog.__init__() got an unexpected keyword argument 'tipo_equipo_id'. Did you mean 'tipo_equipo'?
+
+2025-11-28 21:35:54,415 - KardexApp.ExceptionHandler - CRITICAL - Excepción no controlada: SubtipoEquipoDialog.__init__() got an unexpected keyword argument 'tipo_equipo_id'. Did you mean 'tipo_equipo'?
+Traceback (most recent call last):
+  File "C:\Users\TUF\Documents\GitHub\kardex\kardex-valorizado\src\views\equipos_window.py", line 558, in crear_nuevo_subtipo
+    dialog = SubtipoEquipoDialog(self, tipo_equipo_id=tipo_id)
+TypeError: SubtipoEquipoDialog.__init__() got an unexpected keyword argument 'tipo_equipo_id'. Did you mean 'tipo_equipo'?
+
+2025-11-28 21:37:38,441 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 21:48:42,187 - KardexApp.ExceptionHandler - CRITICAL - Excepción no controlada: Parent instance <Equipo at 0x12f3b146030> is not bound to a Session; lazy load operation of attribute 'tipo_equipo' cannot proceed (Background on this error at: https://sqlalche.me/e/20/bhk3)
+Traceback (most recent call last):
+  File "C:\Users\TUF\Documents\GitHub\kardex\kardex-valorizado\src\views\base_crud_view.py", line 213, in show_data
+    self.fill_row(row, item)
+    ~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\Users\TUF\Documents\GitHub\kardex\kardex-valorizado\src\views\equipos_window.py", line 1037, in fill_row
+    tipo_nombre = item.tipo_equipo.nombre if item.tipo_equipo else "N/A"
+                                             ^^^^^^^^^^^^^^^^
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\orm\attributes.py", line 569, in __get__
+    return self.impl.get(state, dict_)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\orm\attributes.py", line 1096, in get
+    value = self._fire_loader_callables(state, key, passive)
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\orm\attributes.py", line 1131, in _fire_loader_callables
+    return self.callable_(state, passive)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\orm\strategies.py", line 922, in _load_for_state
+    raise orm_exc.DetachedInstanceError(
+    ...<3 lines>...
+    )
+sqlalchemy.orm.exc.DetachedInstanceError: Parent instance <Equipo at 0x12f3b146030> is not bound to a Session; lazy load operation of attribute 'tipo_equipo' cannot proceed (Background on this error at: https://sqlalche.me/e/20/bhk3)
+
+2025-11-28 21:49:31,602 - KardexApp.ExceptionHandler - CRITICAL - Excepción no controlada: Parent instance <Equipo at 0x12f3b147f20> is not bound to a Session; lazy load operation of attribute 'tipo_equipo' cannot proceed (Background on this error at: https://sqlalche.me/e/20/bhk3)
+Traceback (most recent call last):
+  File "C:\Users\TUF\Documents\GitHub\kardex\kardex-valorizado\src\views\base_crud_view.py", line 213, in show_data
+    self.fill_row(row, item)
+    ~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\Users\TUF\Documents\GitHub\kardex\kardex-valorizado\src\views\equipos_window.py", line 1037, in fill_row
+    tipo_nombre = item.tipo_equipo.nombre if item.tipo_equipo else "N/A"
+                                             ^^^^^^^^^^^^^^^^
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\orm\attributes.py", line 569, in __get__
+    return self.impl.get(state, dict_)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\orm\attributes.py", line 1096, in get
+    value = self._fire_loader_callables(state, key, passive)
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\orm\attributes.py", line 1131, in _fire_loader_callables
+    return self.callable_(state, passive)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\orm\strategies.py", line 922, in _load_for_state
+    raise orm_exc.DetachedInstanceError(
+    ...<3 lines>...
+    )
+sqlalchemy.orm.exc.DetachedInstanceError: Parent instance <Equipo at 0x12f3b147f20> is not bound to a Session; lazy load operation of attribute 'tipo_equipo' cannot proceed (Background on this error at: https://sqlalche.me/e/20/bhk3)
+
+2025-11-28 21:51:34,242 - KardexApp - INFO - Logger inicializado correctamente.
+2025-11-28 21:51:46,004 - KardexApp.ExceptionHandler - CRITICAL - Excepción no controlada: (sqlite3.OperationalError) no such column: alquiler_detalles.fecha_salida
+[SQL: SELECT alquiler_detalles.id AS alquiler_detalles_id, alquiler_detalles.alquiler_id AS alquiler_detalles_alquiler_id, alquiler_detalles.tipo_item AS alquiler_detalles_tipo_item, alquiler_detalles.equipo_id AS alquiler_detalles_equipo_id, alquiler_detalles.producto_id AS alquiler_detalles_producto_id, alquiler_detalles.fecha_salida AS alquiler_detalles_fecha_salida, alquiler_detalles.fecha_retorno AS alquiler_detalles_fecha_retorno, alquiler_detalles.horometro_salida AS alquiler_detalles_horometro_salida, alquiler_detalles.horometro_retorno AS alquiler_detalles_horometro_retorno, alquiler_detalles.horas_uso AS alquiler_detalles_horas_uso, alquiler_detalles.precio_unitario AS alquiler_detalles_precio_unitario, alquiler_detalles.total AS alquiler_detalles_total, alquiler_detalles.operador_id AS alquiler_detalles_operador_id 
+FROM alquiler_detalles JOIN alquileres ON alquileres.id = alquiler_detalles.alquiler_id 
+WHERE alquiler_detalles.equipo_id = ? AND alquileres.estado != ? AND alquileres.fecha_inicio <= ? AND alquileres.fecha_fin_estimada >= ?]
+[parameters: (21, 'ANULADO', '2025-12-28', '2025-11-28')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Traceback (most recent call last):
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\engine\default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such column: alquiler_detalles.fecha_salida
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\TUF\Documents\GitHub\kardex\kardex-valorizado\main.py", line 1023, in on_module_selected
+    launch_rental()
+    ~~~~~~~~~~~~~^^
+  File "C:\Users\TUF\Documents\GitHub\kardex\kardex-valorizado\main.py", line 1011, in launch_rental
+    main_window = RentalMainWindow()
+  File "C:\Users\TUF\Documents\GitHub\kardex\kardex-valorizado\src\views\rental_main_window.py", line 30, in __init__
+    self.init_ui()
+    ~~~~~~~~~~~~^^
+  File "C:\Users\TUF\Documents\GitHub\kardex\kardex-valorizado\src\views\rental_main_window.py", line 96, in init_ui
+    self.gantt_widget = RentalGanttWidget()
+                        ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\TUF\Documents\GitHub\kardex\kardex-valorizado\src\views\rental_gantt.py", line 22, in __init__
+    self.load_data()
+    ~~~~~~~~~~~~~~^^
+  File "C:\Users\TUF\Documents\GitHub\kardex\kardex-valorizado\src\views\rental_gantt.py", line 102, in load_data
+    self.draw_rentals(equipo, y)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\Users\TUF\Documents\GitHub\kardex\kardex-valorizado\src\views\rental_gantt.py", line 168, in draw_rentals
+    ).all()
+      ~~~^^
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\orm\query.py", line 2704, in all
+    return self._iter().all()  # type: ignore
+           ~~~~~~~~~~^^
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\orm\query.py", line 2857, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+        params,
+        ^^^^^^^
+        execution_options={"_sa_orm_load_options": self.load_options},
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\orm\session.py", line 2351, in execute
+    return self._execute_internal(
+           ~~~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+    ...<4 lines>...
+        _add_event=_add_event,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\orm\session.py", line 2249, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self,
+        ^^^^^
+    ...<4 lines>...
+        conn,
+        ^^^^^
+    )
+    ^
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\orm\context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+        statement, params or {}, execution_options=execution_options
+    )
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\engine\base.py", line 1419, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\sql\elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\engine\base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\engine\base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\engine\base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\TUF\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\engine\default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: alquiler_detalles.fecha_salida
+[SQL: SELECT alquiler_detalles.id AS alquiler_detalles_id, alquiler_detalles.alquiler_id AS alquiler_detalles_alquiler_id, alquiler_detalles.tipo_item AS alquiler_detalles_tipo_item, alquiler_detalles.equipo_id AS alquiler_detalles_equipo_id, alquiler_detalles.producto_id AS alquiler_detalles_producto_id, alquiler_detalles.fecha_salida AS alquiler_detalles_fecha_salida, alquiler_detalles.fecha_retorno AS alquiler_detalles_fecha_retorno, alquiler_detalles.horometro_salida AS alquiler_detalles_horometro_salida, alquiler_detalles.horometro_retorno AS alquiler_detalles_horometro_retorno, alquiler_detalles.horas_uso AS alquiler_detalles_horas_uso, alquiler_detalles.precio_unitario AS alquiler_detalles_precio_unitario, alquiler_detalles.total AS alquiler_detalles_total, alquiler_detalles.operador_id AS alquiler_detalles_operador_id 
+FROM alquiler_detalles JOIN alquileres ON alquileres.id = alquiler_detalles.alquiler_id 
+WHERE alquiler_detalles.equipo_id = ? AND alquileres.estado != ? AND alquileres.fecha_inicio <= ? AND alquileres.fecha_fin_estimada >= ?]
+[parameters: (21, 'ANULADO', '2025-12-28', '2025-11-28')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+2025-11-28 21:58:14,044 - KardexApp - INFO - Logger inicializado correctamente.
