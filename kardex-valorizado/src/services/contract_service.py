@@ -123,3 +123,144 @@ class ContractService:
         
         doc.build(story)
         return True
+
+    def generate_delivery_act(self, alquiler: Alquiler, output_path: str):
+        doc = SimpleDocTemplate(output_path, pagesize=A4,
+                                rightMargin=2*cm, leftMargin=2*cm,
+                                topMargin=2*cm, bottomMargin=2*cm)
+        story = []
+        
+        # Title
+        story.append(Paragraph(f"ACTA DE ENTREGA DE EQUIPOS - {alquiler.numero_contrato}", self.style_title))
+        story.append(Spacer(1, 1*cm))
+        
+        # Info
+        texto_info = f"""
+        <b>Fecha de Entrega:</b> {date.today().strftime('%d/%m/%Y')}<br/>
+        <b>Cliente:</b> {alquiler.cliente.razon_social_o_nombre}<br/>
+        <b>Obra:</b> {alquiler.ubicacion_obra or "No especificada"}<br/>
+        """
+        story.append(Paragraph(texto_info, self.style_normal))
+        story.append(Spacer(1, 0.5*cm))
+        
+        # Equipos
+        story.append(Paragraph("EQUIPOS ENTREGADOS", self.style_heading))
+        data_equipos = [["Código", "Descripción", "Serie", "H. Salida", "Estado"]]
+        
+        for det in alquiler.detalles:
+            if det.tipo_item.value == 'CONSUMIBLE':
+                nombre = det.producto.nombre if det.producto else "Consumible"
+                codigo = det.producto.codigo if det.producto else "-"
+                serie = "-"
+                horometro = "-"
+                estado = "NUEVO"
+            else:
+                nombre = det.equipo.nombre if det.equipo else "Equipo"
+                codigo = det.equipo.codigo if det.equipo else "-"
+                serie = det.equipo.serie if det.equipo else "-"
+                horometro = str(det.horometro_salida)
+                estado = det.equipo.estado.value if det.equipo else "-"
+            
+            data_equipos.append([
+                codigo,
+                Paragraph(nombre, self.style_normal),
+                serie,
+                horometro,
+                estado
+            ])
+            
+        t_equipos = Table(data_equipos, colWidths=[2.5*cm, 7*cm, 2.5*cm, 2*cm, 2.5*cm])
+        t_equipos.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
+            ('GRID', (0,0), (-1,-1), 1, colors.black),
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ]))
+        story.append(t_equipos)
+        story.append(Spacer(1, 1*cm))
+        
+        # Evidencias (Fotos)
+        # Aquí buscaríamos fotos asociadas al alquiler con tipo 'SALIDA'
+        # Por ahora, placeholder
+        story.append(Paragraph("EVIDENCIA FOTOGRÁFICA (SALIDA)", self.style_heading))
+        # Logic to add images would go here
+        story.append(Paragraph("(Ver anexo digital)", self.style_normal))
+        story.append(Spacer(1, 2*cm))
+        
+        # Firmas
+        data_firmas = [
+            ["__________________________", "__________________________"],
+            ["ENTREGADO POR (KARDEX)", "RECIBIDO CONFORME (CLIENTE)"],
+        ]
+        t_firmas = Table(data_firmas, colWidths=[8*cm, 8*cm])
+        t_firmas.setStyle(TableStyle([('ALIGN', (0,0), (-1,-1), 'CENTER')]))
+        story.append(t_firmas)
+        
+        doc.build(story)
+        return True
+
+    def generate_return_act(self, alquiler: Alquiler, output_path: str):
+        doc = SimpleDocTemplate(output_path, pagesize=A4,
+                                rightMargin=2*cm, leftMargin=2*cm,
+                                topMargin=2*cm, bottomMargin=2*cm)
+        story = []
+        
+        # Title
+        story.append(Paragraph(f"ACTA DE DEVOLUCIÓN DE EQUIPOS - {alquiler.numero_contrato}", self.style_title))
+        story.append(Spacer(1, 1*cm))
+        
+        # Info
+        texto_info = f"""
+        <b>Fecha de Devolución:</b> {date.today().strftime('%d/%m/%Y')}<br/>
+        <b>Cliente:</b> {alquiler.cliente.razon_social_o_nombre}<br/>
+        <b>Obra:</b> {alquiler.ubicacion_obra or "No especificada"}<br/>
+        """
+        story.append(Paragraph(texto_info, self.style_normal))
+        story.append(Spacer(1, 0.5*cm))
+        
+        # Equipos Devueltos
+        story.append(Paragraph("EQUIPOS DEVUELTOS", self.style_heading))
+        data_equipos = [["Código", "Descripción", "H. Retorno", "H. Uso", "Obs"]]
+        
+        # Filtrar solo devueltos hoy o todos los devueltos?
+        # Generalmente un acta es por evento.
+        # Si hay devoluciones parciales, deberíamos filtrar por fecha de retorno = hoy.
+        # Por simplicidad, listamos todos los que tienen fecha de retorno.
+        
+        for det in alquiler.detalles:
+            if det.fecha_retorno:
+                if det.tipo_item.value == 'CONSUMIBLE':
+                    continue # Consumables not usually returned in act unless unused
+                
+                nombre = det.equipo.nombre if det.equipo else "Equipo"
+                codigo = det.equipo.codigo if det.equipo else "-"
+                h_ret = str(det.horometro_retorno)
+                h_uso = str(det.horas_uso)
+                
+                data_equipos.append([
+                    codigo,
+                    Paragraph(nombre, self.style_normal),
+                    h_ret,
+                    h_uso,
+                    ""
+                ])
+            
+        t_equipos = Table(data_equipos, colWidths=[2.5*cm, 7*cm, 2.5*cm, 2*cm, 3*cm])
+        t_equipos.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
+            ('GRID', (0,0), (-1,-1), 1, colors.black),
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ]))
+        story.append(t_equipos)
+        story.append(Spacer(1, 1*cm))
+        
+        # Firmas
+        data_firmas = [
+            ["__________________________", "__________________________"],
+            ["RECIBIDO POR (KARDEX)", "DEVUELTO POR (CLIENTE)"],
+        ]
+        t_firmas = Table(data_firmas, colWidths=[8*cm, 8*cm])
+        t_firmas.setStyle(TableStyle([('ALIGN', (0,0), (-1,-1), 'CENTER')]))
+        story.append(t_firmas)
+        
+        doc.build(story)
+        return True
