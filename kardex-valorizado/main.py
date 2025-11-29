@@ -7,7 +7,7 @@ Archivo: main.py
 import sys
 from pathlib import Path
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QLabel, QVBoxLayout,
-                             QWidget, QMenuBar, QMenu, QToolBar, QPushButton, QTabWidget, QTabBar, QMessageBox)
+                             QWidget, QMenuBar, QMenu, QToolBar, QPushButton, QTabWidget, QTabBar, QMessageBox, QDialog)
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QAction
 
