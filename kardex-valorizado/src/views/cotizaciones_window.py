@@ -6,6 +6,7 @@ from PyQt6.QtGui import QFont, QIcon
 from models.database_model import (obtener_session, Cotizacion, CotizacionDetalle, 
                                    EstadoCotizacion, Cliente, Producto, Moneda)
 from views.ventas_window import VentaDialog
+from views.alquileres_window import AlquilerDialog
 from utils.styles import STYLE_TABLE_ALTERNATE
 from datetime import datetime
 
@@ -77,6 +78,21 @@ class CotizacionesWindow(QWidget):
                 btn_convertir.clicked.connect(lambda checked, c=cot: self.convertir_a_venta(c))
                 self.tabla.setCellWidget(row, 6, btn_convertir)
 
+                btn_alquiler = QPushButton("A Alquiler")
+                btn_alquiler.setStyleSheet("background-color: #e67e22; color: white;")
+                btn_alquiler.clicked.connect(lambda checked, c=cot: self.convertir_a_alquiler(c))
+                # Usamos un layout o widget contenedor si queremos múltiples botones en la celda,
+                # o agregamos una columna. Por simplicidad, agregamos columna 7.
+                # Pero la tabla tiene 7 columnas (0-6). Necesitamos ampliarla o ponerlos juntos.
+                # Vamos a ponerlos en un widget contenedor en la columna 6.
+                
+                widget_btns = QWidget()
+                layout_btns = QHBoxLayout(widget_btns)
+                layout_btns.setContentsMargins(0,0,0,0)
+                layout_btns.addWidget(btn_convertir)
+                layout_btns.addWidget(btn_alquiler)
+                self.tabla.setCellWidget(row, 6, widget_btns)
+
     def nueva_cotizacion(self):
         dialog = CotizacionDialog(self)
         if dialog.exec():
@@ -114,6 +130,25 @@ class CotizacionesWindow(QWidget):
                 cotizacion.estado = EstadoCotizacion.CONVERTIDA_VENTA
                 self.session.commit()
                 self.cargar_datos()
+
+    def convertir_a_alquiler(self, cotizacion):
+        reply = QMessageBox.question(self, "Confirmar", 
+                                     f"¿Desea crear un Alquiler basado en la cotización {cotizacion.numero_cotizacion}?",
+                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        if reply == QMessageBox.StandardButton.Yes:
+            data = {
+                'cliente_id': cotizacion.cliente_id,
+                'numero_cotizacion': cotizacion.numero_cotizacion,
+                'observaciones': cotizacion.observaciones,
+                'detalles': [] # Aquí podríamos pasar los detalles
+            }
+            
+            dialog = AlquilerDialog(self, cotizacion_data=data)
+            if dialog.exec():
+                # Opcional: Marcar cotización como convertida o referenciada
+                # cotizacion.estado = EstadoCotizacion.CONVERTIDA_ALQUILER (si existiera)
+                pass
+            self.cargar_datos()
 
 # --- DIALOGO DE COTIZACIÓN (Simplificado, reutilizando lógica de Venta si fuera posible, pero haremos uno propio rápido) ---
 # Por brevedad, este diálogo será básico. En producción debería heredar de una clase base común con VentaDialog.
