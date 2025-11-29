@@ -837,11 +837,10 @@ class ComprasWindow(QWidget):
 
         prov_id = self.cmb_proveedor_filtro.currentData()
 
-        temp_session = obtener_session()
-        compras = []
+        # Usar la sesión principal de la ventana
         try:
             columna_fecha_filtro = func.coalesce(Compra.fecha_registro_contable, Compra.fecha)
-            query = temp_session.query(Compra).options(joinedload(Compra.proveedor))
+            query = self.session.query(Compra).options(joinedload(Compra.proveedor))
 
             query = query.filter(
                 columna_fecha_filtro >= fecha_desde,
@@ -852,11 +851,15 @@ class ComprasWindow(QWidget):
                 query = query.filter_by(proveedor_id=prov_id)
 
             compras = query.order_by(columna_fecha_filtro.asc(), Compra.id.asc()).all()
+            
+            # No necesitamos expunge_all si usamos self.session y no la cerramos
+            # self.session.expunge_all() 
 
         except Exception as e:
              QMessageBox.critical(self, "Error al Cargar Compras", f"No se pudieron cargar los datos:\n{e}")
-        finally:
-             temp_session.close()
+        # No cerrar self.session
+        # finally:
+        #      temp_session.close()
 
         self.mostrar_compras(compras)
 
