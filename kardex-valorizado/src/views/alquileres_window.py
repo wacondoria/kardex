@@ -13,7 +13,7 @@ from views.base_crud_view import BaseCRUDView
 
 from models.database_model import (obtener_session, Alquiler, AlquilerDetalle,
                                    EstadoAlquiler, EstadoEquipo, TipoEquipo,
-                                   Equipo, Cliente, AlquilerEvidencia, Proveedor)
+                                   Equipo, Cliente, AlquilerEvidencia, Proveedor, Producto, TipoItemAlquiler)
 from utils.file_manager import FileManager
 from utils.widgets import SearchableComboBox, UpperLineEdit
 from services.rental_service import RentalService
@@ -425,19 +425,96 @@ class AddItemDialog(QDialog):
         self.item_confirmado.emit(data)
         self.accept()
 
+class AddConsumableDialog(QDialog):
+    consumible_confirmado = pyqtSignal(dict)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.session = obtener_session()
+        self.init_ui()
+
+    def init_ui(self):
+        self.setWindowTitle("Agregar Consumible")
+        self.setFixedSize(400, 250)
+        
+        layout = QVBoxLayout()
+        form = QFormLayout()
+        
+        self.cmb_producto = SearchableComboBox()
+        self.cargar_productos()
+        self.cmb_producto.currentIndexChanged.connect(self.actualizar_precio)
+        form.addRow("Producto:*", self.cmb_producto)
+        
+        self.spn_cantidad = QDoubleSpinBox()
+        self.spn_cantidad.setRange(0.01, 999999)
+        self.spn_cantidad.setValue(1.0)
+        form.addRow("Cantidad:", self.spn_cantidad)
+        
+        self.spn_precio = QDoubleSpinBox()
+        self.spn_precio.setRange(0, 999999)
+        self.spn_precio.setPrefix("S/ ")
+        form.addRow("Precio Unit.:", self.spn_precio)
+        
+        layout.addLayout(form)
+        
+        btn_layout = QHBoxLayout()
+        btn_cancel = QPushButton("Cancelar")
+        btn_cancel.clicked.connect(self.reject)
+        btn_add = QPushButton("Agregar")
+        btn_add.clicked.connect(self.confirmar)
+        
+        btn_layout.addStretch()
+        btn_layout.addWidget(btn_cancel)
+        btn_layout.addWidget(btn_add)
+        layout.addLayout(btn_layout)
+        
+        self.setLayout(layout)
+
+    def cargar_productos(self):
+        # Cargar todos los productos (idealmente filtrar por categoría 'Consumibles' si existiera flag)
+        productos = self.session.query(Producto).filter(Producto.activo == True).all()
+        self.cmb_producto.addItem("Seleccione...", None)
+        for p in productos:
+            self.cmb_producto.addItem(f"{p.codigo} - {p.nombre}", p.id)
+
+    def actualizar_precio(self):
+        prod_id = self.cmb_producto.currentData()
+        if prod_id:
+            prod = self.session.query(Producto).get(prod_id)
+            if prod and prod.precio_venta:
+                self.spn_precio.setValue(prod.precio_venta)
+
+    def confirmar(self):
+        prod_id = self.cmb_producto.currentData()
+        if not prod_id:
+            QMessageBox.warning(self, "Error", "Seleccione un producto.")
+            return
+            
+        data = {
+            'producto_id': prod_id,
+            'cantidad': self.spn_cantidad.value(),
+            'tarifa': self.spn_precio.value(),
+            'tipo_item': 'CONSUMIBLE'
+        }
+        self.consumible_confirmado.emit(data)
+        self.accept()
+
 class AlquilerDialog(QDialog):
     """Diálogo para crear/editar Alquiler"""
     alquiler_guardado = pyqtSignal()
 
-    def __init__(self, parent=None, alquiler=None):
+    def __init__(self, parent=None, alquiler=None, cotizacion_data=None):
         super().__init__(parent)
         self.session = obtener_session()
         self.alquiler = alquiler
+        self.cotizacion_data = cotizacion_data
         self.detalles_temp = [] # Lista de dicts
         self.init_ui()
         
         if alquiler:
             self.cargar_datos()
+        elif cotizacion_data:
+            self.cargar_datos_cotizacion()
 
     def init_ui(self):
         self.setWindowTitle("Nuevo Alquiler" if not self.alquiler else "Editar Alquiler")
@@ -489,8 +566,15 @@ class AlquilerDialog(QDialog):
         btn_add_item = QPushButton("➕ Agregar Equipo Suelto")
         btn_add_item.clicked.connect(self.agregar_item_suelto)
         
+        btn_add_item = QPushButton("➕ Agregar Equipo Suelto")
+        btn_add_item.clicked.connect(self.agregar_item_suelto)
+        
+        btn_add_cons = QPushButton("🛒 Agregar Consumible")
+        btn_add_cons.clicked.connect(self.agregar_consumible)
+        
         toolbar_det.addWidget(btn_add_kit)
         toolbar_det.addWidget(btn_add_item)
+        toolbar_det.addWidget(btn_add_cons)
         toolbar_det.addStretch()
         
         det_layout.addLayout(toolbar_det)
@@ -617,43 +701,65 @@ class AlquilerDialog(QDialog):
         self.detalles_temp.append(data)
         self.actualizar_tabla_detalles()
 
+    def agregar_consumible(self):
+        dialog = AddConsumableDialog(self)
+        dialog.consumible_confirmado.connect(self.recibir_consumible)
+        dialog.exec()
+
+    def recibir_consumible(self, data):
+        self.detalles_temp.append(data)
+        self.actualizar_tabla_detalles()
+
     def actualizar_tabla_detalles(self):
         self.tabla_detalles.setRowCount(0)
         total = 0.0
         for row_idx, det in enumerate(self.detalles_temp):
             self.tabla_detalles.insertRow(row_idx)
             
-            equipo = self.session.query(Equipo).get(det['equipo_id'])
-            
             # 0: Código
-            self.tabla_detalles.setItem(row_idx, 0, QTableWidgetItem(equipo.codigo))
             # 1: Descripción
-            nombre_equipo = equipo.nombre
-            if det.get('es_subalquiler'):
-                nombre_equipo += " (SUB-ALQUILER)"
-            self.tabla_detalles.setItem(row_idx, 1, QTableWidgetItem(nombre_equipo))
             
-            # 2: Cantidad
-            self.tabla_detalles.setItem(row_idx, 2, QTableWidgetItem(str(det['cantidad'])))
-            # 3: Tarifa
-            self.tabla_detalles.setItem(row_idx, 3, QTableWidgetItem(f"{det['tarifa']:.2f}"))
+            tipo = det.get('tipo_item', 'EQUIPO')
             
-            # 4: H. Salida (Editable)
-            h_salida = det.get('horometro_salida', equipo.horometro_actual)
-            item_salida = QTableWidgetItem(str(h_salida))
-            # item_salida.setFlags(item_salida.flags() | Qt.ItemFlag.ItemIsEditable) # Default is editable
-            self.tabla_detalles.setItem(row_idx, 4, item_salida)
-            
-            # 5: H. Retorno (Editable)
-            h_retorno = det.get('horometro_retorno', 0.0)
-            item_retorno = QTableWidgetItem(str(h_retorno))
-            self.tabla_detalles.setItem(row_idx, 5, item_retorno)
-            
-            # 6: H. Uso (Calculated)
-            h_uso = 0.0
-            if h_retorno > h_salida:
-                h_uso = h_retorno - h_salida
-            self.tabla_detalles.setItem(row_idx, 6, QTableWidgetItem(f"{h_uso:.1f}"))
+            if tipo == 'CONSUMIBLE':
+                prod = self.session.query(Producto).get(det['producto_id'])
+                self.tabla_detalles.setItem(row_idx, 0, QTableWidgetItem(prod.codigo))
+                self.tabla_detalles.setItem(row_idx, 1, QTableWidgetItem(f"[CONSUMIBLE] {prod.nombre}"))
+                
+                # Deshabilitar horómetros para consumibles
+                item_salida = QTableWidgetItem("-")
+                item_salida.setFlags(Qt.ItemFlag.NoItemFlags)
+                self.tabla_detalles.setItem(row_idx, 4, item_salida)
+                
+                item_retorno = QTableWidgetItem("-")
+                item_retorno.setFlags(Qt.ItemFlag.NoItemFlags)
+                self.tabla_detalles.setItem(row_idx, 5, item_retorno)
+                
+                self.tabla_detalles.setItem(row_idx, 6, QTableWidgetItem("-"))
+                
+            else:
+                equipo = self.session.query(Equipo).get(det['equipo_id'])
+                self.tabla_detalles.setItem(row_idx, 0, QTableWidgetItem(equipo.codigo))
+                nombre_equipo = equipo.nombre
+                if det.get('es_subalquiler'):
+                    nombre_equipo += " (SUB-ALQUILER)"
+                self.tabla_detalles.setItem(row_idx, 1, QTableWidgetItem(nombre_equipo))
+                
+                # 4: H. Salida (Editable)
+                h_salida = det.get('horometro_salida', equipo.horometro_actual)
+                item_salida = QTableWidgetItem(str(h_salida))
+                self.tabla_detalles.setItem(row_idx, 4, item_salida)
+                
+                # 5: H. Retorno (Editable)
+                h_retorno = det.get('horometro_retorno', 0.0)
+                item_retorno = QTableWidgetItem(str(h_retorno))
+                self.tabla_detalles.setItem(row_idx, 5, item_retorno)
+                
+                # 6: H. Uso (Calculated)
+                h_uso = 0.0
+                if h_retorno > h_salida:
+                    h_uso = h_retorno - h_salida
+                self.tabla_detalles.setItem(row_idx, 6, QTableWidgetItem(f"{h_uso:.1f}"))
             
             # 7: Subtotal
             subtotal = det['cantidad'] * det['tarifa']
@@ -703,16 +809,44 @@ class AlquilerDialog(QDialog):
         # Cargar detalles
         self.detalles_temp = []
         for det in self.alquiler.detalles:
-            self.detalles_temp.append({
-                'equipo_id': det.equipo_id,
-                'cantidad': 1, # Assuming 1 for now as discussed
-                'tarifa': det.precio_unitario,
-                'horometro_salida': det.horometro_salida,
-                'horometro_retorno': det.horometro_retorno
-            })
+            if det.tipo_item == TipoItemAlquiler.CONSUMIBLE:
+                 self.detalles_temp.append({
+                    'producto_id': det.producto_id,
+                    'cantidad': det.cantidad or 1,
+                    'tarifa': det.precio_unitario,
+                    'tipo_item': 'CONSUMIBLE'
+                })
+            else:
+                self.detalles_temp.append({
+                    'equipo_id': det.equipo_id,
+                    'cantidad': 1, 
+                    'tarifa': det.precio_unitario,
+                    'horometro_salida': det.horometro_salida,
+                    'horometro_retorno': det.horometro_retorno,
+                    'tipo_item': 'EQUIPO'
+                })
         self.actualizar_tabla_detalles()
         
         self.cargar_evidencias()
+
+
+    def cargar_datos_cotizacion(self):
+        if not self.cotizacion_data: return
+        
+        # Cliente
+        cliente_id = self.cotizacion_data.get('cliente_id')
+        if cliente_id:
+            index = self.cmb_cliente.findData(cliente_id)
+            if index >= 0: self.cmb_cliente.setCurrentIndex(index)
+            
+        # Observaciones
+        obs = self.cotizacion_data.get('observaciones', '')
+        num = self.cotizacion_data.get('numero_cotizacion', '')
+        self.setWindowTitle(f"Nuevo Alquiler (Desde {num})")
+        
+        # Intentar cargar items (Simplificado: Solo mensaje por ahora si no hay mapeo directo)
+        # En una versión avanzada, aquí iteraríamos los detalles de la cotización
+        # e intentaríamos buscar equipos disponibles que coincidan con el producto.
 
     def guardar(self):
         cliente_id = self.cmb_cliente.currentData()
@@ -734,53 +868,58 @@ class AlquilerDialog(QDialog):
                 
                 # Guardar detalles
                 # Guardar detalles
+                # Guardar detalles
                 for det in self.detalles_temp:
-                    equipo = self.session.query(Equipo).get(det['equipo_id'])
+                    tipo = det.get('tipo_item', 'EQUIPO')
                     
-                    h_salida = det.get('horometro_salida', equipo.horometro_actual)
-                    h_retorno = det.get('horometro_retorno', 0.0)
-                    h_uso = 0.0
-                    if h_retorno > h_salida:
-                        h_uso = h_retorno - h_salida
+                    if tipo == 'CONSUMIBLE':
+                        nuevo_det = AlquilerDetalle(
+                            alquiler_id=self.alquiler.id,
+                            producto_id=det['producto_id'],
+                            tipo_item=TipoItemAlquiler.CONSUMIBLE,
+                            cantidad=det['cantidad'],
+                            precio_unitario=det['tarifa'],
+                            total=det['cantidad'] * det['tarifa'],
+                            fecha_salida=self.date_inicio.date().toPyDate()
+                        )
+                        self.session.add(nuevo_det)
+                    else:
+                        equipo = self.session.query(Equipo).get(det['equipo_id'])
                         
-                    # Update Equipo Horometer if returned
-                    if h_retorno > 0:
-                        if h_retorno > equipo.horometro_actual:
-                            equipo.horometro_actual = h_retorno
+                        h_salida = det.get('horometro_salida', equipo.horometro_actual)
+                        h_retorno = det.get('horometro_retorno', 0.0)
+                        h_uso = 0.0
+                        if h_retorno > h_salida:
+                            h_uso = h_retorno - h_salida
                             
-                    nuevo_det = AlquilerDetalle(
-                        alquiler_id=self.alquiler.id,
-                        equipo_id=det['equipo_id'],
-                        # cantidad=det['cantidad'], # Model doesn't have cantidad? Let's check. 
-                        # Wait, AlquilerDetalle usually implies 1 unit per row for serialized items, but let's check model again.
-                        # The model shown in previous step didn't show 'cantidad'. It has 'total'.
-                        # Assuming 1 unit for now or checking if I missed 'cantidad' column.
-                        # If it's rental of serialized equipment, quantity is usually 1.
-                        # But the dialog has 'cantidad'.
-                        # Let's assume quantity is 1 for serialized equipment or add it if missing.
-                        # Re-reading model snippet: No 'cantidad' column visible in the snippet.
-                        # But 'total' implies quantity * price.
-                        # Let's assume quantity is handled or I should add it.
-                        # For now, I'll map 'precio_unitario' and 'total'.
+                        # Update Equipo Horometer if returned
+                        if h_retorno > 0:
+                            if h_retorno > equipo.horometro_actual:
+                                equipo.horometro_actual = h_retorno
+                                
+                        nuevo_det = AlquilerDetalle(
+                            alquiler_id=self.alquiler.id,
+                            equipo_id=det['equipo_id'],
+                            tipo_item=TipoItemAlquiler.EQUIPO,
+                            
+                            precio_unitario=det['tarifa'],
+                            total=det['cantidad'] * det['tarifa'],
+                            
+                            horometro_salida=h_salida,
+                            horometro_retorno=h_retorno,
+                            horas_uso=h_uso,
+                            
+                            fecha_salida=self.date_inicio.date().toPyDate(),
+                            
+                            # Sub-alquiler
+                            es_subalquiler=det.get('es_subalquiler', False),
+                            proveedor_subalquiler_id=det.get('proveedor_id'),
+                            costo_subalquiler=det.get('costo_subalquiler', 0.0)
+                        )
+                        self.session.add(nuevo_det)
                         
-                        precio_unitario=det['tarifa'],
-                        total=det['cantidad'] * det['tarifa'],
-                        
-                        horometro_salida=h_salida,
-                        horometro_retorno=h_retorno,
-                        horas_uso=h_uso,
-                        
-                        fecha_salida=self.date_inicio.date().toPyDate(),
-                        
-                        # Sub-alquiler
-                        es_subalquiler=det.get('es_subalquiler', False),
-                        proveedor_subalquiler_id=det.get('proveedor_id'),
-                        costo_subalquiler=det.get('costo_subalquiler', 0.0)
-                    )
-                    self.session.add(nuevo_det)
-                    
-                    # Actualizar estado del equipo
-                    equipo.estado = EstadoEquipo.ALQUILADO
+                        # Actualizar estado del equipo
+                        equipo.estado = EstadoEquipo.ALQUILADO
             
             self.session.commit()
             self.alquiler_guardado.emit()
@@ -863,6 +1002,222 @@ class BillingPreviewDialog(QDialog):
         self.service.close()
         super().closeEvent(event)
 
+class PartialReturnDialog(QDialog):
+    return_confirmed = pyqtSignal()
+
+    def __init__(self, parent=None, alquiler=None):
+        super().__init__(parent)
+        self.session = obtener_session()
+        self.alquiler = alquiler
+        self.init_ui()
+        self.cargar_items_pendientes()
+
+    def init_ui(self):
+        self.setWindowTitle(f"Devolución de Equipos - Contrato {self.alquiler.numero_contrato}")
+        self.resize(800, 500)
+        
+        layout = QVBoxLayout()
+        
+        # Header
+        form = QFormLayout()
+        self.date_retorno = QDateEdit(date.today())
+        self.date_retorno.setCalendarPopup(True)
+        form.addRow("Fecha de Devolución:", self.date_retorno)
+        layout.addLayout(form)
+        
+        layout.addWidget(QLabel("Seleccione los ítems a devolver:"))
+        
+        # Table
+        self.table = QTableWidget()
+        self.table.setColumnCount(6)
+        self.table.setHorizontalHeaderLabels(["Devolver", "Equipo/Item", "Código", "H. Salida", "H. Retorno", "Notas"])
+        self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        layout.addWidget(self.table)
+        
+        # Buttons
+        btn_layout = QHBoxLayout()
+        btn_cancel = QPushButton("Cancelar")
+        btn_cancel.clicked.connect(self.reject)
+        
+        btn_save = QPushButton("Registrar Devolución")
+        btn_save.clicked.connect(self.guardar)
+        btn_save.setStyleSheet("background-color: #e67e22; color: white; font-weight: bold;")
+        
+        btn_layout.addStretch()
+        btn_layout.addWidget(btn_cancel)
+        btn_layout.addWidget(btn_save)
+        layout.addLayout(btn_layout)
+        
+        self.setLayout(layout)
+
+    def cargar_items_pendientes(self):
+        self.table.setRowCount(0)
+        # Filtrar detalles no devueltos
+        detalles_pendientes = [d for d in self.alquiler.detalles if not d.fecha_retorno]
+        
+        for row, det in enumerate(detalles_pendientes):
+            self.table.insertRow(row)
+            
+            # Checkbox
+            chk = QCheckBox()
+            cell_widget = QWidget()
+            layout_chk = QHBoxLayout(cell_widget)
+            layout_chk.addWidget(chk)
+            layout_chk.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            layout_chk.setContentsMargins(0,0,0,0)
+            self.table.setCellWidget(row, 0, cell_widget)
+            
+            # Store detail ID in checkbox or widget property
+            chk.setProperty("detalle_id", det.id)
+            
+            # Info
+            nombre = det.equipo.nombre if det.equipo else (det.producto.nombre if det.producto else "Item")
+            codigo = det.equipo.codigo if det.equipo else (det.producto.codigo if det.producto else "-")
+            
+            self.table.setItem(row, 1, QTableWidgetItem(nombre))
+            self.table.setItem(row, 2, QTableWidgetItem(codigo))
+            
+            # Horometros
+            h_salida = det.horometro_salida or 0.0
+            self.table.setItem(row, 3, QTableWidgetItem(str(h_salida)))
+            
+            # H. Retorno (Editable)
+            if det.tipo_item == TipoItemAlquiler.CONSUMIBLE:
+                 self.table.setItem(row, 4, QTableWidgetItem("-"))
+                 chk.setEnabled(False) # Consumables usually don't return? Or maybe unused ones?
+                 # Assuming consumables are sold/used, not returned.
+                 # If partial return of consumables is allowed (e.g. return unused fuel), logic is complex.
+                 # For now disable return of consumables.
+                 chk.setToolTip("Los consumibles no se devuelven (se facturan).")
+            else:
+                item_retorno = QTableWidgetItem(str(h_salida)) # Default to same
+                self.table.setItem(row, 4, item_retorno)
+            
+            self.table.setItem(row, 5, QTableWidgetItem("")) # Notas
+
+    def guardar(self):
+        fecha_retorno = self.date_retorno.date().toPyDate()
+        items_devueltos = 0
+        
+        try:
+            for row in range(self.table.rowCount()):
+                cell_widget = self.table.cellWidget(row, 0)
+                chk = cell_widget.findChild(QCheckBox)
+                
+                if chk.isChecked():
+                    det_id = chk.property("detalle_id")
+                    detalle = self.session.get(AlquilerDetalle, det_id)
+                    
+                    if detalle:
+                        # Validar fecha
+                        if fecha_retorno < detalle.fecha_salida.date():
+                            QMessageBox.warning(self, "Error", f"La fecha de retorno no puede ser anterior a la salida ({detalle.fecha_salida.date()}) para el item {detalle.equipo.codigo}.")
+                            return
+
+                        # Horometro
+                        h_retorno_val = 0.0
+                        item_h = self.table.item(row, 4)
+                        if item_h and item_h.text() != "-":
+                            try:
+                                h_retorno_val = float(item_h.text())
+                            except ValueError:
+                                QMessageBox.warning(self, "Error", f"Horómetro inválido en fila {row+1}")
+                                return
+                                
+                            if h_retorno_val < detalle.horometro_salida:
+                                QMessageBox.warning(self, "Error", f"El horómetro de retorno no puede ser menor al de salida ({detalle.horometro_salida}) en fila {row+1}")
+                                return
+                        
+                        # Actualizar Detalle
+                        detalle.fecha_retorno = datetime.combine(fecha_retorno, datetime.min.time())
+                        detalle.horometro_retorno = h_retorno_val
+                        detalle.horas_uso = h_retorno_val - detalle.horometro_salida
+                        
+                        # Actualizar Equipo
+                        if detalle.equipo:
+                            detalle.equipo.estado = EstadoEquipo.DISPONIBLE
+                            detalle.equipo.horometro_actual = h_retorno_val
+                            # Check maintenance logic here? (Phase 4)
+                        
+                        items_devueltos += 1
+            
+            if items_devueltos > 0:
+                # Verificar si todos los items fueron devueltos para cerrar alquiler
+                # Recargar alquiler para ver estado actual de detalles
+                self.session.flush()
+                pendientes = [d for d in self.alquiler.detalles if not d.fecha_retorno and d.tipo_item != TipoItemAlquiler.CONSUMIBLE]
+                
+                if not pendientes:
+                    reply = QMessageBox.question(self, "Cerrar Alquiler", "Todos los equipos han sido devueltos. ¿Desea finalizar el contrato?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+                    if reply == QMessageBox.StandardButton.Yes:
+                        self.alquiler.estado = EstadoAlquiler.FINALIZADO
+                        self.alquiler.fecha_fin_real = fecha_retorno
+                
+                self.session.commit()
+                self.return_confirmed.emit()
+                self.accept()
+            else:
+                QMessageBox.warning(self, "Aviso", "No seleccionó ningún ítem para devolver.")
+                
+        except Exception as e:
+            self.session.rollback()
+            QMessageBox.critical(self, "Error", str(e))
+
+class ExtensionDialog(QDialog):
+    extension_confirmed = pyqtSignal()
+
+    def __init__(self, parent=None, alquiler=None):
+        super().__init__(parent)
+        self.session = obtener_session()
+        self.alquiler = alquiler
+        self.init_ui()
+
+    def init_ui(self):
+        self.setWindowTitle(f"Extender Alquiler - {self.alquiler.numero_contrato}")
+        self.setFixedSize(400, 200)
+        
+        layout = QVBoxLayout()
+        form = QFormLayout()
+        
+        self.lbl_actual = QLabel(self.alquiler.fecha_fin_estimada.strftime("%d/%m/%Y"))
+        form.addRow("Fecha Fin Actual:", self.lbl_actual)
+        
+        self.date_nueva = QDateEdit(self.alquiler.fecha_fin_estimada)
+        self.date_nueva.setCalendarPopup(True)
+        self.date_nueva.setMinimumDate(QDate(self.alquiler.fecha_fin_estimada.year, self.alquiler.fecha_fin_estimada.month, self.alquiler.fecha_fin_estimada.day))
+        form.addRow("Nueva Fecha Fin:", self.date_nueva)
+        
+        layout.addLayout(form)
+        
+        btn_layout = QHBoxLayout()
+        btn_cancel = QPushButton("Cancelar")
+        btn_cancel.clicked.connect(self.reject)
+        btn_save = QPushButton("Guardar Extensión")
+        btn_save.clicked.connect(self.guardar)
+        
+        btn_layout.addStretch()
+        btn_layout.addWidget(btn_cancel)
+        btn_layout.addWidget(btn_save)
+        layout.addLayout(btn_layout)
+        
+        self.setLayout(layout)
+
+    def guardar(self):
+        nueva_fecha = self.date_nueva.date().toPyDate()
+        if nueva_fecha <= self.alquiler.fecha_fin_estimada:
+            QMessageBox.warning(self, "Error", "La nueva fecha debe ser posterior a la actual.")
+            return
+            
+        try:
+            self.alquiler.fecha_fin_estimada = nueva_fecha
+            self.session.commit()
+            QMessageBox.information(self, "Éxito", "Alquiler extendido correctamente.")
+            self.extension_confirmed.emit()
+            self.accept()
+        except Exception as e:
+            self.session.rollback()
+            QMessageBox.critical(self, "Error", str(e))
+
 class AlquileresWindow(BaseCRUDView):
     """Ventana de gestión de Alquileres"""
     
@@ -878,9 +1233,25 @@ class AlquileresWindow(BaseCRUDView):
         btn_contract = QPushButton("📄 Generar Contrato")
         btn_contract.clicked.connect(self.generar_contrato)
         
+        btn_return = QPushButton("🔙 Devolución / Retorno")
+        btn_return.clicked.connect(self.open_return_dialog)
+        
+        btn_extend = QPushButton("📅 Extender Plazo")
+        btn_extend.clicked.connect(self.open_extension_dialog)
+        
+        btn_acta_entrega = QPushButton("📄 Acta Entrega")
+        btn_acta_entrega.clicked.connect(self.generar_acta_entrega)
+        
+        btn_acta_devolucion = QPushButton("📄 Acta Devolución")
+        btn_acta_devolucion.clicked.connect(self.generar_acta_devolucion)
+        
         # Insert at top
         self.layout().insertWidget(0, btn_billing)
         self.layout().insertWidget(1, btn_contract)
+        self.layout().insertWidget(2, btn_return)
+        self.layout().insertWidget(3, btn_extend)
+        self.layout().insertWidget(4, btn_acta_entrega)
+        self.layout().insertWidget(5, btn_acta_devolucion)
 
     def open_billing_preview(self):
         dialog = BillingPreviewDialog(self)
@@ -909,6 +1280,69 @@ class AlquileresWindow(BaseCRUDView):
                 os.startfile(file_name)
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Error al generar contrato:\n{str(e)}")
+
+    def open_return_dialog(self):
+        selected_row = self.tabla.currentRow()
+        if selected_row < 0:
+            QMessageBox.warning(self, "Aviso", "Seleccione un alquiler para registrar devolución.")
+            return
+            
+        alquiler_id = int(self.tabla.item(selected_row, 0).text())
+        alquiler = self.session.get(Alquiler, alquiler_id)
+        
+        if not alquiler: return
+        
+        dialog = PartialReturnDialog(self, alquiler)
+        dialog.return_confirmed.connect(self.load_data)
+        dialog.exec()
+
+    def open_extension_dialog(self):
+        selected_row = self.tabla.currentRow()
+        if selected_row < 0:
+            QMessageBox.warning(self, "Aviso", "Seleccione un alquiler para extender.")
+            return
+            
+        alquiler_id = int(self.tabla.item(selected_row, 0).text())
+        alquiler = self.session.get(Alquiler, alquiler_id)
+        
+        if not alquiler: return
+        
+        dialog = ExtensionDialog(self, alquiler)
+        dialog.extension_confirmed.connect(self.load_data)
+        dialog.exec()
+
+    def generar_acta_entrega(self):
+        self._generar_documento("entrega")
+
+    def generar_acta_devolucion(self):
+        self._generar_documento("devolucion")
+
+    def _generar_documento(self, tipo):
+        selected_row = self.tabla.currentRow()
+        if selected_row < 0:
+            QMessageBox.warning(self, "Aviso", "Seleccione un alquiler.")
+            return
+            
+        alquiler_id = int(self.tabla.item(selected_row, 0).text())
+        alquiler = self.session.get(Alquiler, alquiler_id)
+        
+        if not alquiler: return
+        
+        nombre_doc = f"Acta_{tipo.capitalize()}_{alquiler.id}.pdf"
+        file_name, _ = QFileDialog.getSaveFileName(self, f"Guardar Acta {tipo.capitalize()}", nombre_doc, "PDF Files (*.pdf)")
+        
+        if file_name:
+            try:
+                service = ContractService()
+                if tipo == "entrega":
+                    service.generate_delivery_act(alquiler, file_name)
+                else:
+                    service.generate_return_act(alquiler, file_name)
+                    
+                QMessageBox.information(self, "Éxito", f"Documento generado correctamente en:\n{file_name}")
+                os.startfile(file_name)
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Error al generar documento:\n{str(e)}")
 
 
 
