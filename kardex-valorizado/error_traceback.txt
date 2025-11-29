@@ -1,7 +1,0 @@
-Traceback (most recent call last):
-  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 17, in <module>
-    from views.login_window import LoginWindow
-  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\login_window.py", line 21, in <module>
-    from models.database_model import (obtener_session, Usuario, Licencia,
-                                       AnioContable, EstadoAnio, Rol, Permiso)
-ImportError: cannot import name 'obtener_session' from 'models.database_model' (C:\Users\USER\Github\kardex\kardex-valorizado\src\models\database_model.py)
