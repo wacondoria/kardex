@@ -20,12 +20,16 @@ class ImportWizard(QDialog):
         layout.addWidget(QLabel("1. Seleccione el tipo de datos y el archivo:"))
         
         self.cmb_tipo = QComboBox()
-        self.cmb_tipo.addItems(["Productos", "Clientes (No impl.)", "Proveedores (No impl.)"])
+        self.cmb_tipo.addItems(["Productos", "Clientes", "Proveedores", "Tipo de Cambio", "Compras", "Ventas"])
         layout.addWidget(self.cmb_tipo)
 
         btn_file = QPushButton("Seleccionar Archivo (Excel/CSV)")
         btn_file.clicked.connect(self.seleccionar_archivo)
         layout.addWidget(btn_file)
+        
+        btn_plantilla = QPushButton("Descargar Plantilla")
+        btn_plantilla.clicked.connect(self.descargar_plantilla)
+        layout.addWidget(btn_plantilla)
 
         self.lbl_archivo = QLabel("Ningún archivo seleccionado")
         layout.addWidget(self.lbl_archivo)
@@ -90,6 +94,70 @@ class ImportWizard(QDialog):
                 self.accept()
             else:
                 QMessageBox.critical(self, "Error", msg)
+
+        elif tipo == "Clientes":
+            exito, msg, errores = self.service.importar_clientes(path)
+            
+            self.progress.setVisible(False)
+            if exito:
+                detalles = "\n".join(errores[:10])
+                if len(errores) > 10: detalles += "\n..."
+                QMessageBox.information(self, "Resultado", f"{msg}\n\nErrores:\n{detalles}")
+                self.accept()
+            else:
+                QMessageBox.critical(self, "Error", msg)
+
+        elif tipo == "Proveedores":
+            exito, msg, errores = self.service.importar_proveedores(path)
+            
+            self.progress.setVisible(False)
+            if exito:
+                detalles = "\n".join(errores[:10])
+                if len(errores) > 10: detalles += "\n..."
+                QMessageBox.information(self, "Resultado", f"{msg}\n\nErrores:\n{detalles}")
+                self.accept()
+            else:
+                QMessageBox.critical(self, "Error", msg)
+
+        elif tipo == "Tipo de Cambio":
+            exito, msg, errores = self.service.importar_tipo_cambio(path)
+            self.progress.setVisible(False)
+            if exito:
+                QMessageBox.information(self, "Resultado", f"{msg}")
+                self.accept()
+            else:
+                QMessageBox.critical(self, "Error", msg)
+
+        elif tipo == "Compras":
+            exito, msg, errores = self.service.importar_compras(path)
+            self.progress.setVisible(False)
+            if exito:
+                detalles = "\n".join(errores[:10])
+                if len(errores) > 10: detalles += "\n..."
+                QMessageBox.information(self, "Resultado", f"{msg}\n\nErrores:\n{detalles}")
+                self.accept()
+            else:
+                QMessageBox.critical(self, "Error", msg)
+
+        elif tipo == "Ventas":
+             QMessageBox.information(self, "Info", "Importación de Ventas en desarrollo.")
+             self.progress.setVisible(False)
+
         else:
             QMessageBox.information(self, "Info", "Este tipo de importación aún no está implementado.")
             self.progress.setVisible(False)
+            self.progress.setVisible(False)
+
+    def descargar_plantilla(self):
+        tipo = self.cmb_tipo.currentText()
+        if "No impl" in tipo:
+            QMessageBox.warning(self, "Aviso", "No hay plantilla disponible para este tipo.")
+            return
+            
+        path, _ = QFileDialog.getSaveFileName(self, "Guardar Plantilla", f"plantilla_{tipo.lower()}.xlsx", "Excel (*.xlsx);;CSV (*.csv)")
+        if path:
+            success, msg = self.service.generar_plantilla(tipo, path)
+            if success:
+                QMessageBox.information(self, "Éxito", f"Plantilla guardada en:\n{path}")
+            else:
+                QMessageBox.critical(self, "Error", msg)
