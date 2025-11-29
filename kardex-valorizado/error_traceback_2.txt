@@ -1,6 +1,0 @@
-Traceback (most recent call last):
-  File "C:\Users\USER\Github\kardex\kardex-valorizado\main.py", line 23, in <module>
-    from views.tipo_cambio_window import TipoCambioWindow
-  File "C:\Users\USER\Github\kardex\kardex-valorizado\src\views\tipo_cambio_window.py", line 21, in <module>
-    from models.database_model import obtener_session, TipoCambio
-ImportError: cannot import name 'TipoCambio' from 'models.database_model' (C:\Users\USER\Github\kardex\kardex-valorizado\src\models\database_model.py)
