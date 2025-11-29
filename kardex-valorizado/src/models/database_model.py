@@ -426,6 +426,7 @@ class Cliente(Base):
     direccion = Column(Text)
     telefono = Column(String(20))
     email = Column(String(100))
+    contacto = Column(String(100))
     
     activo = Column(Boolean, default=True)
     fecha_registro = Column(DateTime, default=datetime.now)
