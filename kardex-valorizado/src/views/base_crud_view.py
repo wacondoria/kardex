@@ -139,16 +139,10 @@ class BaseCRUDView(QWidget):
             items = query.all()
             
             # Detach items from session so they can be used in main thread
-            # Or keep session open? If we detach, we lose lazy loading.
-            # We will return the list of items.
-            # Important: If items have relationships, accessing them in main thread might fail if session is closed.
-            # We will keep local_session open? No, we should close it.
-            # Strategy: Eager load what's needed or keep objects attached to a session that lives in main thread?
-            # The pattern here is tricky. 
-            # Option A: Return IDs and reload in main thread (fast query).
-            # Option B: Expunge all.
-            
+            local_session.expunge_all()
             local_session.close() 
+            
+            return items 
             # If we close, we can't access lazy attributes.
             # For this MVP optimization, let's assume we fetch what we need or use the main session to re-merge if needed.
             # Actually, passing ORM objects across threads is risky.
