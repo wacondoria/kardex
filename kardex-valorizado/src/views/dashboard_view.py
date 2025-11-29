@@ -74,7 +74,9 @@ class DashboardWidget(QWidget):
     """
     def __init__(self):
         super().__init__()
-        self.session = obtener_session()
+    def __init__(self):
+        super().__init__()
+        # self.session removido para evitar mantener conexiones abiertas
         self.init_ui()
         self.cargar_datos()
 
@@ -142,19 +144,20 @@ class DashboardWidget(QWidget):
 
     def cargar_datos(self):
         """Recupera los datos de la BD y actualiza los widgets."""
+        session = obtener_session()
         try:
             hoy = date.today()
             anio_actual = hoy.year
             mes_actual = hoy.month
 
             # --- KPI 1: Ventas del Día ---
-            ventas_dia = self.session.query(func.sum(Venta.total)).filter(
+            ventas_dia = session.query(func.sum(Venta.total)).filter(
                 func.date(Venta.fecha) == hoy
             ).scalar() or 0.0
             self.kpi_ventas.value_label.setText(f"S/ {ventas_dia:,.2f}")
 
             # --- KPI 2: Compras del Mes ---
-            compras_mes = self.session.query(func.sum(Compra.total)).filter(
+            compras_mes = session.query(func.sum(Compra.total)).filter(
                 extract('year', Compra.fecha) == anio_actual,
                 extract('month', Compra.fecha) == mes_actual
             ).scalar() or 0.0
@@ -177,7 +180,7 @@ class DashboardWidget(QWidget):
             # FROM movimientos_stock GROUP BY producto_id
 
             # Esto puede ser pesado. Limitaremos a productos con stock mínimo definido.
-            prods_con_minimo = self.session.query(Producto).filter(
+            prods_con_minimo = session.query(Producto).filter(
                 Producto.activo == True,
                 Producto.stock_minimo > 0
             ).all()
@@ -191,7 +194,7 @@ class DashboardWidget(QWidget):
             criticos_count = 0
             if product_ids:
                 subquery = (
-                    self.session.query(
+                    session.query(
                         func.max(MovimientoStock.id).label('max_id')
                     )
                     .filter(MovimientoStock.producto_id.in_(product_ids))
@@ -201,7 +204,7 @@ class DashboardWidget(QWidget):
 
                 # Sumar saldo de todos los almacenes por producto
                 stocks_query = (
-                    self.session.query(
+                    session.query(
                         MovimientoStock.producto_id,
                         func.sum(MovimientoStock.saldo_cantidad)
                     )
@@ -224,17 +227,19 @@ class DashboardWidget(QWidget):
 
 
             # --- GRÁFICO: Ventas vs Compras (6 meses) ---
-            self.actualizar_grafico(hoy)
+            self.actualizar_grafico(hoy, session)
 
             # --- ALERTAS ---
-            self.actualizar_alertas()
+            self.actualizar_alertas(session)
 
         except Exception as e:
             print(f"Error cargando dashboard: {e}")
             import traceback
             traceback.print_exc()
+        finally:
+            session.close()
 
-    def actualizar_grafico(self, fecha_ref):
+    def actualizar_grafico(self, fecha_ref, session):
         # Calcular rango de 6 meses
         fechas = []
         ventas_data = []
@@ -256,14 +261,14 @@ class DashboardWidget(QWidget):
             meses_labels.append(mes_nombre)
 
             # Consulta Ventas
-            v = self.session.query(func.sum(Venta.total)).filter(
+            v = session.query(func.sum(Venta.total)).filter(
                 extract('year', Venta.fecha) == y,
                 extract('month', Venta.fecha) == m
             ).scalar() or 0.0
             ventas_data.append(v)
 
             # Consulta Compras
-            c = self.session.query(func.sum(Compra.total)).filter(
+            c = session.query(func.sum(Compra.total)).filter(
                 extract('year', Compra.fecha) == y,
                 extract('month', Compra.fecha) == m
             ).scalar() or 0.0
@@ -285,13 +290,13 @@ class DashboardWidget(QWidget):
 
         self.canvas.draw()
 
-    def actualizar_alertas(self):
+    def actualizar_alertas(self, session):
         self.list_alerts.clear()
 
         # 1. Órdenes de Compra Pendientes
         try:
             if OrdenCompra and EstadoOrden:
-                pendientes = self.session.query(OrdenCompra).filter_by(estado=EstadoOrden.PENDIENTE).count()
+                pendientes = session.query(OrdenCompra).filter_by(estado=EstadoOrden.PENDIENTE).count()
                 if pendientes > 0:
                     item = QListWidgetItem(f"📝 {pendientes} Órdenes de Compra por aprobar")
                     item.setForeground(Qt.GlobalColor.darkRed)
@@ -309,5 +314,5 @@ class DashboardWidget(QWidget):
             self.list_alerts.addItem(item)
 
     def closeEvent(self, event):
-        self.session.close()
+        # self.session.close() # Ya no es necesario
         super().closeEvent(event)
