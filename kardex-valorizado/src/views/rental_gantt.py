@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
 from PyQt6.QtCore import Qt, QDate, QRectF
 from PyQt6.QtGui import QBrush, QColor, QPen, QFont
 from models.database_model import obtener_session, Equipo, AlquilerDetalle, TipoEquipo, SubtipoEquipo, Alquiler, EstadoAlquiler
+from sqlalchemy import text
 from datetime import timedelta
 
 class RentalGanttWidget(QWidget):
@@ -19,6 +20,15 @@ class RentalGanttWidget(QWidget):
         self.day_width = 40
         
         self.init_ui()
+        
+        # DEBUG: Verify DB connection and schema
+        try:
+            print(f"DEBUG: RentalGantt DB URL: {self.session.bind.url}")
+            result = self.session.execute(text("PRAGMA table_info(alquiler_detalles)")).fetchall()
+            print(f"DEBUG: alquiler_detalles columns: {[r[1] for r in result]}")
+        except Exception as e:
+            print(f"DEBUG: Error checking schema: {e}")
+            
         self.load_data()
 
     def init_ui(self):
