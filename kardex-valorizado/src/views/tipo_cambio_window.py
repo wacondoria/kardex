@@ -298,6 +298,7 @@ class TipoCambioWindow(QWidget):
         fecha_hasta = self.date_hasta.date().toPyDate()
 
         try:
+            self.session.expire_all()
             # --- MEJORA 2: Filtrar solo los activos ---
             tipos_cambio = self.session.query(TipoCambio).filter(
                 TipoCambio.fecha >= fecha_desde,
