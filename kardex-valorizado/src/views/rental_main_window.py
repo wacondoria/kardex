@@ -10,6 +10,8 @@ from views.operadores_window import OperadoresWindow
 from views.rental_dashboard import RentalDashboardWidget
 from views.proyectos_window import ProyectosWindow
 from views.rental_gantt import RentalGanttWidget
+from views.maintenance_window import MaintenanceWindow
+from views.roi_report import ROIReportWindow
 
 class RentalMainWindow(QMainWindow):
     """
@@ -62,7 +64,17 @@ class RentalMainWindow(QMainWindow):
         
         btn_operadores = QPushButton("👷 Operadores")
         btn_operadores.clicked.connect(self.abrir_operadores)
+        btn_operadores = QPushButton("👷 Operadores")
+        btn_operadores.clicked.connect(self.abrir_operadores)
         toolbar.addWidget(btn_operadores)
+        
+        btn_mant = QPushButton("🔧 Mantenimiento")
+        btn_mant.clicked.connect(self.abrir_mantenimiento)
+        toolbar.addWidget(btn_mant)
+        
+        btn_roi = QPushButton("📈 ROI")
+        btn_roi.clicked.connect(self.abrir_roi)
+        toolbar.addWidget(btn_roi)
         
         toolbar.addSeparator()
         
@@ -151,4 +163,27 @@ class RentalMainWindow(QMainWindow):
         
         operadores_widget = OperadoresWindow()
         self.tab_widget.addTab(operadores_widget, nombre_pestana)
+        self.tab_widget.addTab(operadores_widget, nombre_pestana)
         self.tab_widget.setCurrentWidget(operadores_widget)
+
+    def abrir_mantenimiento(self):
+        nombre_pestana = "Gestión de Mantenimiento"
+        for i in range(self.tab_widget.count()):
+            if self.tab_widget.tabText(i) == nombre_pestana:
+                self.tab_widget.setCurrentIndex(i)
+                return
+        
+        mant_widget = MaintenanceWindow()
+        self.tab_widget.addTab(mant_widget, nombre_pestana)
+        self.tab_widget.setCurrentWidget(mant_widget)
+
+    def abrir_roi(self):
+        nombre_pestana = "Reporte ROI"
+        for i in range(self.tab_widget.count()):
+            if self.tab_widget.tabText(i) == nombre_pestana:
+                self.tab_widget.setCurrentIndex(i)
+                return
+        
+        roi_widget = ROIReportWindow()
+        self.tab_widget.addTab(roi_widget, nombre_pestana)
+        self.tab_widget.setCurrentWidget(roi_widget)
