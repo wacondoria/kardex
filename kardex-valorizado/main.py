@@ -14,37 +14,9 @@ from PyQt6.QtGui import QFont, QAction
 # Agregar src al path
 sys.path.insert(0, str(Path(__file__).parent / 'src'))
 
-from views.login_window import LoginWindow
 from utils.app_context import app_context
-from views.productos_window import ProductosWindow
-from views.proveedores_window import ProveedoresWindow
-from views.clientes_window import ClientesWindow
-from views.empresas_window import EmpresasWindow
-from views.tipo_cambio_window import TipoCambioWindow
-from views.compras_window import ComprasWindow
-from views.ventas_window import VentasWindow
-from views.kardex_window import KardexWindow
-from views.backup_window import BackupWindow
-from views.motivos_ajuste_window import MotivosAjusteWindow
-from views.ajustes_inventario_window import AjustesInventarioWindow
-from views.requisiciones_window import RequisicionesWindow
-from views.ordenes_compra_window import OrdenesCompraWindow
-from views.seguridad_window import SeguridadWindow
-from views.valorizacion_window import ValorizacionWindow
-from views.anio_contable_window import AnioContableWindow
-from views.sistemas_importacion_window import SistemasImportacionWindow
-from views.sistemas_importacion_window import SistemasImportacionWindow
-from views.dashboard_view import DashboardWidget
-from views.module_selector import ModuleSelector
-from views.rental_main_window import RentalMainWindow
-from views.proyectos_window import ProyectosWindow
 from services.backup_scheduler import BackupScheduler
 from utils.theme_manager import ThemeManager
-from views.cotizaciones_window import CotizacionesWindow
-from views.reportes_window import ReportesWindow
-from views.auditoria_window import AuditoriaWindow
-from views.import_wizard import ImportWizard
-from views.equipos_calendar import MaintenanceCalendar
 
 # --- Integración para actualización automática ---
 from utils.actualizador_tc import actualizar_tc_desde_excel
@@ -502,6 +474,7 @@ class KardexMainWindow(QMainWindow):
 
     def crear_pestana_bienvenida(self):
         """Crea la pestaña de Dashboard inicial"""
+        from views.dashboard_view import DashboardWidget
         dashboard = DashboardWidget()
         index = self.tab_widget.addTab(dashboard, "📊 Dashboard")
         self.tab_widget.tabBar().setTabButton(index, QTabBar.ButtonPosition.RightSide, None)
@@ -703,6 +676,7 @@ class KardexMainWindow(QMainWindow):
 
     def abrir_productos(self):
         """Abre la ventana de gestión de productos en una nueva pestaña"""
+        from views.productos_window import ProductosWindow
         nombre_pestana = "Productos"
         for i in range(self.tab_widget.count()):
             if self.tab_widget.tabText(i) == nombre_pestana:
@@ -715,6 +689,7 @@ class KardexMainWindow(QMainWindow):
 
     def abrir_kardex(self):
         """Abre la ventana de Kardex Valorizado en una nueva pestaña"""
+        from views.kardex_window import KardexWindow
         nombre_pestana = "Kardex"
         for i in range(self.tab_widget.count()):
             if self.tab_widget.tabText(i) == nombre_pestana:
@@ -727,6 +702,7 @@ class KardexMainWindow(QMainWindow):
 
     def abrir_compras(self):
         """Abre la ventana de gestión de compras en una nueva pestaña"""
+        from views.compras_window import ComprasWindow
         nombre_pestana = "Compras"
         for i in range(self.tab_widget.count()):
             if self.tab_widget.tabText(i) == nombre_pestana:
@@ -739,6 +715,7 @@ class KardexMainWindow(QMainWindow):
 
     def abrir_ventas(self):
         """Abre la ventana de gestión de ventas en una nueva pestaña"""
+        from views.ventas_window import VentasWindow
         nombre_pestana = "Ventas"
         for i in range(self.tab_widget.count()):
             if self.tab_widget.tabText(i) == nombre_pestana:
@@ -751,6 +728,7 @@ class KardexMainWindow(QMainWindow):
 
     def abrir_tipo_cambio(self):
         """Abre la ventana de gestión de tipo de cambio"""
+        from views.tipo_cambio_window import TipoCambioWindow
         if self.ventana_tipo_cambio is None:
             self.ventana_tipo_cambio = TipoCambioWindow()
 
@@ -760,6 +738,7 @@ class KardexMainWindow(QMainWindow):
 
     def abrir_empresas(self):
         """Abre la ventana de gestión de empresas"""
+        from views.empresas_window import EmpresasWindow
         if not app_context.has_permission('configuracion_sistema'):
             QMessageBox.warning(self, "Acceso Denegado", "No tienes permiso para gestionar empresas.")
             return
@@ -773,6 +752,7 @@ class KardexMainWindow(QMainWindow):
 
     def abrir_proveedores(self):
         """Abre la ventana de gestión de proveedores"""
+        from views.proveedores_window import ProveedoresWindow
         if self.ventana_proveedores is None:
             self.ventana_proveedores = ProveedoresWindow()
 
@@ -782,6 +762,7 @@ class KardexMainWindow(QMainWindow):
 
     def abrir_clientes(self):
         """Abre la ventana de gestión de clientes"""
+        from views.clientes_window import ClientesWindow
         if self.ventana_clientes is None:
             self.ventana_clientes = ClientesWindow()
 
@@ -791,6 +772,7 @@ class KardexMainWindow(QMainWindow):
 
     def abrir_proyectos(self):
         """Abre la ventana de gestión de proyectos en una nueva pestaña"""
+        from views.proyectos_window import ProyectosWindow
         nombre_pestana = "Proyectos"
         for i in range(self.tab_widget.count()):
             if self.tab_widget.tabText(i) == nombre_pestana:
@@ -803,6 +785,7 @@ class KardexMainWindow(QMainWindow):
 
     def abrir_backup(self):
         """Abre la ventana de backup"""
+        from views.backup_window import BackupWindow
         if not app_context.has_permission('configuracion_sistema'):
             QMessageBox.warning(self, "Acceso Denegado", "No tienes permiso para gestionar backups.")
             return
@@ -816,6 +799,7 @@ class KardexMainWindow(QMainWindow):
 
     def abrir_requisiciones(self):
         """Abre la ventana de gestión de requisiciones en una nueva pestaña"""
+        from views.requisiciones_window import RequisicionesWindow
         nombre_pestana = "Requisiciones"
         for i in range(self.tab_widget.count()):
             if self.tab_widget.tabText(i) == nombre_pestana:
@@ -828,6 +812,7 @@ class KardexMainWindow(QMainWindow):
 
     def abrir_ordenes_compra(self):
         """Abre la ventana de gestión de órdenes de compra en una nueva pestaña"""
+        from views.ordenes_compra_window import OrdenesCompraWindow
         nombre_pestana = "Órdenes de Compra"
         for i in range(self.tab_widget.count()):
             if self.tab_widget.tabText(i) == nombre_pestana:
@@ -840,6 +825,7 @@ class KardexMainWindow(QMainWindow):
 
     def abrir_seguridad(self):
         """Abre la ventana de gestión de seguridad (usuarios y roles)"""
+        from views.seguridad_window import SeguridadWindow
         if not app_context.has_permission('gestionar_usuarios'):
             QMessageBox.warning(self, "Acceso Denegado", "No tienes permiso para gestionar la seguridad.")
             return
@@ -853,6 +839,7 @@ class KardexMainWindow(QMainWindow):
 
     def abrir_valorizacion(self):
         """Abre la ventana de valorización de inventario en una nueva pestaña"""
+        from views.valorizacion_window import ValorizacionWindow
         nombre_pestana = "Valorización"
         for i in range(self.tab_widget.count()):
             if self.tab_widget.tabText(i) == nombre_pestana:
@@ -865,6 +852,7 @@ class KardexMainWindow(QMainWindow):
 
     def abrir_admin_anios(self):
         """Abre la ventana de administración de años contables."""
+        from views.anio_contable_window import AnioContableWindow
         if not app_context.has_permission('configuracion_sistema'):
             QMessageBox.warning(self, "Acceso Denegado", "No tienes permiso para gestionar los años contables.")
             return
@@ -878,6 +866,7 @@ class KardexMainWindow(QMainWindow):
         self.current_theme = ThemeManager.toggle_theme(QApplication.instance(), self.current_theme)
 
     def abrir_cotizaciones(self):
+        from views.cotizaciones_window import CotizacionesWindow
         nombre_pestana = "Cotizaciones"
         for i in range(self.tab_widget.count()):
             if self.tab_widget.tabText(i) == nombre_pestana:
@@ -888,6 +877,7 @@ class KardexMainWindow(QMainWindow):
         self.tab_widget.setCurrentWidget(self.ventana_cotizaciones)
 
     def abrir_reportes_avanzados(self):
+        from views.reportes_window import ReportesWindow
         if self.ventana_reportes_avanzados is None:
             self.ventana_reportes_avanzados = ReportesWindow()
         self.ventana_reportes_avanzados.show()
@@ -895,6 +885,7 @@ class KardexMainWindow(QMainWindow):
         self.ventana_reportes_avanzados.activateWindow()
 
     def abrir_auditoria(self):
+        from views.auditoria_window import AuditoriaWindow
         if self.ventana_auditoria is None:
             self.ventana_auditoria = AuditoriaWindow()
         self.ventana_auditoria.show()
@@ -902,10 +893,30 @@ class KardexMainWindow(QMainWindow):
         self.ventana_auditoria.activateWindow()
 
     def abrir_import_wizard(self):
+        from views.import_wizard import ImportWizard
         wizard = ImportWizard(self)
-        wizard.exec()
+        if wizard.exec() == QDialog.DialogCode.Accepted:
+            self.refresh_all_tabs()
+
+    def refresh_all_tabs(self):
+        """Refresca los datos de todas las pestañas abiertas"""
+        for i in range(self.tab_widget.count()):
+            widget = self.tab_widget.widget(i)
+            if hasattr(widget, 'load_data'):
+                try:
+                    widget.load_data()
+                except Exception as e:
+                    print(f"Error refreshing tab {i}: {e}")
+            elif hasattr(widget, 'refresh'):
+                try:
+                    widget.refresh()
+                except Exception as e:
+                    print(f"Error refreshing tab {i}: {e}")
+        
+        QMessageBox.information(self, "Actualización", "Datos actualizados correctamente en todas las pestañas.")
 
     def abrir_calendario(self):
+        from views.equipos_calendar import MaintenanceCalendar
         nombre_pestana = "Calendario"
         for i in range(self.tab_widget.count()):
             if self.tab_widget.tabText(i) == nombre_pestana:
@@ -917,6 +928,7 @@ class KardexMainWindow(QMainWindow):
 
     def abrir_importacion(self):
         """Abre la ventana de importación de datos."""
+        from views.sistemas_importacion_window import SistemasImportacionWindow
         if not app_context.has_permission('configuracion_sistema'):
             QMessageBox.warning(self, "Acceso Denegado", "No tienes permiso para importar datos.")
             return
@@ -930,6 +942,7 @@ class KardexMainWindow(QMainWindow):
 
     def abrir_motivos_ajuste(self):
         """Abre la ventana de gestión de motivos de ajuste."""
+        from views.motivos_ajuste_window import MotivosAjusteWindow
         if self.ventana_motivos_ajuste is None:
             self.ventana_motivos_ajuste = MotivosAjusteWindow()
 
@@ -939,6 +952,7 @@ class KardexMainWindow(QMainWindow):
 
     def abrir_ajustes_inventario(self):
         """Abre la ventana de gestión de ajustes de inventario en una nueva pestaña."""
+        from views.ajustes_inventario_window import AjustesInventarioWindow
         nombre_pestana = "Ajustes de Inventario"
         for i in range(self.tab_widget.count()):
             if self.tab_widget.tabText(i) == nombre_pestana:
@@ -984,6 +998,7 @@ def main():
     app.setStyleSheet(stylesheet)
 
     main_window = None
+    from views.login_window import LoginWindow
     login_window = LoginWindow()
     module_selector = None
 
@@ -996,6 +1011,7 @@ def main():
         if not module_selector:
             # Necesitamos user_info, que ya deberíamos tener en app_context o guardado
             user_info = app_context.get_user_info()
+            from views.module_selector import ModuleSelector
             module_selector = ModuleSelector(user_info)
             module_selector.module_selected.connect(on_module_selected)
         
@@ -1009,6 +1025,7 @@ def main():
 
     def launch_rental():
         nonlocal main_window
+        from views.rental_main_window import RentalMainWindow
         main_window = RentalMainWindow()
         main_window.return_to_menu.connect(show_selector)
         main_window.show()
@@ -1029,6 +1046,7 @@ def main():
         login_window.close()
         
         # Mostrar selector de módulo
+        from views.module_selector import ModuleSelector
         module_selector = ModuleSelector(user_info)
         module_selector.module_selected.connect(on_module_selected)
         module_selector.show()
