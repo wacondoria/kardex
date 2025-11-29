@@ -1,4 +1,0 @@
-Error activating license: (sqlite3.IntegrityError) NOT NULL constraint failed: licencias.clave
-[SQL: INSERT INTO licencias (clave, fecha_inicio, fecha_vencimiento, activa, tipo, fecha_registro) VALUES (?, ?, ?, ?, ?, ?)]
-[parameters: (None, '2025-11-28', '2026-11-28', 1, 'STANDARD', '2025-11-28 16:03:48.515186')]
-(Background on this error at: https://sqlalche.me/e/20/gkpj)
