@@ -137,7 +137,7 @@ class ClienteDialog(QDialog):
             self.btn_guardar.setEnabled(False)
             return
 
-        query = self.session.query(Cliente).filter_by(ruc_o_dni=identificador)
+        query = self.session.query(Cliente).filter_by(numero_documento=identificador)
         if self.cliente:
             query = query.filter(Cliente.id != self.cliente.id)
         if query.first():
@@ -154,17 +154,17 @@ class ClienteDialog(QDialog):
             self.txt_id_display.setText(str(self.cliente.id))
             self.lbl_id_etiqueta.show()
             self.txt_id_display.show()
-        self.txt_ruc_o_dni.setText(self.cliente.ruc_o_dni)
-        self.txt_razon_social.setText(self.cliente.razon_social_o_nombre)
+        self.txt_ruc_o_dni.setText(self.cliente.numero_documento)
+        self.txt_razon_social.setText(self.cliente.razon_social)
         self.txt_direccion.setPlainText(self.cliente.direccion or "")
         self.txt_telefono.setText(self.cliente.telefono or "")
         self.txt_email.setText(self.cliente.email or "")
         self.txt_contacto.setText(self.cliente.contacto or "")
 
     def guardar(self):
-        ruc_o_dni = self.txt_ruc_o_dni.text().strip()
+        numero_documento = self.txt_ruc_o_dni.text().strip()
         razon_social = self.txt_razon_social.text().strip()
-        if len(ruc_o_dni) not in [8, 11]:
+        if len(numero_documento) not in [8, 11]:
             QMessageBox.warning(self, "Error", "El RUC/DNI debe tener 8 u 11 dígitos")
             return
         if not razon_social:
@@ -178,8 +178,8 @@ class ClienteDialog(QDialog):
         try:
             if not self.cliente:
                 cliente = Cliente(
-                    ruc_o_dni=ruc_o_dni,
-                    razon_social_o_nombre=razon_social,
+                    numero_documento=numero_documento,
+                    razon_social=razon_social,
                     direccion=self.txt_direccion.toPlainText() or None,
                     telefono=self.txt_telefono.text().strip() or None,
                     email=email or None,
@@ -188,8 +188,8 @@ class ClienteDialog(QDialog):
                 self.session.add(cliente)
                 mensaje = f"Cliente {razon_social} creado exitosamente"
             else:
-                self.cliente.ruc_o_dni = ruc_o_dni
-                self.cliente.razon_social_o_nombre = razon_social
+                self.cliente.numero_documento = numero_documento
+                self.cliente.razon_social = razon_social
                 self.cliente.direccion = self.txt_direccion.toPlainText() or None
                 self.cliente.telefono = self.txt_telefono.text().strip() or None
                 self.cliente.email = email or None
@@ -234,9 +234,10 @@ class ClientesWindow(BaseCRUDView):
         return query.order_by(Cliente.razon_social)
 
     def fill_row(self, row, cli):
+        print(f"DEBUG: cli type: {type(cli)}, dir: {dir(cli)}")
         self.tabla.setItem(row, 0, QTableWidgetItem(str(cli.id)))
-        self.tabla.setItem(row, 1, QTableWidgetItem(cli.ruc_o_dni))
-        self.tabla.setItem(row, 2, QTableWidgetItem(cli.razon_social_o_nombre))
+        self.tabla.setItem(row, 1, QTableWidgetItem(cli.numero_documento))
+        self.tabla.setItem(row, 2, QTableWidgetItem(cli.razon_social))
         self.tabla.setItem(row, 3, QTableWidgetItem(cli.telefono or ""))
         self.tabla.setItem(row, 4, QTableWidgetItem(cli.email or ""))
         self.tabla.setItem(row, 5, QTableWidgetItem(cli.contacto or ""))
@@ -245,21 +246,25 @@ class ClientesWindow(BaseCRUDView):
     def apply_search_filters(self, query, text):
         filtro_texto = f"%{text}%"
         return query.filter(or_(
-            Cliente.ruc_o_dni.ilike(filtro_texto),
+            Cliente.numero_documento.ilike(filtro_texto),
             Cliente.razon_social.ilike(filtro_texto),
             Cliente.contacto.ilike(filtro_texto)
         ))
 
     def _open_dialog(self, item=None):
+        # Si es edición, asegurarnos de que el item esté adjunto a la sesión actual
+        if item:
+            item = self.session.merge(item)
+            
         dialog = ClienteDialog(self, cliente=item, session=self.session)
         if dialog.exec() == QDialog.DialogCode.Accepted:
-            if item: self.session.refresh(item)
+            # No necesitamos refresh explícito porque load_data recargará todo
             self.load_data()
 
     def delete_item(self, cliente):
         # We override this to show the specific message format from the original file
         respuesta = QMessageBox.question(self, "Confirmar eliminación",
-            f"¿Está seguro de eliminar al cliente:\n{cliente.ruc_o_dni} - {cliente.razon_social_o_nombre}?",
+            f"¿Está seguro de eliminar al cliente:\n{cliente.numero_documento} - {cliente.razon_social}?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
 
         if respuesta == QMessageBox.StandardButton.Yes:
