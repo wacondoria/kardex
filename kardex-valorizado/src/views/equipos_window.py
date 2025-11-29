@@ -6,6 +6,7 @@ from PyQt6.QtCore import Qt, pyqtSignal, QDate, QSize, QRegularExpression
 from PyQt6.QtGui import QFont, QPixmap, QRegularExpressionValidator
 import sys
 import os
+from sqlalchemy.orm import joinedload
 from pathlib import Path
 from datetime import date
 
@@ -127,7 +128,7 @@ class SubtipoEquipoDialog(QDialog):
     """Diálogo para crear o editar un Subtipo de Equipo"""
     subtipo_guardado = pyqtSignal()
 
-    def __init__(self, parent=None, subtipo=None, tipo_equipo=None):
+    def __init__(self, parent=None, subtipo=None, tipo_equipo_id=None):
         super().__init__(parent)
         self.session = obtener_session()
         self.subtipo = subtipo
@@ -435,12 +436,22 @@ class EquipoDialog(QDialog):
         self.spn_tarifa = QDoubleSpinBox()
         self.spn_tarifa.setRange(0, 999999)
         self.spn_tarifa.setPrefix("S/ ")
+
+        self.spn_tarifa_semanal = QDoubleSpinBox()
+        self.spn_tarifa_semanal.setRange(0, 999999)
+        self.spn_tarifa_semanal.setPrefix("S/ ")
+
+        self.spn_tarifa_mensual = QDoubleSpinBox()
+        self.spn_tarifa_mensual.setRange(0, 999999)
+        self.spn_tarifa_mensual.setPrefix("S/ ")
         
         self.spn_tarifa_dolares = QDoubleSpinBox()
         self.spn_tarifa_dolares.setRange(0, 999999)
         self.spn_tarifa_dolares.setPrefix("$ ")
         
         form_fin.addRow("Tarifa Diaria (S/):", self.spn_tarifa)
+        form_fin.addRow("Tarifa Semanal (S/):", self.spn_tarifa_semanal)
+        form_fin.addRow("Tarifa Mensual (S/):", self.spn_tarifa_mensual)
         form_fin.addRow("Tarifa Diaria ($):", self.spn_tarifa_dolares)
         
         grp_fin.setLayout(form_fin)
@@ -449,6 +460,27 @@ class EquipoDialog(QDialog):
         layout_tecnico.addStretch()
         tab_tecnico.setLayout(layout_tecnico)
         self.tabs.addTab(tab_tecnico, "Detalles Técnicos")
+
+        # === BOTONES ===
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+        
+        self.btn_cancelar = QPushButton("Cancelar")
+        self.btn_cancelar.setFixedSize(100, 40)
+        self.btn_cancelar.setStyleSheet("background-color: #95a5a6; color: white; border-radius: 5px; font-weight: bold;")
+        self.btn_cancelar.clicked.connect(self.reject)
+        
+        self.btn_guardar = QPushButton("Guardar")
+        self.btn_guardar.setFixedSize(100, 40)
+        self.btn_guardar.setStyleSheet(STYLE_CUADRADO_VERDE)
+        self.btn_guardar.clicked.connect(self.guardar)
+        
+        btn_layout.addWidget(self.btn_cancelar)
+        btn_layout.addWidget(self.btn_guardar)
+        
+        main_layout.addLayout(btn_layout)
+        
+        self.setLayout(main_layout)
 
 
     def cargar_almacenes(self):
@@ -695,6 +727,8 @@ class EquipoDialog(QDialog):
         self.spn_horometro.setValue(self.equipo.horometro_actual)
         
         self.spn_tarifa.setValue(self.equipo.tarifa_diaria_referencial)
+        self.spn_tarifa_semanal.setValue(self.equipo.tarifa_semanal or 0.0)
+        self.spn_tarifa_mensual.setValue(self.equipo.tarifa_mensual or 0.0)
         self.spn_tarifa_dolares.setValue(self.equipo.tarifa_diaria_dolares or 0.0)
 
         if self.equipo.foto_referencia:
@@ -796,6 +830,8 @@ class EquipoDialog(QDialog):
             self.equipo.horometro_actual = self.spn_horometro.value()
             
             self.equipo.tarifa_diaria_referencial = self.spn_tarifa.value()
+            self.equipo.tarifa_semanal = self.spn_tarifa_semanal.value()
+            self.equipo.tarifa_mensual = self.spn_tarifa_mensual.value()
             self.equipo.tarifa_diaria_dolares = self.spn_tarifa_dolares.value()
             
             # Guardar Foto/Video
@@ -821,6 +857,14 @@ class EquiposWindow(BaseCRUDView):
         
         self.tabla.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.tabla.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+
+    def get_base_query(self, session=None):
+        sess = session if session else self.session
+        return sess.query(Equipo).options(
+            joinedload(Equipo.tipo_equipo),
+            joinedload(Equipo.subtipo_equipo),
+            joinedload(Equipo.almacen)
+        ).filter_by(activo=True)
         
     def setup_table_columns(self):
         self.tabla.setColumnCount(9)
