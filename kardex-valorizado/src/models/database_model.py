@@ -3,7 +3,7 @@ Modelo de Base de Datos Completo - Sistema Kardex Valorizado
 SQLAlchemy ORM con SQLite
 """
 
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean, Text, ForeignKey, Date, Enum, Table
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean, Text, ForeignKey, Date, Enum, Table, Index
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 from datetime import datetime
@@ -92,6 +92,19 @@ class EstadoCotizacion(enum.Enum):
     APROBADA = "APROBADA"
     RECHAZADA = "RECHAZADA"
     CONVERTIDA_VENTA = "CONVERTIDA_VENTA"
+
+class TipoMantenimiento(enum.Enum):
+    PREVENTIVO = "PREVENTIVO"
+    CORRECTIVO = "CORRECTIVO"
+
+class EstadoMantenimiento(enum.Enum):
+    PENDIENTE = "PENDIENTE"
+    EN_PROCESO = "EN_PROCESO"
+    FINALIZADO = "FINALIZADO"
+
+class TipoItemAlquiler(enum.Enum):
+    EQUIPO = "EQUIPO"
+    CONSUMIBLE = "CONSUMIBLE"
 
 # ============================================
 # TABLA DE ASOCIACIÓN: USUARIO - EMPRESA
@@ -201,6 +214,11 @@ class Producto(Base):
     # Estado
     activo = Column(Boolean, default=True)
     fecha_registro = Column(DateTime, default=datetime.now)
+    
+    __table_args__ = (
+        Index('idx_producto_codigo', 'codigo'),
+        Index('idx_producto_nombre', 'nombre'),
+    )
 
     # Optimistic Locking
     version_id = Column(Integer, nullable=False, default=1)
@@ -314,6 +332,8 @@ class Equipo(Base):
     valor_adquisicion = Column(Float, default=0.0)
     fecha_adquisicion = Column(Date)
     tarifa_diaria_referencial = Column(Float, default=0.0) # Soles
+    tarifa_semanal = Column(Float, default=0.0) # Soles
+    tarifa_mensual = Column(Float, default=0.0) # Soles
     tarifa_diaria_dolares = Column(Float, default=0.0) # Dólares
     
     # Multimedia
@@ -322,6 +342,12 @@ class Equipo(Base):
     fecha_registro = Column(DateTime, default=datetime.now)
     activo = Column(Boolean, default=True)
 
+    __table_args__ = (
+        Index('idx_equipo_codigo', 'codigo'),
+        Index('idx_equipo_nombre', 'nombre'),
+        Index('idx_equipo_estado', 'estado'),
+    )
+
     # Relaciones
     almacen = relationship("Almacen")
     tipo_equipo = relationship("TipoEquipo", back_populates="equipos")
@@ -329,6 +355,30 @@ class Equipo(Base):
     proveedor = relationship("Proveedor")
     componentes_kit = relationship("KitComponente", back_populates="equipo_default")
     detalles_alquiler = relationship("AlquilerDetalle", back_populates="equipo")
+    mantenimientos = relationship("OrdenMantenimiento", back_populates="equipo")
+
+class OrdenMantenimiento(Base):
+    __tablename__ = 'ordenes_mantenimiento'
+
+    id = Column(Integer, primary_key=True)
+    equipo_id = Column(Integer, ForeignKey('equipos.id'), nullable=False)
+    
+    tipo = Column(Enum(TipoMantenimiento), default=TipoMantenimiento.PREVENTIVO)
+    estado = Column(Enum(EstadoMantenimiento), default=EstadoMantenimiento.PENDIENTE)
+    
+    fecha_ingreso = Column(Date, nullable=False)
+    fecha_estimada_salida = Column(Date, nullable=True)
+    fecha_real_salida = Column(Date, nullable=True)
+    
+    descripcion = Column(Text)
+    costo_total = Column(Float, default=0.0)
+    
+    realizado_por = Column(String(200)) # Interno o Proveedor
+    
+    fecha_registro = Column(DateTime, default=datetime.now)
+    
+    # Relaciones
+    equipo = relationship("Equipo", back_populates="mantenimientos")
 
 class KitComponente(Base):
     __tablename__ = 'kit_componentes'
@@ -1002,7 +1052,11 @@ class AlquilerDetalle(Base):
     
     id = Column(Integer, primary_key=True)
     alquiler_id = Column(Integer, ForeignKey('alquileres.id'), nullable=False)
-    equipo_id = Column(Integer, ForeignKey('equipos.id'), nullable=False)
+    
+    tipo_item = Column(Enum(TipoItemAlquiler), default=TipoItemAlquiler.EQUIPO)
+    
+    equipo_id = Column(Integer, ForeignKey('equipos.id'), nullable=True)
+    producto_id = Column(Integer, ForeignKey('productos.id'), nullable=True) # Para consumibles
     
     fecha_salida = Column(DateTime, nullable=True)
     fecha_retorno = Column(DateTime, nullable=True)
@@ -1020,8 +1074,10 @@ class AlquilerDetalle(Base):
     operador_id = Column(Integer, ForeignKey('operadores.id'), nullable=True)
     
     # Relaciones
+    # Relaciones
     alquiler = relationship("Alquiler", back_populates="detalles")
     equipo = relationship("Equipo", back_populates="detalles_alquiler")
+    producto = relationship("Producto")
     operador = relationship("Operador", back_populates="alquileres_detalle")
 
 class AlquilerEvidencia(Base):
@@ -1074,7 +1130,7 @@ class TipoCambio(Base):
 # ============================================
 
 # Crear el motor de base de datos
-engine = create_engine('sqlite:///kardex.db', echo=False)
+engine = create_engine('sqlite:///kardex.db', echo=False, pool_size=20, max_overflow=30, pool_recycle=3600)
 
 # Crear la sesión
 Session = sessionmaker(bind=engine)
